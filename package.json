@@ -1,0 +1,69 @@
+{
+  "name": "theatre-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "emulators": "node scripts/emulators.mjs",
+    "dev:web": "vite --host 127.0.0.1",
+    "dev:api": "tsx watch apps/api/server.ts",
+    "seed": "tsx scripts/seed.ts",
+    "backfill:seed-history": "tsx scripts/backfill-seed-history.ts",
+    "migrate:priority-policy": "tsx scripts/migrate-priority-policy.ts",
+    "migrate:artifact-fields": "tsx scripts/migrate-artifact-fields.ts",
+    "migrate:reporting-hierarchy": "tsx scripts/migrate-reporting-hierarchy.ts",
+    "build": "tsc --noEmit && vite build",
+    "build:review": "node scripts/build-review.mjs",
+    "verify:review": "node scripts/verify-review-build.mjs",
+    "setup:review": "tsx scripts/setup-review.ts",
+    "start": "node apps/api/server.ts",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:integration": "tsx tests/integration.ts",
+    "format": "prettier --write apps shared scripts tests vite.config.ts",
+    "format:check": "prettier --check apps shared scripts tests vite.config.ts",
+    "migrate:admin-roles": "tsx scripts/migrate-admin-roles.ts",
+    "test:admin": "tsx tests/admin-integration.ts"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@fastify/helmet": "^13.1.1",
+    "@fastify/rate-limit": "^11.2.0",
+    "@fontsource/dm-sans": "^5.3.0",
+    "@fontsource/manrope": "^5.3.0",
+    "dexie": "^4.4.6",
+    "fastify": "^5.12.5",
+    "firebase": "^12.19.0",
+    "firebase-admin": "^14.5.0",
+    "lucide-react": "^1.51.0",
+    "papaparse": "^5.7.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "recharts": "^3.10.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@types/node": "^26.6.4",
+    "@types/papaparse": "^5.5.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "fake-indexeddb": "^6.2.5",
+    "google-auth-library": "^11.1.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.0.3"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.14.5",
+    "gaxios": {
+      "uuid": "^11.1.1"
+    }
+  }
+}

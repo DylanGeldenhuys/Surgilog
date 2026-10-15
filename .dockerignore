@@ -1,0 +1,9 @@
+**
+!Dockerfile
+!package.json
+!package-lock.json
+!apps/
+!apps/api/
+!apps/api/**
+!shared/
+!shared/**

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en-ZA">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#176b9a" />
+    <title>Update SurgiLog</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f4f8fb;
+        color: #20384b;
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+      }
+      main {
+        margin: 24px;
+        padding: 32px;
+        max-width: 460px;
+        background: white;
+        border: 1px solid #dce7ee;
+        border-radius: 18px;
+      }
+      h1 {
+        font-size: 26px;
+        line-height: 1.25;
+      }
+      button {
+        padding: 12px 20px;
+        background: #176b9a;
+        color: white;
+        border: 0;
+        border-radius: 8px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.65;
+        cursor: wait;
+      }
+      a {
+        color: #176b9a;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Update SurgiLog</h1>
+      <p>
+        Install the latest app and return to sign-in. Your account password is all you need to sign
+        in.
+      </p>
+      <p>Save any open forms before updating. Your saved offline work stays in this browser.</p>
+      <button id="update" type="button">Update and open app</button>
+      <p id="status" role="status" aria-live="polite"></p>
+      <a href="/">Back to sign-in</a>
+    </main>
+    <script>
+      // This route is deliberately under /api/: existing app workers exclude
+      // that path from navigation fallback, so even an old client gets this page.
+      // Remove only replaceable app-delivery state. IndexedDB and account storage hold
+      // the encrypted workspace and must never be cleared by this recovery page.
+      const button = document.querySelector('#update');
+      const status = document.querySelector('#status');
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        status.textContent = 'Checking for the latest app…';
+        try {
+          status.textContent = 'Removing the old cached app…';
+          const registrations = await navigator.serviceWorker?.getRegistrations();
+          await Promise.all((registrations ?? []).map((registration) => registration.unregister()));
+          if ('caches' in window)
+            await Promise.all((await caches.keys()).map((name) => caches.delete(name)));
+          status.textContent = 'Opening the current app…';
+          location.replace('/?app-refreshed=' + Date.now());
+        } catch (error) {
+          status.textContent =
+            error.message ||
+            'Reconnect to the internet and try again. Saved work has not been changed.';
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

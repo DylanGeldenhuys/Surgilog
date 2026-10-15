@@ -1,0 +1,6 @@
+title: Theatre Tracker user provisioning
+description: Create review staff identities and generate password setup links.
+stage: GA
+includedPermissions:
+  - firebaseauth.users.create
+  - firebaseauth.users.sendEmail

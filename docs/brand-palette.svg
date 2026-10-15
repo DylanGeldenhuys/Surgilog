@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title description">
+  <title id="title">SurgiLog core colour palette</title>
+  <desc id="description">Eight colour swatches for Theatre blue, Pale blue, Clinical white, Mist, Silver, Slate, Ink and Gold.</desc>
+  <rect width="1200" height="620" fill="#f4f7fa"/>
+  <text x="64" y="72" fill="#203a4a" font-family="Manrope, Arial, sans-serif" font-size="34" font-weight="800">SurgiLog</text>
+  <text x="64" y="108" fill="#42586a" font-family="DM Sans, Arial, sans-serif" font-size="18">Core colour palette · sRGB / HEX</text>
+
+  <g font-family="DM Sans, Arial, sans-serif">
+    <g transform="translate(64 150)">
+      <rect width="250" height="160" rx="16" fill="#176b9a"/>
+      <text x="22" y="118" fill="#ffffff" font-size="21" font-weight="600">Theatre blue</text>
+      <text x="22" y="144" fill="#ffffff" font-size="16">#176B9A</text>
+    </g>
+    <g transform="translate(338 150)">
+      <rect width="250" height="160" rx="16" fill="#f0f6fa" stroke="#e3eaf0"/>
+      <text x="22" y="118" fill="#203a4a" font-size="21" font-weight="600">Pale blue</text>
+      <text x="22" y="144" fill="#42586a" font-size="16">#F0F6FA</text>
+    </g>
+    <g transform="translate(612 150)">
+      <rect width="250" height="160" rx="16" fill="#ffffff" stroke="#e3eaf0"/>
+      <text x="22" y="118" fill="#203a4a" font-size="21" font-weight="600">Clinical white</text>
+      <text x="22" y="144" fill="#42586a" font-size="16">#FFFFFF</text>
+    </g>
+    <g transform="translate(886 150)">
+      <rect width="250" height="160" rx="16" fill="#f4f7fa" stroke="#d5dfe7"/>
+      <text x="22" y="118" fill="#203a4a" font-size="21" font-weight="600">Mist</text>
+      <text x="22" y="144" fill="#42586a" font-size="16">#F4F7FA</text>
+    </g>
+
+    <g transform="translate(64 340)">
+      <rect width="250" height="160" rx="16" fill="#e3eaf0"/>
+      <text x="22" y="118" fill="#203a4a" font-size="21" font-weight="600">Silver</text>
+      <text x="22" y="144" fill="#42586a" font-size="16">#E3EAF0</text>
+    </g>
+    <g transform="translate(338 340)">
+      <rect width="250" height="160" rx="16" fill="#748595"/>
+      <text x="22" y="118" fill="#ffffff" font-size="21" font-weight="600">Slate</text>
+      <text x="22" y="144" fill="#ffffff" font-size="16">#748595</text>
+    </g>
+    <g transform="translate(612 340)">
+      <rect width="250" height="160" rx="16" fill="#203a4a"/>
+      <text x="22" y="118" fill="#ffffff" font-size="21" font-weight="600">Ink</text>
+      <text x="22" y="144" fill="#ffffff" font-size="16">#203A4A</text>
+    </g>
+    <g transform="translate(886 340)">
+      <rect width="250" height="160" rx="16" fill="#b69048"/>
+      <text x="22" y="118" fill="#203a4a" font-size="21" font-weight="600">Gold</text>
+      <text x="22" y="144" fill="#203a4a" font-size="16">#B69048</text>
+    </g>
+  </g>
+
+  <line x1="64" y1="552" x2="1136" y2="552" stroke="#e3eaf0"/>
+  <circle cx="76" cy="581" r="6" fill="#c8a76a"/>
+  <text x="94" y="588" fill="#42586a" font-family="DM Sans, Arial, sans-serif" font-size="16">Calm clinical clarity · restrained gold accents · light surfaces</text>
+</svg>

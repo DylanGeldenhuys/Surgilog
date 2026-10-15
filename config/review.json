@@ -1,0 +1,13 @@
+{
+  "projectId": "theatre-tracker-2f2e5",
+  "region": "africa-south1",
+  "service": "theatre-tracker-api",
+  "firebase": {
+    "apiKey": "AIzaSyA0zYjJb1AvIqEImiUKU74CjF_o2_sBBAs",
+    "authDomain": "theatre-tracker-2f2e5.firebaseapp.com",
+    "projectId": "theatre-tracker-2f2e5",
+    "storageBucket": "theatre-tracker-2f2e5.firebasestorage.app",
+    "messagingSenderId": "54783611706",
+    "appId": "1:54783611706:web:815f50ab74f524d42eb603"
+  }
+}
