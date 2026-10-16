@@ -69,7 +69,7 @@ For a stale port-4173 app screen, open [Update SurgiLog](http://127.0.0.1:4173/a
 - Patient and first-case registration, demographic corrections, case notes, local search/filtering, 10-case backlog pages, Leo-confirmed P1/P2/P3 treatment targets of 30/90/365 days, clinical priority/readiness review, holds, case history, and action alerts for overdue treatment or unrecorded surgery outcomes.
 - Theatre sessions and bookings with clinician-entered operating estimates, fitting-session choices, automatic start assignment, configurable 15–30-minute turnaround (default 15), and concurrent capacity checks.
 - Theatre entry/completion recorded by doctors, scrub sisters or clerks; cancellation requires a doctor/write admin and returns the case to waiting without resetting its clock.
-- Separate actual theatre register, Draft/Verified workflow, direct recorded age without fabricated DOB, multiple procedures/team details, offline recording and historical CSV preview. Weekly/monthly/quarterly/April–March reports, activity breakdowns and aggregate printing are local preview additions.
+- Separate actual theatre register, Draft/Verified workflow, direct recorded age without fabricated DOB, multiple procedures/team details, offline recording and historical CSV preview. Weekly/monthly/quarterly/April–March reports, activity breakdowns and aggregate printing are published fictional-data review additions.
 - Actual-event completion charts, outstanding-case median/P90, overdue cases, cancellations and occupancy with timing completeness.
 - CSV paste/validation for new waiting cases; P1 imports require an explicit assessment timestamp. Rows use the same permissions and replay checks as normal registration.
 - Server-first connected updates, with an encrypted offline outbox, durable fallback saves, prompt ordered replay, idempotency, version conflicts, persistent three-day inactivity sessions, explicit logout and conflict review.
@@ -106,3 +106,5 @@ Read [AGENTS.md](AGENTS.md) and [docs/handover.md](docs/handover.md) first. Deta
 ## Code review
 
 The [15 October 2026 review](docs/code-review-2026-10-15.md) records corrected defects, regression evidence, remaining production/clinical risks, and the new history index required before deployment. The hardening and theatre-extension API, indexes and frontend are now deployed; see [handover](docs/handover.md) for release status.
+
+Phone installation/offline checks and the Leo/Tobela clinical walkthrough are in [review acceptance](docs/review-acceptance.md). Physical-device results and clinical decisions are recorded separately from automated verification.

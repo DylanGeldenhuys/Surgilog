@@ -227,6 +227,8 @@ strong {
   display: flex;
   flex-direction: column;
   z-index: 30;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 .workspace-label {
   font-size: 9px;

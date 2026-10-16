@@ -93,6 +93,36 @@ beforeEach(async () => {
 });
 
 describe('persistent sessions and explicit logout', () => {
+  it('opens and remembers durable work while browser persistence permission is unanswered', async () => {
+    const persist = vi.fn(() => new Promise<boolean>(() => {}));
+    vi.stubGlobal('navigator', { storage: { persist } });
+    try {
+      const v = await openOnline(identity, password);
+      await rememberWorkspace(v);
+      expect(persist).toHaveBeenCalledOnce();
+      expect(await rows.get(v.id)).toBeDefined();
+      expect((await resumeWorkspace(identity.profile.uid))?.id).toBe(v.id);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('keeps the saved workspace usable when browser persistence is denied', async () => {
+    vi.stubGlobal('navigator', {
+      storage: { persist: vi.fn().mockRejectedValue(new Error('Permission denied')) },
+    });
+    try {
+      const v = await openOnline(identity, password);
+      await rememberWorkspace(v);
+      expect((await unlock(identity.profile.email, password)).data.profile).toEqual(
+        identity.profile,
+      );
+      expect((await resumeWorkspace(identity.profile.uid))?.id).toBe(v.id);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('restores the encrypted workspace and pending work without storing the password', async () => {
     const v = await openOnline(identity, password);
     v.data.pending = pending;

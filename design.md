@@ -161,6 +161,8 @@ The prototype uses optical spacing such as 17px, 21px and 23px; it does not yet 
 
 ### Responsive behaviour — current
 
+The fixed navigation scrolls vertically on short screens and phone landscape so every section and Log out remain reachable.
+
 | Viewport | Behaviour |
 | --- | --- |
 | ≥1500px | More generous padding and taller chart panels |

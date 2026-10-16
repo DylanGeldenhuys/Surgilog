@@ -16,6 +16,14 @@ Run `npm ci` then `npm run dev`. App 127.0.0.1:5173, API :8787, Auth :9099, Fire
 
 Stack actually used: React/TypeScript/Vite, plain CSS, native dialog/forms, Lucide, Recharts, Zod, Papa Parse; Firebase Auth SDK; Fastify/Admin SDK API; Firestore Standard emulator; Dexie/Web Crypto vault. A custom React workspace hook handles refresh, projection and replay. Tailwind/shadcn, TanStack Query/Router and React Hook Form were early recommendations, not installed implementations.
 
+## Phone/browser follow-up and review pack — 16 October 2026
+
+Dylan can test both iPhone and Android. Prepared [phone checks and Leo/Tobela clinical walkthrough](review-acceptance.md), with actual-device results and clinician decisions explicitly pending. No messages/invitations were sent. Corrected obsolete scheduler/P1-subtarget wording in the pilot criteria; confirmed roles and 30/90/365 elapsed-day targets are unchanged.
+
+Additional local built-PWA checks used Playwright WebKit (iPhone-sized), Chromium (Android-sized) and Firefox. WebKit/Chromium offline Draft creation → full offline reload → automatic reconnect passed, with exactly one server record each and logout clearing vault/session rows. Firefox exposed a login wait on optional storage persistence; the request is now non-blocking after durable saving. Two regression tests added; **84 unit tests**, typecheck, formatting and both builds pass. Short-screen navigation now scrolls, keeping Log out reachable at 844×390 in all three engines. Full details and limits are in [verification](verification.md).
+
+Published this frontend-only fix as Hosting **80a0e416d643e631** at **14:15:35 SAST**, bundle **index-MKrKENiU.js**. Hosted files/security/cache headers match the prepared build; API remains **00006-seh** at 100%, with no database/rules/IAM changes. Temporary local synthetic register records/keys/receipts/audits were removed. Physical installed-app behaviour and clinical acceptance still need Dylan/Leo/Tobela's results; desktop engine emulation is not device signoff.
+
 ## Theatre extension published and independently verified (16 October 2026)
 
 Dylan asked Claude to finish publication after the initial deployment work, then asked Codex to independently verify it. Live API **theatre-tracker-api-00006-seh** serves **100%**, build **9db07c3d-3144-4103-9e1d-8f8e1da1dbdb**; Hosting **eec873a2dac0b3a7** matches the prepared release from commit **2bc5d98**, and all six indexes are READY. Real authenticated API/workflow checks and hosted offline recording → offline reload → reconnect sync passed. Existing accounts/review records were preserved; verification used an isolated temporary synthetic hospital/account. See [deployment](deployment.md) and [verification](verification.md). No redeployment was necessary for this double-check. The register/planner consolidation described in chat is a suggestion only, not implemented.

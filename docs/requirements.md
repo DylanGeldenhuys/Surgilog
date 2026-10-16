@@ -187,14 +187,14 @@ The first architecture must allow hospital growth, but these features do not nee
 
 ## First-pilot acceptance criteria
 
-1. A clinician registers a patient/case on a phone, and an authorised scheduler sees it on desktop after refresh without losing data across sign-in sessions.
+1. A clinician registers a patient/case on a phone, and an authorised Doctor or write admin sees it on desktop after refresh without losing data across sign-in sessions.
 2. A patient can have two distinct surgical cases without identity duplication or shared case status.
 3. Users cannot retrieve or mutate another hospital's cases by changing IDs, filters, import data, or export requests. Department restrictions also hold server-side.
 4. Scheduling a case preserves its waiting days and outstanding-case membership; completing it updates the correct reporting cohort.
-5. A scheduler cannot change priority; a clinician's priority change records a reason, old/new values, and author.
+5. A Nurse/Clerk or read admin cannot change existing priority; a Doctor/write admin's priority change records a reason, old/new values, and author.
 6. Two simultaneous conflicting bookings produce one success and one explicit conflict, with no partial state or duplicate booking.
 7. Cancelling a booking preserves history and returns the case appropriately; cancellation is not counted as treatment.
-8. Recorded theatre timings reproduce known utilisation, overrun, and turnover examples. Missing/invalid timings cannot create misleading complete figures.
+8. Recorded theatre timings reproduce known utilisation and observed-gap examples. Missing/invalid timings cannot create misleading complete figures. Overrun/downtime classification remains a broader pilot requirement, not an implemented report.
 9. Repeating an import or retrying a write creates no duplicate clinical event, case, or completion count.
 10. Revoked staff access is enforced on subsequent API requests; sign-out clears in-memory patient data and service-worker caches contain no clinical responses.
 11. Leo can complete the registration → priority → booking → outcome workflow with synthetic cases and approves the terminology, target policies, and report definitions.
@@ -206,13 +206,13 @@ The first architecture must allow hospital growth, but these features do not nee
 
 1. Which hospital and department will pilot, and what are the approximate backlog, daily operations, theatres, and staff numbers?
 2. Is the initial scope elective surgery only? How should emergency cases and emergency displacement be recorded?
-3. Given the confirmed bands, what urgency clock anchor, P1 subtarget selection, month arithmetic and review policies apply?
+3. Given the confirmed single P1/P2/P3 bands and 30/90/365 elapsed-day limits, what urgency clock anchor, retrospective reprioritisation and review policies apply?
 4. Does the waiting clock start at referral, accepted referral, decision to operate, or formal listing? How should holds and transfers be reported?
 5. Which identifiers and clinical/readiness fields are essential, including unknown birth dates, children, and patients without phones?
 6. Who creates/publishes lists, who can approve exceptions, and who records actual theatre times and outcomes?
 7. Which utilisation definition does the hospital already use, what are its session cutoffs, and are reliable actual timings available?
-8. Which devices are shared and what offline unlock, expiry, retention and recovery policies apply? Offline recording is already required.
+8. Which devices are shared, and what retention and password-reset recovery policies apply? Offline recording, a single account password, explicit logout/discard and three-day inactivity expiry are already confirmed.
 9. What source spreadsheet/system is used now, and can a synthetic sample of its column structure be provided?
 10. Who owns the data, authorises access, approves processing/location arrangements, and sets retention, recovery, and hosting budget?
 
-Reconcile these answers and Leo's Claude conversation against this document before treating the draft clinical rules as agreed requirements.
+Record Leo/Tobela's decisions using the [review walkthrough](review-acceptance.md) before treating draft clinical rules as approved. Leo's original artifact is sufficient to continue development; his Claude conversation is not a prerequisite.

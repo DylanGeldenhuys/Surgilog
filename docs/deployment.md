@@ -6,15 +6,19 @@ Updated 16 October 2026. **Published with fictional data, including the Admin ta
 - API: https://theatre-tracker-api-54783611706.africa-south1.run.app
 - Project: `theatre-tracker-2f2e5`; owner account: `dylangeldenhuys1@gmail.com`.
 - API revision: `theatre-tracker-api-00006-seh`, ready with 100% traffic.
-- Hosting version: `eec873a2dac0b3a7`, released 16 October 2026 at 11:31:42 SAST.
+- Hosting version: `80a0e416d643e631`, released 16 October 2026 at 14:15:35 SAST.
 - Cloud Build: `9db07c3d-3144-4103-9e1d-8f8e1da1dbdb`.
 - Firestore ruleset: `c20c7b24-ee5c-44cc-a463-521eb8529e87`.
 
 Dylan completed owner sign-in and explicitly approved the API/IAM plan in [review-infrastructure.md](review-infrastructure.md). Email/Password Auth, Firestore rules/indexes, backend and Hosting are deployed. Fictional setup installed 659 documents across two hospitals and three departments. **One explicitly requested permanent Super User was created and verified on 9 October; other reviewer accounts remain deferred.** There is no shared hosted demo account; the local emulator credentials do not work on this website. No email has been sent to Leo.
 
+## Browser follow-up patch — 16 October 2026
+
+Published frontend-only fixes for sign-in waiting on optional storage permission and unreachable navigation/logout on short screens. Hosting **80a0e416d643e631**, bundle **index-MKrKENiU.js**, CSS **index-vB2VRVdc.css**; live files and headers match the build. 84 unit tests, builds/typecheck/formatting and targeted WebKit/Chromium/Firefox checks pass. API, Firestore, accounts and IAM were unchanged. The immediately previous Hosting version is **eec873a2dac0b3a7**. See [verification](verification.md) and [pending physical-phone/clinical checks](review-acceptance.md).
+
 ## Theatre release — independently verified 16 October 2026
 
-Dylan asked Claude to complete publication after the initial deployment work, then asked Codex to double-check it. No new source changes or redeployment were necessary during this verification. The live API revision above has 100% traffic, and the hosted HTML/JS/CSS, manifest, service worker and update page match the prepared build from commit `2bc5d98`. The live Hosting version was read back from Firebase. API health is review mode for the expected project with `admin-v1` and `theatre-register-v1`; the release guard passes.
+Dylan asked Claude to complete publication after the initial deployment work, then asked Codex to double-check it. No new source changes or redeployment were necessary during this verification. At that verification, Hosting was `eec873a2dac0b3a7`. The API revision above had 100% traffic, and the hosted HTML/JS/CSS, manifest, service worker and update page match the prepared build from commit `2bc5d98`. The live Hosting version was read back from Firebase. API health is review mode for the expected project with `admin-v1` and `theatre-register-v1`; the release guard passes.
 
 All five new indexes and the existing history index were independently confirmed READY: `CICAgJiUpoMK` / `CICAgJim14AK` (register date DESC/ASC), `CICAgJjF9oIK` (booking entry), `CICAgJj7z4EK` (booking planned start), `CICAgJiUpoMJ` (session start), and `CICAgOjXh4EK` (case history). Existing runtime identity, service-level maximum of two instances, origins and review configuration were preserved. No extra IAM/rules changes were needed.
 

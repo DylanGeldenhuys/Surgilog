@@ -255,7 +255,11 @@ export async function openOnline(
     },
   };
   await saveVault(v);
-  await navigator.storage?.persist?.().catch(() => false);
+  // Firefox may wait for a browser permission prompt here. Persistence is a
+  // best-effort eviction safeguard; the durable vault write above gates login.
+  void Promise.resolve()
+    .then(() => navigator.storage?.persist?.())
+    .catch(() => false);
   return v;
 }
 export async function saveVault(v: Vault) {

@@ -2,6 +2,25 @@
 
 Updated 16 October 2026. The theatre extension and matching hardening frontend are published and independently live-verified (see deployment.md). All verification data was synthetic.
 
+## Browser/device follow-up — 16 October 2026
+
+**Implemented and published fixes:** `openOnline` no longer waits for the optional browser storage-persistence permission after its durable encrypted write; unanswered/denied permission cannot hold sign-in open. Fixed navigation now scrolls vertically on short screens, preserving access to Log out. **84 unit tests / 12 files** pass, including two new persistence-permission regressions. Typecheck, full formatting, local and review builds pass; the existing bundle-size advisory remains. API integration suites were not repeated for these frontend-only changes; their prior results below still describe the unchanged API.
+
+Local built PWA at port 4173 with synthetic emulators:
+
+| Environment | Actual checks | Result |
+| --- | --- | --- |
+| Playwright WebKit 26.6, iPhone 15 descriptor, 393px portrait | Sign-in/reload restoration; actual date/time form filling; new Draft offline save; full offline reload; automatic reconnect; independent server count exactly one; logout removed vault/session rows | Pass |
+| Playwright Chromium 155, Pixel 7 descriptor, 412px portrait | Same offline/register/restoration/count/logout workflow | Pass |
+| Playwright Firefox 156 desktop | Initially reproduced sign-in hang with optional persistence pending. Fixed build signed in and restored on reload. Also injected a never-settling persistence promise: sign-in and reload restoration passed | Pass after fix |
+| All three engines, 844×390 landscape | Update flow preserved session; sidebar scrolls; Log out can be scrolled to and clicked; document width equals viewport width | Pass after fix |
+
+The two new local Drafts (`SYN-UAT-0-20261016`, `SYN-UAT-1-20261016`) and their uniqueness keys/receipts/audits were removed; existing fixture data was preserved. Four network errors per mobile-emulated browser occurred during deliberate disconnection. Chromium also requested an absent `/favicon.ico` during update navigation (404); the explicit app icons remain available. This is not a claim of zero browser console messages. A selector mismatch during automation was corrected; it was not a save failure.
+
+Hosting **80a0e416d643e631**, released **14:15:35 SAST**, contains bundle **index-MKrKENiU.js** and CSS **index-vB2VRVdc.css**. Live HTML/JS/CSS byte hashes, manifest, service worker/update page and security/cache headers match the prepared release. API revision **00006-seh** and Firestore/IAM settings were unchanged. The previous authenticated hosted workflow checks below used the same API and the prior frontend. No new hosted clinical writes were needed for this patch.
+
+**Still pending:** physical iPhone Safari/installed app, physical Android Chrome/installed app, OS keyboard/standalone lifecycle and real connection-loss results; clinician acceptance by Leo/Tobela. WebKit on macOS with an iPhone descriptor is not Safari running on an iPhone. Firefox offline recording was not exercised in this follow-up. Dylan confirmed both phone types are available, but no results have yet been reported. See the [review worksheet](review-acceptance.md).
+
 ## Published theatre release — 16 October 2026
 
 Dylan reported Claude had completed deployment and requested an independent double-check. Verified live API `theatre-tracker-api-00006-seh` at 100%, Cloud Build `9db07c3d-3144-4103-9e1d-8f8e1da1dbdb`, Hosting version `eec873a2dac0b3a7` (11:31:42 SAST). All five new composite indexes plus the existing history index are READY. Health/project/capabilities and the Hosting release guard pass. Hosted HTML, JS/CSS byte hashes, manifest, service worker/update-page bytes and security/cache headers match the prepared review build from commit `2bc5d98` (main bundle `index-4upPIYK7.js`). No product code change or redeployment was required during the double-check.
