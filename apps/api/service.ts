@@ -1,3 +1,5 @@
+import { saveTheatreEntry } from './theatre.ts';
+import type { TheatreEntry } from '../../shared/theatre.ts';
 import { createHash } from 'node:crypto';
 import { db } from './firebase.ts';
 import {
@@ -26,7 +28,7 @@ import {
   type ReportingDepartmentSelection,
   overlaps,
   nextAvailableStart,
-  TURNOVER_MINUTES,
+  turnaroundMinutes,
 } from '../../shared/domain.ts';
 
 export class ApiError extends Error {
@@ -78,7 +80,9 @@ type ResolvedReportingAccess = {
   hospital: Hospital;
   departments: string[];
 };
-async function resolvedReportingAccess(profile: Profile): Promise<ResolvedReportingAccess[]> {
+export async function resolvedReportingAccess(
+  profile: Profile,
+): Promise<ResolvedReportingAccess[]> {
   const grants = profile.reportingGrants ?? [],
     snapshots =
       grants.length || profile.superUser
@@ -159,6 +163,15 @@ export async function workspace(uid: string, hid: string, dep: string): Promise<
   const cases = cs.docs.map((d) => d.data() as SurgicalCase),
     sessions = ss.docs.map((d) => d.data() as TheatreSession),
     bookings = bs.docs.map((d) => d.data() as Booking);
+  const register =
+    m.role === 'viewer'
+      ? null
+      : await h
+          .collection('theatreEntries')
+          .where('departmentId', '==', dep)
+          .orderBy('operationDate', 'desc')
+          .limit(501)
+          .get();
   const report = metrics(cases, sessions, bookings),
     prioritised = [...cases]
       .sort(
@@ -204,6 +217,8 @@ export async function workspace(uid: string, hid: string, dep: string): Promise<
     metrics: report,
     asOf,
     truncated: cases.length > visible.length,
+    theatreEntries: register?.docs.slice(0, 500).map((d) => d.data() as TheatreEntry) ?? [],
+    theatreEntriesTruncated: (register?.size ?? 0) > 500,
   };
 }
 
@@ -485,6 +500,7 @@ export async function execute(uid: string, hid: string, input: unknown) {
     422,
     'Recording time is inconsistent. Check the device clock.',
   );
+  if (op.type === 'theatre-entry') return saveTheatreEntry(uid, hid, op);
   const hash = createHash('sha256').update(JSON.stringify(op)).digest('hex');
   const h = db.doc(`hospitals/${hid}`),
     receipt = h.collection('receipts').doc(op.id);
@@ -788,14 +804,19 @@ export async function execute(uid: string, hid: string, input: unknown) {
             gs = await tx.get(guard),
             all = await tx.get(h.collection('bookings').where('sessionId', '==', s.id));
           const existingBookings = all.docs.map((booking) => booking.data() as Booking),
-            start = nextAvailableStart(s, existingBookings, d.duration);
+            start = nextAvailableStart(
+              s,
+              existingBookings,
+              d.duration,
+              turnaroundMinutes(hospital),
+            );
           requireThat(
             start,
             409,
             'This session no longer has enough space. Choose another session.',
           );
           const end = new Date(
-            +new Date(start) + (d.duration + TURNOVER_MINUTES) * 60000,
+            +new Date(start) + (d.duration + turnaroundMinutes(hospital)) * 60000,
           ).toISOString();
           const siblingCases = await tx.get(
             h.collection('cases').where('patientId', '==', c.patientId),
@@ -819,7 +840,7 @@ export async function execute(uid: string, hid: string, input: unknown) {
             outAt: null,
             reason: '',
             estimatedMinutes: d.duration,
-            turnoverMinutes: TURNOVER_MINUTES,
+            turnoverMinutes: turnaroundMinutes(hospital),
             version: 1,
           };
           tx.create(h.collection('bookings').doc(b.id), b);

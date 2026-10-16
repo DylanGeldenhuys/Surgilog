@@ -1,6 +1,6 @@
 # Leo's review deployment
 
-Updated 15 October 2026. **Published with fictional data, including the Admin tab and confirmed role hierarchy.**
+Updated 16 October 2026. **Published with fictional data, including the Admin tab and confirmed role hierarchy. Theatre-register preview remains local.**
 
 - Website: https://theatre-tracker-2f2e5.web.app
 - API: https://theatre-tracker-api-54783611706.africa-south1.run.app
@@ -19,6 +19,8 @@ On 15 October, deployed the additive `audit(caseId ASC, at DESC)` index (`CICAgO
 Dylan then paused deployment to discuss the theatre-register extension. **Hosting remains the 13 October branding release above; the matching hardening frontend has not been published.** Full live authenticated/history/replay/booking checks were prepared but not run. The temporary synthetic test hospital/account/profile and all associated records/local credentials were cleaned up. Existing reviewer accounts/data, IAM and rules were unchanged. See [theatre proposal](theatre-register-proposal.md) and [handover](handover.md) before resuming; do not describe this as a fully verified hardening release.
 
 ## Actual infrastructure
+
+The 16 October [theatre extension](theatre-register.md) has not changed this cloud release. Before publishing it, deploy and confirm READY the five additive indexes in `firebase/firestore.indexes.json`: `theatreEntries(departmentId ASC, operationDate DESC)` and the ASC-date variant; `bookings(departmentId ASC, inAt ASC)`; `bookings(departmentId ASC, start ASC)`; `sessions(departmentId ASC, start ASC)`. Then deploy/test the new API before Hosting. Local health advertises `admin-v1` and `theatre-register-v1`; the frontend predeploy guard now requires both, so it will intentionally reject the current older live API. No schema conversion, rule change or additional IAM was required for the local implementation. Live index readiness/workflows and scale remain unverified for the extension.
 
 Classic Firebase Hosting serves the React/Vite PWA. The existing Fastify API runs on Cloud Run in `africa-south1` (Johannesburg), alongside the verified Firestore Standard `(default)` database. The API uses the dedicated `theatre-tracker-api` identity with `roles/datastore.user`, `roles/firebaseauth.viewer` and the project custom role `theatreTrackerUserProvisioner` (`firebaseauth.users.create`, `firebaseauth.users.sendEmail`). Source builds use `theatre-tracker-build` with `roles/run.builder`. Both identities belong only to this project; no service-account key was downloaded.
 

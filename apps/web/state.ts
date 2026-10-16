@@ -175,7 +175,13 @@ export function useWorkspace(initial: Vault, onEnd: (reason: SessionEnd) => void
           }));
           setMessage(error.message);
           // Stop dependent edits to the same case; they remain visible for review.
-          const cid = 'caseId' in p.operation.data ? p.operation.data.caseId : null;
+          const target = (op: Operation) =>
+            op.type === 'theatre-entry'
+              ? `entry:${op.data.entryId}`
+              : 'caseId' in op.data
+                ? `case:${op.data.caseId}`
+                : null;
+          const cid = target(p.operation);
           if (cid)
             await commit((d) => ({
               ...d,
@@ -183,12 +189,11 @@ export function useWorkspace(initial: Vault, onEnd: (reason: SessionEnd) => void
                 x.operation.id !== p.operation.id &&
                 x.hospitalId === p.hospitalId &&
                 x.status === 'pending' &&
-                'caseId' in x.operation.data &&
-                x.operation.data.caseId === cid
+                target(x.operation) === cid
                   ? {
                       ...x,
                       status: 'conflict',
-                      error: 'An earlier change for this case needs review first.',
+                      error: 'An earlier change for this record needs review first.',
                     }
                   : x,
               ),

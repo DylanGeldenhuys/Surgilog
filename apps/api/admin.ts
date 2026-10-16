@@ -350,6 +350,8 @@ export async function administer(uid: string, input: unknown): Promise<AdminResu
                 ),
                 version: (actor.version ?? 1) + 1,
               });
+          } else if (op.type === 'theatre-settings') {
+            updated.turnaroundMinutes = op.data.turnaroundMinutes;
           } else {
             checkAccess(h.theatres.length < 100, 422, 'The theatre limit was reached.');
             checkAccess(

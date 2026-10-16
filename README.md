@@ -4,6 +4,8 @@ A first iteration of a surgical backlog and theatre tracker for South African ho
 
 Brand, colour, typography and reusable visual guidance are documented in [design.md](design.md).
 
+The new [theatre-register preview](docs/theatre-register.md) runs locally on `feature/theatre-register`: actual operation records, structured CSV preview, period reports/printing and an Admin setting for 15–30-minute turnaround. It is not yet on the hosted site. The working baseline is saved at `147acf7` / `checkpoint/pre-theatre-register`; see the preview guide for rollback.
+
 The [hosted review](https://theatre-tracker-2f2e5.web.app) is published with fictional patients. Individual reviewer accounts are still pending; local demo accounts work only in the emulators. See [deployment status](docs/deployment.md).
 
 ## Run locally
@@ -53,7 +55,7 @@ The login’s **Super User** shortcut opens the full local Admin section. All ac
 | `province@demo.theatre.local` | `state_viewer`; Western Cape, aggregate only |
 | `district@demo.theatre.local` | `district_viewer`; City of Cape Town, aggregate only |
 
-Use your account password and the single **Open workspace** button. The app refreshes the account online when possible and automatically opens the encrypted saved workspace during a connection outage. There is no separate offline mode, device passphrase, migration banner or old-workspace recovery form. Locking preserves saved work; clearing browser storage deletes it. Only one workspace can be open per browser origin at a time.
+Use your account password and the single **Open workspace** button. The app refreshes the account online when possible and automatically opens the encrypted saved workspace during a connection outage. There is no separate offline mode, device passphrase, migration banner or old-workspace recovery form. Explicit Log out deletes that account’s local work, including unsynced entries; automatic inactivity expiry retains encrypted work for later sign-in. Only one workspace can be open per browser origin at a time.
 
 For a stale port-4173 app screen, open [Update SurgiLog](http://127.0.0.1:4173/api/app-update.html) in the same browser and choose **Update and open app**. Continue in the page it opens. This unregisters the old service worker and removes replaceable static-app caches. It does not clear IndexedDB, account storage or encrypted saved work.
 
@@ -65,8 +67,9 @@ For a stale port-4173 app screen, open [Update SurgiLog](http://127.0.0.1:4173/a
 - Artifact reporting roles enforced independently for global, region, country, province/state and district scopes. Overview lists every authorised hospital first, then ordinary single Hospital and Department selectors control detailed metrics. Reporting accounts receive no patient records or operational navigation.
 - Separate patients, surgical cases, sessions and booking attempts.
 - Patient and first-case registration, demographic corrections, case notes, local search/filtering, 10-case backlog pages, Leo-confirmed P1/P2/P3 treatment targets of 30/90/365 days, clinical priority/readiness review, holds, case history, and action alerts for overdue treatment or unrecorded surgery outcomes.
-- Theatre sessions and bookings with clinician-entered operating estimates, fitting-session choices, automatic start assignment, visible 15-minute turnover, and concurrent capacity checks.
-- Theatre entry, completion and cancellation recorded by doctors, scrub sisters or clerks. Cancellation returns the case to waiting without resetting its clock.
+- Theatre sessions and bookings with clinician-entered operating estimates, fitting-session choices, automatic start assignment, configurable 15–30-minute turnaround (default 15), and concurrent capacity checks.
+- Theatre entry/completion recorded by doctors, scrub sisters or clerks; cancellation requires a doctor/write admin and returns the case to waiting without resetting its clock.
+- Separate actual theatre register, Draft/Verified workflow, direct recorded age without fabricated DOB, multiple procedures/team details, offline recording and historical CSV preview. Weekly/monthly/quarterly/April–March reports, activity breakdowns and aggregate printing are local preview additions.
 - Actual-event completion charts, outstanding-case median/P90, overdue cases, cancellations and occupancy with timing completeness.
 - CSV paste/validation for new waiting cases; P1 imports require an explicit assessment timestamp. Rows use the same permissions and replay checks as normal registration.
 - Server-first connected updates, with an encrypted offline outbox, durable fallback saves, prompt ordered replay, idempotency, version conflicts, persistent three-day inactivity sessions, explicit logout and conflict review.
@@ -80,6 +83,7 @@ With `npm run dev` running:
 npm test
 npm run test:integration
 npm run test:admin
+npm run test:theatre
 npm run build
 npm run format:check
 npm audit

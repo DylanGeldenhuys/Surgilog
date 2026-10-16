@@ -1,6 +1,6 @@
 # SurgiLog — design and brand guide
 
-Version 0.3 · Updated 13 October 2026 · Working brand for the unreleased app
+Version 0.4 · Updated 16 October 2026 · Working brand for the app
 
 This is the shared reference for the app, presentations, documents and future brand assets. It records the **current implementation** and gives **reuse guidance** for new work. Dylan leads development; Leo provides clinical/product direction. This is a working identity, not a completed institutional brand programme.
 
@@ -250,6 +250,8 @@ These portable names are aliases for the current core values, suitable for a new
 ```
 
 ## Maintaining consistency
+
+The local Theatre register and Performance extension uses the same white panels, mist background, Ink headings and standard inputs/buttons. Register rows expose Draft/Verified as text; status is never conveyed by colour alone. Dates/times identify SAST and reporting scope. Charts use primary blue `#176b9a` for counts, green `#50927d` for utilisation, restrained gold `#b69048` for turnaround and muted blue `#6a9ab5` for first entry. Unknown/future observations stay blank. Tables wrap headings and names; report columns fit their panels instead of inheriting the wide patient-table layout. On phones, charts/breakdowns stack in one column and KPI cards use two columns. The executive print view omits navigation/controls, keeps hospital/department/period/generated time and metric definitions, and contains aggregates only. These patterns add no new brand identity.
 
 Keep this file, the palette SVG and the app styles aligned when a design decision changes. Update current values explicitly; label new proposals until implemented. Link approved new logo variants here when created. Dark mode, vector/monochrome/reversed logo exports, print specifications and a full accessibility pass remain future design work.
 

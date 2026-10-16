@@ -30,7 +30,12 @@ if (process.argv.includes('--check-api')) {
   const health = await response.json();
   if (health.mode !== 'review' || health.projectId !== config.projectId)
     throw new Error('The API is not running in review mode for this Firebase project.');
-  if (!health.capabilities?.includes('admin-v1'))
-    throw new Error('Deploy the Admin-capable API before publishing this frontend.');
+  if (
+    !health.capabilities?.includes('admin-v1') ||
+    !health.capabilities?.includes('theatre-register-v1')
+  )
+    throw new Error(
+      'Deploy the API with Admin and theatre-register support before publishing this frontend.',
+    );
 }
 console.log(`Verified review build for ${marker.projectId}.`);

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { theatreEntrySchema, type TheatreEntry } from './theatre.ts';
 
 export const roles = [
   'super_user',
@@ -67,6 +68,7 @@ export type Hospital = {
   theatres: string[];
   surgeons: string[];
   version?: number;
+  turnaroundMinutes?: number;
 };
 export type ReportingAccess = { hospitalId: string; departments: string[] };
 export type Identity = {
@@ -192,6 +194,8 @@ export type Workspace = {
   metrics: Metrics;
   asOf: string;
   truncated: boolean;
+  theatreEntries?: TheatreEntry[];
+  theatreEntriesTruncated?: boolean;
 };
 
 const id = z.string().regex(/^[\w-]{1,100}$/);
@@ -230,6 +234,7 @@ export const newCaseSchema = z
 export type NewCase = z.infer<typeof newCaseSchema>;
 const base = { id: z.string().uuid(), occurredAt: instant, recordedAt: instant };
 export const operationSchema = z.discriminatedUnion('type', [
+  z.object({ ...base, type: z.literal('theatre-entry'), data: theatreEntrySchema }).strict(),
   z.object({ ...base, type: z.literal('register'), data: newCaseSchema }).strict(),
   z
     .object({
@@ -364,6 +369,7 @@ export type OperationResult = {
     surgicalCase?: SurgicalCase;
     booking?: Booking;
     session?: TheatreSession;
+    theatreEntry?: TheatreEntry;
   };
 };
 export type Pending = {
@@ -392,7 +398,7 @@ export const canOperate = (role: Role, op: Operation) =>
       : canRecord(role)
     : op.type === 'session' || op.type === 'book'
       ? canSchedule(role)
-      : ['register', 'patient', 'case-notes'].includes(op.type)
+      : ['register', 'patient', 'case-notes', 'theatre-entry'].includes(op.type)
         ? canEditPatient(role)
         : canClinical(role);
 export const roleLabels: Record<Role, string> = {
@@ -463,14 +469,18 @@ export function ageYears(dob: string, on = saDay(new Date())) {
 export const overlaps = (a: string, b: string, c: string, d: string) =>
   Date.parse(a) < Date.parse(d) && Date.parse(c) < Date.parse(b);
 export const TURNOVER_MINUTES = 15;
+export const turnaroundMinutes = (hospital: Hospital) =>
+  hospital.turnaroundMinutes ?? TURNOVER_MINUTES;
 export function nextAvailableStart(
   session: TheatreSession,
   bookings: Booking[],
   operatingMinutes: number,
+  turnover = TURNOVER_MINUTES,
 ) {
   if (!Number.isInteger(operatingMinutes) || operatingMinutes < 5 || operatingMinutes > 720)
     return null;
-  const required = (operatingMinutes + TURNOVER_MINUTES) * 60000;
+  if (!Number.isInteger(turnover) || turnover < 15 || turnover > 30) return null;
+  const required = (operatingMinutes + turnover) * 60000;
   let cursor = +new Date(session.start);
   const active = bookings
     .filter((booking) => booking.sessionId === session.id && booking.status !== 'Cancelled')
@@ -492,6 +502,7 @@ export function nextOperatingSlot(
   sessions: TheatreSession[],
   bookings: Booking[],
   now = new Date().toISOString(),
+  turnover = TURNOVER_MINUTES,
 ): OperatingSlot | null {
   const current = Math.ceil(+new Date(now) / 60000) * 60000;
   let earliest: OperatingSlot | null = null;
@@ -501,7 +512,7 @@ export function nextOperatingSlot(
         ...session,
         start: new Date(Math.max(+new Date(session.start), current)).toISOString(),
       },
-      start = nextAvailableStart(availableSession, bookings, 5);
+      start = nextAvailableStart(availableSession, bookings, 5, turnover);
     if (!start) continue;
     const nextBooking = bookings
         .filter(

@@ -11,6 +11,7 @@ Sign in online once per account/browser/origin with your account password and vi
 | View prepared cases | Encrypted department subset, with server refresh time; local search only. |
 | Register a patient/case; edit demographics or case notes; change clinical priority/readiness/hold | When connected, send to the server first and show Synced only after acknowledgement. If the connection or server is temporarily unavailable, save a role-authorised durable pending operation; the server checks current permission, department scope and version on replay. |
 | Record theatre entry, completion or cancellation | When connected, send to the server first. During an outage, save an authorised operation locally (start/end for recorders; cancellation only for doctors/write admins), preserving actual event and recording times. |
+| Create/edit a theatre-register entry (local preview) | Server-first; fall back to the same encrypted outbox. Draft/verified permissions and entry versions are checked again on replay. Latest 500 saved entries plus prepared completed bookings are available offline; period reports require connectivity. |
 | Create sessions or book shared slots | Online server confirmation required. An uncertain response can be retried with the same submitted request while its form remains open. Refresh after closing an uncertain form to inspect server state. |
 | Admin configuration and staff account/access changes | Online-only; automatic invitation email delivery, exports and advanced outcome/delay recording remain unimplemented. |
 
@@ -35,6 +36,8 @@ Dylan explicitly removed pre-release migration notices and all old-secret recove
 Persistent browser storage is requested where available. Quota errors propagate before local success. Storage may be cleared, evicted or lost; this app cannot promise loss-proof offline records. Encryption also does not protect an unlocked app from malicious same-origin scripts. [Web Crypto](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API), [browser storage](https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria), [Dexie](https://dexie.org/docs).
 
 ## Replay and conflict handling
+
+The local theatre extension also carries an entry version and entry ID. Dependent register edits queue behind earlier edits of the same entry. Acknowledgement snapshots merge the authoritative entry into prepared copies in the same durable write that removes the pending operation. Draft/verification permissions are rechecked on replay. Register conflict review preserves the proposal; there is no automatic merge.
 
 Each operation has a UUID, hospital/department scope, payload, base case version, event time and recording time. Client order preserves case dependencies. API transactions atomically write the transition, actor-attributed audit event, and actor/payload-bound idempotency receipt with a server receipt time. The current role and department are checked even for receipt replays. A lost response can therefore be retried without a second effect.
 

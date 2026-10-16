@@ -1,6 +1,6 @@
 # Project handover
 
-Updated: 15 October 2026, Africa/Johannesburg.
+Updated: 16 October 2026, Africa/Johannesburg.
 
 ## People and confirmed direction
 
@@ -10,17 +10,29 @@ Confirmed: desktop/phone installable PWA; Firebase/GCP; multiple hospital tenant
 
 ## Actual status
 
-A working local v0.1 implementation now exists. It has been built and exercised with synthetic records. Email/Password Auth, API-only Firestore rules/indexes, Cloud Run API and Firebase Hosting are deployed to the fictional-data review project. The website is https://theatre-tracker-2f2e5.web.app. The Admin tab and confirmed role hierarchy are also published (6 October 2026), with live provisioning/permission checks passed. It is not connected to a hospital or clinically approved. No commit/push was requested. Inspect the working tree; code/docs remain local changes.
+A working local v0.1 implementation now exists. It has been built and exercised with synthetic records. Email/Password Auth, API-only Firestore rules/indexes, Cloud Run API and Firebase Hosting are deployed to the fictional-data review project. The website is https://theatre-tracker-2f2e5.web.app. The Admin tab and confirmed role hierarchy are also published (6 October 2026), with live provisioning/permission checks passed. It is not connected to a hospital or clinically approved. Dylan requested a rollback checkpoint before extending theatre functionality: `main` and tag `checkpoint/pre-theatre-register` point to **147acf7**. New work is on **feature/theatre-register**; inspect its working tree. Nothing was pushed or deployed for this extension.
 
 Run `npm ci` then `npm run dev`. App 127.0.0.1:5173, API :8787, Auth :9099, Firestore :8080, emulator UI :4000. For service-worker/offline reload testing, run `npm run build` then `npm run preview` separately at :4173 while the backend/emulators run. Java 21 is installed via Homebrew on this Mac; launcher detects it. Full instructions and synthetic demo accounts are in [README](../README.md).
 
 Stack actually used: React/TypeScript/Vite, plain CSS, native dialog/forms, Lucide, Recharts, Zod, Papa Parse; Firebase Auth SDK; Fastify/Admin SDK API; Firestore Standard emulator; Dexie/Web Crypto vault. A custom React workspace hook handles refresh, projection and replay. Tailwind/shadcn, TanStack Query/Router and React Hook Form were early recommendations, not installed implementations.
 
-## Theatre extension requested; deployment paused (15 October 2026)
+## Theatre extension implemented locally; deployment remains paused (16 October 2026)
 
-Dylan paused further deployment to analyse a pasted Tobela/Claude conversation about theatre registers and executive reporting. See [sanitised proposal and gaps](theatre-register-proposal.md). Workbook/scans/generated attachments are unavailable; no clinical rows or identifiers were copied into project memory or imported. The proposal is analysis only: actual theatre register, age-at-operation support, retrospective/unplanned activity, staff/department/location breakdowns, April–March fiscal reports and reviewed import/scanning. Metric definitions and source claims remain unverified; existing confirmed roles/priorities still apply.
+Dylan approved building and previewing the extension, retaining planned session start/end and making the booking turnaround allowance configurable in Admin from 15–30 minutes. See [implemented theatre register, metrics, limits and rollback](theatre-register.md). Existing hospitals default to 15; new bookings save their allowance, preserving old bookings. Only configuration write admins can change it.
 
-The earlier traffic switch had already completed when Dylan paused: API `theatre-tracker-api-00004-2hm` serves 100%, Cloud Build `4451fab7-013c-49af-923e-61599059d155`; health returns 200/review/expected project. History index `CICAgOjXh4EK` is READY. **Frontend hardening is not published:** Hosting remains `e4e2c9dee7b5db86`. Full live workflow verification was not run. Temporary isolated deployment-test hospital/account/profile/records and credential file were removed; the test browser is closed. No production reviewer data/account reset or IAM/rules changes. Resume deployment only when requested; current task is understanding the theatre extension.
+New **Theatre register** supports historical/manual operations, optional DOB or recorded age/unit, sex, ward/admission date, actual procedures/team/times, Draft/Verified status and structured CSV preview. Completed bookings appear automatically and enriched rows replace them without double counting. Nurses/clerks draft; doctors/write admins verify or amend verified rows. Standalone activity never creates a fake backlog case/booking. Entries use the encrypted outbox and server-side version/permission/idempotency checks.
+
+**Performance** now offers Monday weeks, months, quarters and April–March financial years with four charts, activity breakdowns and aggregate printing for one selected department. Capacity includes idle staffed sessions and only elapsed hours; occupancy includes overnight carry-in and unions overlaps. Actual turnaround and first entry use recorded events, not the booking allowance. Drafts/missing data are explicit. API responses expose no patient rows. OCR/scans, recurring availability, clinical timing corrections and full pagination remain deferred; metric conventions need Leo/Tobela review.
+
+Latest checks: **82 unit tests**, **20 existing workflow API scenarios**, **7 Admin scenarios** and **9 theatre scenarios** pass. Typecheck, formatting, local/review builds pass. Chromium verified draft creation offline, full offline PWA reload and automatic reconnect sync; clinical verification; Admin 30-minute save and restoration to 15; report period selection. Final layout/print checks are recorded in [verification](verification.md). The roughly 1 MB / 307 kB gzip bundle advisory remains. Nothing from the supplied private source was imported.
+
+Local emulator snapshot before feature browser changes: `.local/pre-theatre-register-emulators` (ignored/private). One clearly synthetic verified register record remains for preview; the local Admin role migration added missing synthetic accounts without resetting patients. All temporary integration fixtures are removed. Live cloud state below is unchanged. Five additional composite indexes and the `theatre-register-v1` API release capability must precede any future frontend deployment.
+
+### Source analysis and prior cloud state
+
+Dylan paused further deployment to analyse a pasted Tobela/Claude conversation about theatre registers and executive reporting. See [sanitised proposal and gaps](theatre-register-proposal.md). Workbook/scans/generated attachments are unavailable; no clinical rows or identifiers were copied into project memory or imported. The source analysis remains historical; the implemented preview above supersedes its old gap list. Existing confirmed roles/priorities still apply.
+
+The earlier traffic switch had already completed when Dylan paused: API `theatre-tracker-api-00004-2hm` serves 100%, Cloud Build `4451fab7-013c-49af-923e-61599059d155`; health returns 200/review/expected project. History index `CICAgOjXh4EK` is READY. **Frontend hardening and the theatre extension are not published:** Hosting remains `e4e2c9dee7b5db86`. Full live workflow verification was not run. Temporary isolated deployment-test hospital/account/profile/records and credential file were removed; the test browser is closed. No production reviewer data/account reset or IAM/rules changes. Resume deployment only when requested; current task is local theatre preview.
 
 ## Code review and hardening (14–15 October 2026)
 
@@ -44,7 +56,7 @@ Dylan explicitly supplied an email/password and requested the highest applicatio
 
 - One account sign-in flow with automatic encrypted offline fallback; separate aggregate-reporting and exact operational scopes; server membership checks; and named global/region/country/state-or-province/district reporting grants.
 - Patient/first-case registration, demographic corrections including gender, case-note editing, readiness/priority/hold changes, full artifact-field backlog table, filters, case history and waiting-list CSV preview/import.
-- Theatre sessions and estimate-first ready-case bookings; automatic earliest fitting starts; separately recorded 15-minute turnover; theatre/surgeon overlap prevention and atomic concurrent slot protection.
+- Theatre sessions and estimate-first ready-case bookings; automatic earliest fitting starts; separately recorded hospital-configurable 15–30-minute turnaround (default 15); theatre/surgeon overlap prevention and atomic concurrent slot protection.
 - Overview/Performance **Next OR slot** calculated from upcoming staffed sessions and non-cancelled bookings, with date, time, theatre and unallocated minutes.
 - Theatre entry/completion and reasoned cancellation. Scheduled/held cases remain in the backlog; cancellations preserve listing/urgency clocks.
 - Server metrics from actual events: true median and nearest-rank P90 on open cases; six-month P1/P2/P3 backlog trend from listing/completion and effective-dated priority history; completion cohorts; clipped/unioned occupancy; unavailable utilisation if timings are missing. Overview's hospital table combines every authorised hospital without returning patient/case payloads; detailed Overview/Performance metrics use one selected department.
@@ -65,7 +77,7 @@ Dylan explicitly supplied an email/password and requested the highest applicatio
 
 ## Verification
 
-`npm test`: 67 passing tests across 10 files. `npm run test:admin`: 7 passing scenarios. `npm run test:integration`: 20 passing integration scenarios, including aggregate-response redaction and grant isolation, gender edits, priority-history persistence, the patient/readiness/hold lifecycle, cross-department edit protection, automatic slot assignment under actual concurrent HTTP booking requests, concurrent session reservations, private cross-department conflict explanations and Firestore denial. Typecheck/production build pass. Dependency audit was reduced to zero known vulnerabilities with scoped transitive overrides; see package.json and [verification](verification.md).
+`npm test`: 82 passing tests across 12 files. `npm run test:theatre`: 9 passing theatre scenarios. `npm run test:admin`: 7 passing scenarios. `npm run test:integration`: 20 passing integration scenarios, including aggregate-response redaction and grant isolation, gender edits, priority-history persistence, the patient/readiness/hold lifecycle, cross-department edit protection, automatic slot assignment under actual concurrent HTTP booking requests, concurrent session reservations, private cross-department conflict explanations and Firestore denial. Typecheck/production build pass. Dependency audit was reduced to zero known vulnerabilities with scoped transitive overrides; see package.json and [verification](verification.md).
 
 Chromium browser checks: desktop/390px layout; sign-in; clinician/recorder controls; offline registration followed by offline page reload/unlock and successful reconnect; clerk entry/completion queued offline then accepted in order; same-origin second-tab lock rejection; lock/reopen; genuine competing priority changes retained for explicit conflict review. Artifacts contain synthetic data only and are ignored under `output/playwright/`. Physical phones, Safari and Firefox have not been verified. Browser console network errors during deliberate disconnection are expected.
 

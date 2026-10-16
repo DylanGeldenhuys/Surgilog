@@ -1,3 +1,4 @@
+import { theatreReport } from './theatre.ts';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -34,8 +35,29 @@ app.get('/health', async () => ({
   ok: true,
   mode: runtime.local ? 'local-emulators' : 'review',
   projectId: runtime.projectId,
-  capabilities: ['admin-v1'],
+  capabilities: ['admin-v1', 'theatre-register-v1'],
 }));
+app.get<{ Querystring: { hospitalId: string; departmentId: string; from: string; to: string } }>(
+  '/api/reporting/theatre',
+  async (req) => {
+    const query = z
+      .object({
+        hospitalId: z.string().regex(/^[\w-]{1,100}$/),
+        departmentId: z.string().regex(/^[\w-]{1,100}$/),
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .strict()
+      .parse(req.query);
+    return theatreReport(
+      await uid(req),
+      query.hospitalId,
+      query.departmentId,
+      query.from,
+      query.to,
+    );
+  },
+);
 app.get('/api/me', async (req) => me(await uid(req)));
 app.get('/api/admin', async (req) => adminWorkspace(await uid(req)));
 app.post('/api/admin/operations', async (req) => administer(await uid(req), req.body));

@@ -38,6 +38,19 @@ export const adminOperationSchema = z.discriminatedUnion('type', [
   z
     .object({
       ...base,
+      type: z.literal('theatre-settings'),
+      data: z
+        .object({
+          hospitalId: id,
+          version: z.number().int().positive(),
+          turnaroundMinutes: z.number().int().min(15).max(30),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
       type: z.literal('hospital'),
       data: z.object({ hospitalId: id, name, city: name, province: name, district: name }).strict(),
     })

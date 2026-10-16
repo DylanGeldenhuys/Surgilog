@@ -1,3 +1,4 @@
+import { projectedEntry } from '../../shared/theatre.ts';
 import {
   dueDate,
   type Workspace,
@@ -11,6 +12,17 @@ export function projected(base: Workspace, pending: Pending[]) {
   for (const p of pending) {
     if (p.status !== 'pending' || p.hospitalId !== w.hospital.id) continue;
     const op = p.operation;
+    if (op.type === 'theatre-entry') {
+      if (op.data.departmentId !== w.departmentId) continue;
+      const entries = w.theatreEntries ?? [],
+        previous = entries.find((e) => e.id === op.data.entryId);
+      if ((previous?.version ?? 0) !== op.data.version) continue;
+      w.theatreEntries = [
+        ...entries.filter((e) => e.id !== op.data.entryId),
+        projectedEntry(op.data, op.recordedAt, previous),
+      ];
+      continue;
+    }
     if (op.type === 'register') {
       const d = op.data;
       if (d.departmentId !== w.departmentId || w.cases.some((c) => c.id === d.caseId)) continue;
@@ -107,7 +119,7 @@ function confirmedWorkspace(workspace: Workspace, entry: Pending, result?: Opera
   if (workspace.hospital.id !== entry.hospitalId) return workspace;
   if (!result?.changes) return projected(workspace, [entry]);
   const w = structuredClone(workspace);
-  const { patient, surgicalCase, booking, session } = result.changes;
+  const { patient, surgicalCase, booking, session, theatreEntry } = result.changes;
   const merge = <T extends { id: string; version: number }>(
     items: T[],
     incoming: T | undefined,
@@ -120,6 +132,10 @@ function confirmedWorkspace(workspace: Workspace, entry: Pending, result?: Opera
     } else if ((items[index].version ?? 1) <= (incoming.version ?? 1))
       items[index] = structuredClone(incoming);
   };
+  if (theatreEntry?.departmentId === w.departmentId) {
+    w.theatreEntries ??= [];
+    merge(w.theatreEntries, theatreEntry, true);
+  }
   if (surgicalCase?.departmentId === w.departmentId) merge(w.cases, surgicalCase, true);
   merge(w.patients, patient, !!patient && w.cases.some((c) => c.patientId === patient.id));
   if (booking?.departmentId === w.departmentId) merge(w.bookings, booking, true);

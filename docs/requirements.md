@@ -1,8 +1,8 @@
 # First-iteration requirements
 
-## Proposed theatre extension — 15 October 2026
+## Theatre extension preview — 16 October 2026
 
-Dylan supplied Tobela’s workbook-development conversation for analysis. See [theatre register proposal](theatre-register-proposal.md) for source-supported requirements, current gaps and unresolved metric definitions. Attachments are unavailable; the extension is not implemented or clinically approved and does not supersede existing backlog/role policy.
+Dylan approved a local implementation from Tobela’s workbook-development conversation, with existing planned session times and a hospital Admin setting for 15–30 minutes of turnaround. The [theatre register preview](theatre-register.md) documents implemented fields, permissions, offline/CSV intake, April–March reporting, metric definitions and limits. It is implemented/tested locally, not deployed or clinically approved. Attachments remain unavailable; OCR/scanning is deferred. The [original proposal](theatre-register-proposal.md) is source analysis, not current implementation status. Existing backlog priorities and role hierarchy remain in force.
 
 ## Implementation checkpoint — 5 October 2026
 
@@ -105,7 +105,7 @@ Application roles and Google Cloud IAM are separate. Admin changes require conne
 - Reject conflicts on the server even when two schedulers save concurrently. Show the conflict and current data.
 - Show capacity remaining and predicted overrun. Record a reason for an authorised capacity exception; do not silently overbook.
 - **Next OR slot needs further design.** Dylan clarified that it should tell doctors when a theatre is next available to book, based on configured theatre operating windows—commonly 08:00–16:00, with some theatres available 24/7. Theatre availability should be captured when theatres and their operating times are configured. The current v1 card derives an unallocated gap from one-off staffed sessions and bookings; treat that calculation as provisional until the recurring/24-hour availability model is designed. The case-specific scheduling form must still use the clinician's estimate and recheck the exact fit on the server.
-- The current v1 reserves a visible 15-minute turnover after the estimated operation for cleaning and room reset. Keep operating time and turnover as separate values; Leo/hospital policy must confirm whether turnover varies by theatre or procedure.
+- The local preview reserves a visible hospital-configurable 15–30-minute turnaround after the doctor's operating estimate, for reset/setup including anaesthetic preparation. Write configuration admins set it in Admin; default is 15 for compatibility. Each new booking saves the allowance used, and changing the setting does not alter existing bookings. Actual measured turnaround is a separate report metric. Per-theatre/procedure overrides remain deferred.
 - Preserve booking attempts when a case is moved or cancelled. Cancellation reasons include patient, clinical, staffing, equipment, beds, and emergency displacement; Leo should refine these categories.
 - Cancelling a booking returns the still-required case to waiting or an explicit hold. It does not remove the patient from the backlog.
 - If a booking's planned end passes while it is still Scheduled or In theatre, flag it as **Requires action**. Do not infer that surgery happened, infer a cancellation, or automatically return the case to Waiting. Keep the case in the backlog until authorised staff record the actual theatre entry/completion or cancel the booking with a reason; a new date is booked only after resolving the prior attempt.

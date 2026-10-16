@@ -25,7 +25,8 @@
     "format": "prettier --write apps shared scripts tests vite.config.ts",
     "format:check": "prettier --check apps shared scripts tests vite.config.ts",
     "migrate:admin-roles": "tsx scripts/migrate-admin-roles.ts",
-    "test:admin": "tsx tests/admin-integration.ts"
+    "test:admin": "tsx tests/admin-integration.ts",
+    "test:theatre": "tsx tests/theatre-integration.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.0",

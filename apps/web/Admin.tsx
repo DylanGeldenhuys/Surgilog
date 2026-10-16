@@ -4,6 +4,7 @@ import { api } from './firebase.ts';
 import { Empty, Field, Modal } from './ui.tsx';
 import {
   canConfigure,
+  turnaroundMinutes,
   canManageUsers,
   effectiveMembership,
   roleLabels,
@@ -20,7 +21,8 @@ import {
   type AdminUser,
 } from '../../shared/admin.ts';
 
-type FormKind = 'hospital' | 'department' | 'theatre' | 'user-create' | 'user-access';
+type FormKind =
+  'theatre-settings' | 'hospital' | 'department' | 'theatre' | 'user-create' | 'user-access';
 export function Admin({ onChanged }: { onChanged: () => Promise<void> }) {
   const [data, setData] = useState<AdminWorkspace | null>(null),
     [error, setError] = useState(''),
@@ -187,7 +189,25 @@ export function Admin({ onChanged }: { onChanged: () => Promise<void> }) {
                   ) : (
                     <p>No theatres configured yet.</p>
                   )}
-                  <p className="admin-hint">Theatre sessions are planned in Theatre planning.</p>
+                  <p className="admin-hint">
+                    Theatre sessions are planned in Theatre planning. Add Day Theatre or ICU here
+                    when used as operating locations.
+                  </p>
+                  <p>
+                    <strong>
+                      Booking turnaround allowance: {turnaroundMinutes(hospital)} minutes
+                    </strong>
+                  </p>
+                  <p className="admin-hint">
+                    Reserved after each new booking for cleaning, reset and anaesthetic preparation.
+                    Existing bookings keep their saved allowance. Actual gaps are measured
+                    separately.
+                  </p>
+                  {configure && (
+                    <button className="button" onClick={() => open('theatre-settings')}>
+                      Set turnaround time
+                    </button>
+                  )}
                 </section>
               </div>
             </>
@@ -349,6 +369,7 @@ function AdminForm({
   });
   const hospital = data.hospitals.find((h) => h.id === hospitalId);
   const titles = {
+    'theatre-settings': 'Theatre settings',
     hospital: 'Add hospital',
     department: 'Add department',
     theatre: 'Add theatre',
@@ -393,6 +414,16 @@ function AdminForm({
               departmentId: crypto.randomUUID(),
               name: get('name'),
               version: hospital?.version ?? 1,
+            },
+          };
+        else if (kind === 'theatre-settings')
+          op = {
+            id,
+            type: kind,
+            data: {
+              hospitalId,
+              version: hospital?.version ?? 1,
+              turnaroundMinutes: Number(get('turnaroundMinutes')),
             },
           };
         else if (kind === 'theatre')
@@ -450,7 +481,7 @@ function AdminForm({
     >
       <form className="modal-body" onSubmit={submit}>
         <fieldset disabled={busy || !!attempted}>
-          {(!userForm || kind === 'user-create') && (
+          {kind !== 'theatre-settings' && (!userForm || kind === 'user-create') && (
             <Field
               label={
                 userForm
@@ -463,6 +494,22 @@ function AdminForm({
               }
             >
               <input name="name" required minLength={2} maxLength={160} />
+            </Field>
+          )}
+          {kind === 'theatre-settings' && (
+            <Field
+              label="Turnaround allowance (minutes)"
+              hint="15–30 minutes. Applies to new bookings only."
+            >
+              <input
+                name="turnaroundMinutes"
+                type="number"
+                min={15}
+                max={30}
+                step={1}
+                required
+                defaultValue={hospital ? turnaroundMinutes(hospital) : 15}
+              />
             </Field>
           )}
           {kind === 'hospital' && (

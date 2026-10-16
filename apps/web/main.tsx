@@ -1,3 +1,5 @@
+import { TheatreRegister } from './TheatreRegister.tsx';
+import { TheatreReports } from './TheatreReports.tsx';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
@@ -77,6 +79,7 @@ import {
   caseNeedsAttention,
   nextOperatingSlot,
   TURNOVER_MINUTES,
+  turnaroundMinutes,
   saDay,
   compareInstants,
   ageYears,
@@ -99,12 +102,13 @@ import '@fontsource/manrope/latin-600.css';
 import '@fontsource/manrope/latin-800.css';
 import './styles.css';
 
-type Page = 'overview' | 'backlog' | 'theatres' | 'reports' | 'sync' | 'admin';
+type Page = 'register' | 'overview' | 'backlog' | 'theatres' | 'reports' | 'sync' | 'admin';
 const BACKLOG_PAGE_SIZE = 10;
 const navigation = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'backlog', label: 'Surgical backlog', icon: Users },
   { id: 'theatres', label: 'Theatre planning', icon: CalendarDays },
+  { id: 'register', label: 'Theatre register', icon: ClipboardList },
   { id: 'reports', label: 'Performance', icon: BarChart3 },
   { id: 'admin', label: 'Admin', icon: ShieldCheck },
   { id: 'sync', label: 'Saved activity', icon: CloudCheck },
@@ -223,7 +227,12 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
     nextOrSlot = useMemo(
       () =>
         reportWorkspace
-          ? nextOperatingSlot(reportWorkspace.sessions, reportWorkspace.bookings)
+          ? nextOperatingSlot(
+              reportWorkspace.sessions,
+              reportWorkspace.bookings,
+              undefined,
+              turnaroundMinutes(reportWorkspace.hospital),
+            )
           : null,
       [reportWorkspace],
     );
@@ -250,8 +259,8 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
   };
   const navigate = (p: Page) => {
     if (p === 'admin' && !adminAccess) return;
-    if (!hasOperationalAccess && (p === 'backlog' || p === 'theatres')) return;
-    const enteringOperational = p === 'backlog' || p === 'theatres';
+    if (!hasOperationalAccess && (p === 'backlog' || p === 'theatres' || p === 'register')) return;
+    const enteringOperational = p === 'backlog' || p === 'theatres' || p === 'register';
     setScopeGate(enteringOperational && reportingPage && !reportWorkspace);
     setPage(p);
     setSidebar(false);
@@ -351,6 +360,7 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
     backlog: 'Every patient, in focus.',
     theatres: 'Make time for better care.',
     reports: 'Progress you can measure.',
+    register: 'Every operation, recorded.',
     sync: 'Your work, accounted for.',
     admin: 'Your hospitals. Your team.',
   }[page];
@@ -382,7 +392,10 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
         <nav>
           {navigation
             .filter((item) => item.id !== 'admin' || adminAccess)
-            .filter((item) => hasOperationalAccess || !['backlog', 'theatres'].includes(item.id))
+            .filter(
+              (item) =>
+                hasOperationalAccess || !['backlog', 'theatres', 'register'].includes(item.id),
+            )
             .map((n) => (
               <button
                 key={n.id}
@@ -483,13 +496,15 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
                   ? 'The right information to keep your surgical team moving.'
                   : page === 'backlog'
                     ? 'Prioritise care, track readiness, and give every case a clear next step.'
-                    : page === 'theatres'
-                      ? 'Plan capacity, organise your lists, and capture what actually happens.'
-                      : page === 'reports'
-                        ? 'Real activity. Clear definitions. A shared view of progress.'
-                        : page === 'admin'
-                          ? 'Configure your hospitals and give each team the right access.'
-                          : 'Review pending entries and reconnect your team’s work.'}
+                    : page === 'register'
+                      ? 'Record actual operations and review your theatre activity.'
+                      : page === 'theatres'
+                        ? 'Plan capacity, organise your lists, and capture what actually happens.'
+                        : page === 'reports'
+                          ? 'Real activity. Clear definitions. A shared view of progress.'
+                          : page === 'admin'
+                            ? 'Configure your hospitals and give each team the right access.'
+                            : 'Review pending entries and reconnect your team’s work.'}
               </p>
             </div>
             {page === 'backlog' && !scopeGate && canEditPatient(role) && (
@@ -661,7 +676,14 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
               </button>
             </div>
           )}
-          {page === 'admin' && adminAccess && <Admin onChanged={state.refreshIdentity} />}
+          {page === 'admin' && adminAccess && (
+            <Admin
+              onChanged={async () => {
+                await state.refreshIdentity();
+                if (hospitalId && dep) await state.refresh(hospitalId, dep);
+              }}
+            />
+          )}
           {w?.truncated && !reportingPage && page !== 'admin' && (
             <div className="info">
               Showing 250 prioritised cases plus cases with bookings. Metrics cover the full pilot
@@ -684,7 +706,7 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
               departmentName={hospital.departments.find((item) => item.id === dep)?.name ?? dep}
               onContinue={() => setScopeGate(false)}
             />
-          ) : reportingPage && (!report || !dashboardMetrics) ? (
+          ) : page === 'overview' && (!report || !dashboardMetrics) ? (
             <Empty
               title="Preparing this reporting scope"
               detail="Loading aggregate hospital and department metrics…"
@@ -696,7 +718,22 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
             />
           ) : (
             <>
-              {(page === 'overview' || page === 'reports') && (
+              {page === 'reports' && (
+                <TheatreReports
+                  key={`${reportHospitalId}/${reportDepartmentId}`}
+                  hospitalId={reportHospitalId}
+                  departmentId={reportDepartmentId}
+                />
+              )}
+              {page === 'register' && w && (
+                <TheatreRegister
+                  key={`${w.hospital.id}/${w.departmentId}`}
+                  w={w}
+                  role={role}
+                  onSubmit={act}
+                />
+              )}
+              {page === 'overview' && (
                 <>
                   <div className={`metrics ${canViewSelectedDetails ? '' : 'four'}`}>
                     <Metric
@@ -950,47 +987,6 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
                   onCase={openCase}
                   onCreate={() => setForm('session')}
                 />
-              )}
-              {page === 'reports' && (
-                <section className="panel">
-                  <SectionTitle title="Understand the numbers" eyebrow="MEASUREMENT DEFINITIONS" />
-                  <div className="report-definitions">
-                    <div>
-                      <Clock />
-                      <h3>Open-case waiting time</h3>
-                      <p>
-                        Calendar days since listing, including scheduled and held cases. The median
-                        and P90 use the full reporting cohort.
-                      </p>
-                    </div>
-                    <div>
-                      <Activity />
-                      <h3>Theatre utilisation</h3>
-                      <p>
-                        {dashboardMetrics!.utilisation === null
-                          ? 'Not yet available'
-                          : `${dashboardMetrics!.utilisation}%`}{' '}
-                        · occupied minutes within past staffed sessions, divided by planned minutes.
-                        Incomplete timings show an unavailable result.
-                      </p>
-                    </div>
-                    <div>
-                      <CalendarDays />
-                      <h3>Cancellations</h3>
-                      <p>
-                        {dashboardMetrics!.cancelled} recorded booking cancellations for the past 30
-                        days. Cancelled patients remain on the waiting list.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="info">
-                    <ShieldCheck size={18} />
-                    <span>
-                      Reports reflect server-accepted records as of {date(report!.asOf)},{' '}
-                      {time(report!.asOf)} SAST. Pending offline entries appear after they sync.
-                    </span>
-                  </div>
-                </section>
               )}
             </>
           )}

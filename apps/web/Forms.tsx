@@ -10,7 +10,7 @@ import {
   saDay,
   compareInstants,
   nextAvailableStart,
-  TURNOVER_MINUTES,
+  turnaroundMinutes,
   genderOptions,
   type Gender,
   type Role,
@@ -52,6 +52,7 @@ export function OperationForm({
     [selected, setSelected] = useState(''),
     [estimate, setEstimate] = useState(''),
     [attempted, setAttempted] = useState<Operation | null>(null);
+  const turnover = turnaroundMinutes(w.hospital);
   const current = new Date().toISOString(),
     patient = c ? w.patients.find((p) => p.id === c.patientId) : null;
   const sessions = w.sessions
@@ -61,7 +62,7 @@ export function OperationForm({
     availableSessions =
       estimateMinutes >= 5 && estimateMinutes <= 720
         ? sessions.flatMap((session) => {
-            const start = nextAvailableStart(session, w.bookings, estimateMinutes);
+            const start = nextAvailableStart(session, w.bookings, estimateMinutes, turnover);
             return start ? [{ session, start }] : [];
           })
         : [],
@@ -525,7 +526,7 @@ export function OperationForm({
             <>
               <Field
                 label="Estimated operating time (minutes)"
-                hint={`Enter the expected surgery time. A separate ${TURNOVER_MINUTES}-minute turnover is reserved after it for cleaning and resetting the theatre.`}
+                hint={`Enter the expected surgery time. A separate ${turnover}-minute turnover is reserved after it for cleaning, resetting and anaesthetic preparation.`}
               >
                 <input
                   name="duration"
@@ -586,8 +587,7 @@ export function OperationForm({
                     . Turnover is reserved until{' '}
                     {time(
                       new Date(
-                        +new Date(selectedSlot.start) +
-                          (estimateMinutes + TURNOVER_MINUTES) * 60000,
+                        +new Date(selectedSlot.start) + (estimateMinutes + turnover) * 60000,
                       ).toISOString(),
                     )}
                     . The server assigns the first available slot again when you confirm, so two
