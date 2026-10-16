@@ -1,6 +1,6 @@
 # Theatre register preview
 
-Updated 16 October 2026. Implemented and tested locally with synthetic data on `feature/theatre-register`; **not deployed or clinically approved**. The original source analysis remains in [the proposal](theatre-register-proposal.md). No source workbook, scans or patient rows were imported.
+Updated 16 October 2026. Implemented on `feature/theatre-register`, tested with synthetic data and **published to the fictional review site**; not clinically approved. See [deployment](deployment.md) for verified release identifiers. The original source analysis remains in [the proposal](theatre-register-proposal.md). No source workbook, scans or patient rows were imported.
 
 ## Use the preview
 
@@ -51,7 +51,7 @@ Weeks start Monday. Financial years run 1 April–31 March; quarters are Apr–J
 - Additive collections: `hospitals/{hid}/theatreEntries` and `theatreEntryKeys`; existing receipts/audit carry entry IDs and authoritative snapshots. Hospital `turnaroundMinutes` is optional for compatibility. No existing records require conversion.
 - Prepared register contains the newest 500 saved entries plus completed bookings in the existing prepared workspace. A notice identifies that limit and distinguishes server reports; local date/search cannot retrieve older unprepared entries. Existing workspace/Overview collection limits remain 1,000 per department.
 - `/api/reporting/theatre` uses authorised department/date queries, with limits of 5,000 saved entries, 5,000 actual-time bookings, 5,000 planned-time bookings and 2,000 sessions (including padded boundary records). Exceeding a limit rejects the report instead of returning partial totals. References are fetched in batches of 100. Responses contain aggregates only and reads are audited. No snapshots or reporting warehouse yet.
-- Five composite indexes are declared in `firebase/firestore.indexes.json`, not deployed. Before a future release, deploy and verify indexes, then API with `theatre-register-v1`, then frontend. The Hosting guard requires that capability and `admin-v1`.
+- Five composite indexes in `firebase/firestore.indexes.json` are deployed and READY. The API with `theatre-register-v1` and matching frontend are published. Future releases must preserve the index → API → frontend order. The Hosting guard requires that capability and `admin-v1`.
 - Still deferred: OCR/scans, source uploads, structured multiple team members, staff/location directories, recurring/24-hour availability, downtime/overrun/abandoned outcomes, clinical duration classifications, live unplanned-running cases, booked timing corrections, full server pagination and scale testing. Capacity/timing conventions need Leo/Tobela's review.
 
 ## Rollback
@@ -60,6 +60,6 @@ The baseline is commit **`147acf7`**, tagged **`checkpoint/pre-theatre-register`
 
 Code rollback does not roll back data. New collections/fields are additive and ignored by the checkpoint app, but finish syncing or review pending register work before using the older client. Rebuild the PWA and use its update page to replace cached feature assets.
 
-An ignored local emulator snapshot from before the feature browser mutations is saved at `.local/pre-theatre-register-emulators`. It contains Auth and Firestore fixture state, not source code. Keep it private. Restore only with stopped emulators and after exporting any later work you want to keep; the emulator launcher normally imports `.emulator-data`. The snapshot is local-only and was not committed or uploaded. No cloud data was changed by this preview.
+An ignored local emulator snapshot from before the feature browser mutations is saved at `.local/pre-theatre-register-emulators`. It contains Auth and Firestore fixture state, not source code. Keep it private. Restore only with stopped emulators and after exporting any later work you want to keep; the emulator launcher normally imports `.emulator-data`. The snapshot is local-only and was not committed or uploaded. The initial local preview did not change cloud data. Subsequent release verification uses isolated temporary synthetic records and removes them afterward; existing review data is preserved.
 
 See [verification](verification.md) for actual automated/browser evidence and remaining device/release checks.

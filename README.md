@@ -4,7 +4,7 @@ A first iteration of a surgical backlog and theatre tracker for South African ho
 
 Brand, colour, typography and reusable visual guidance are documented in [design.md](design.md).
 
-The new [theatre-register preview](docs/theatre-register.md) runs locally on `feature/theatre-register`: actual operation records, structured CSV preview, period reports/printing and an Admin setting for 15–30-minute turnaround. It is not yet on the hosted site. The working baseline is saved at `147acf7` / `checkpoint/pre-theatre-register`; see the preview guide for rollback.
+The new [theatre-register preview](docs/theatre-register.md) runs locally on `feature/theatre-register`: actual operation records, structured CSV preview, period reports/printing and an Admin setting for 15–30-minute turnaround. Published to the hosted fictional-data review on 16 October 2026. The working baseline is saved at `147acf7` / `checkpoint/pre-theatre-register`; see the preview guide for rollback.
 
 The [hosted review](https://theatre-tracker-2f2e5.web.app) is published with fictional patients. Individual reviewer accounts are still pending; local demo accounts work only in the emulators. See [deployment status](docs/deployment.md).
 
@@ -105,4 +105,4 @@ Read [AGENTS.md](AGENTS.md) and [docs/handover.md](docs/handover.md) first. Deta
 
 ## Code review
 
-The [15 October 2026 review](docs/code-review-2026-10-15.md) records corrected defects, regression evidence, remaining production/clinical risks, and the new history index required before deployment. The hardening API/index are deployed; frontend publication is paused; see [handover](docs/handover.md) for release status.
+The [15 October 2026 review](docs/code-review-2026-10-15.md) records corrected defects, regression evidence, remaining production/clinical risks, and the new history index required before deployment. The hardening and theatre-extension API, indexes and frontend are now deployed; see [handover](docs/handover.md) for release status.

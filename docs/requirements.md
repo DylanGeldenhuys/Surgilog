@@ -2,7 +2,7 @@
 
 ## Theatre extension preview — 16 October 2026
 
-Dylan approved a local implementation from Tobela’s workbook-development conversation, with existing planned session times and a hospital Admin setting for 15–30 minutes of turnaround. The [theatre register preview](theatre-register.md) documents implemented fields, permissions, offline/CSV intake, April–March reporting, metric definitions and limits. It is implemented/tested locally, not deployed or clinically approved. Attachments remain unavailable; OCR/scanning is deferred. The [original proposal](theatre-register-proposal.md) is source analysis, not current implementation status. Existing backlog priorities and role hierarchy remain in force.
+Dylan approved a local implementation from Tobela’s workbook-development conversation, with existing planned session times and a hospital Admin setting for 15–30 minutes of turnaround. The [theatre register preview](theatre-register.md) documents implemented fields, permissions, offline/CSV intake, April–March reporting, metric definitions and limits. It is implemented, tested locally and published to the fictional-data review on 16 October; it is not clinically approved. Attachments remain unavailable; OCR/scanning is deferred. The [original proposal](theatre-register-proposal.md) is source analysis, not current implementation status. Existing backlog priorities and role hierarchy remain in force.
 
 ## Implementation checkpoint — 5 October 2026
 

@@ -1,6 +1,6 @@
 # Theatre register and executive reporting proposal
 
-Source analysis dated 15 October 2026. **Historical proposal; see the [implemented local preview](theatre-register.md) for current status (16 October).** Dylan subsequently approved development with existing planned session hours and Admin-configurable 15–30-minute turnaround. The preview is not deployed or clinically approved. Dylan supplied a pasted conversation attributed to Tobela and Claude; the workbook, scans and generated attachments were not supplied. This document deliberately excludes patient identifiers, transcribed rows and the raw conversation.
+Source analysis dated 15 October 2026. **Historical proposal; see the [implemented local preview](theatre-register.md) for current status (16 October).** Dylan subsequently approved development with existing planned session hours and Admin-configurable 15–30-minute turnaround. The preview was subsequently published to the fictional-data review on 16 October; it is not clinically approved. Dylan supplied a pasted conversation attributed to Tobela and Claude; the workbook, scans and generated attachments were not supplied. This document deliberately excludes patient identifiers, transcribed rows and the raw conversation.
 
 ## What the conversation establishes
 

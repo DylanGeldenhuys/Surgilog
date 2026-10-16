@@ -1,6 +1,6 @@
 # Offline recording
 
-Updated 15 October 2026. Latest hardening is implemented/tested locally; API/index are deployed but frontend publication is paused (see deployment.md). Offline recording is required and a local implementation now exists. The original online-only proposal is superseded.
+Updated 16 October 2026. Hardening and theatre-register changes are published to the fictional-data review (see deployment.md). Offline recording is required and a local implementation now exists. The original online-only proposal is superseded.
 
 ## Implemented behaviour
 

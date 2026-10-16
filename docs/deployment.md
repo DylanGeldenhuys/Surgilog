@@ -1,30 +1,36 @@
 # Leo's review deployment
 
-Updated 16 October 2026. **Published with fictional data, including the Admin tab and confirmed role hierarchy. Theatre-register preview remains local.**
+Updated 16 October 2026. **Published with fictional data, including the Admin tab and confirmed role hierarchy. Theatre register, reporting and turnaround settings are now published.**
 
 - Website: https://theatre-tracker-2f2e5.web.app
 - API: https://theatre-tracker-api-54783611706.africa-south1.run.app
 - Project: `theatre-tracker-2f2e5`; owner account: `dylangeldenhuys1@gmail.com`.
-- API revision: `theatre-tracker-api-00004-2hm`, ready with 100% traffic.
-- Hosting version: `e4e2c9dee7b5db86` (SurgiLog branding).
-- Cloud Build: `4451fab7-013c-49af-923e-61599059d155`.
+- API revision: `theatre-tracker-api-00006-seh`, ready with 100% traffic.
+- Hosting version: `eec873a2dac0b3a7`, released 16 October 2026 at 11:31:42 SAST.
+- Cloud Build: `9db07c3d-3144-4103-9e1d-8f8e1da1dbdb`.
 - Firestore ruleset: `c20c7b24-ee5c-44cc-a463-521eb8529e87`.
 
 Dylan completed owner sign-in and explicitly approved the API/IAM plan in [review-infrastructure.md](review-infrastructure.md). Email/Password Auth, Firestore rules/indexes, backend and Hosting are deployed. Fictional setup installed 659 documents across two hospitals and three departments. **One explicitly requested permanent Super User was created and verified on 9 October; other reviewer accounts remain deferred.** There is no shared hosted demo account; the local emulator credentials do not work on this website. No email has been sent to Leo.
 
-## Hardening release partially deployed; paused by Dylan
+## Theatre release — independently verified 16 October 2026
 
-On 15 October, deployed the additive `audit(caseId ASC, at DESC)` index (`CICAgOjXh4EK`) and confirmed READY. Built the API without live traffic, then switched 100% to revision `theatre-tracker-api-00004-2hm` after index readiness. Live health returned HTTP 200, review mode and the correct project.
+Dylan asked Claude to complete publication after the initial deployment work, then asked Codex to double-check it. No new source changes or redeployment were necessary during this verification. The live API revision above has 100% traffic, and the hosted HTML/JS/CSS, manifest, service worker and update page match the prepared build from commit `2bc5d98`. The live Hosting version was read back from Firebase. API health is review mode for the expected project with `admin-v1` and `theatre-register-v1`; the release guard passes.
 
-Dylan then paused deployment to discuss the theatre-register extension. **Hosting remains the 13 October branding release above; the matching hardening frontend has not been published.** Full live authenticated/history/replay/booking checks were prepared but not run. The temporary synthetic test hospital/account/profile and all associated records/local credentials were cleaned up. Existing reviewer accounts/data, IAM and rules were unchanged. See [theatre proposal](theatre-register-proposal.md) and [handover](handover.md) before resuming; do not describe this as a fully verified hardening release.
+All five new indexes and the existing history index were independently confirmed READY: `CICAgJiUpoMK` / `CICAgJim14AK` (register date DESC/ASC), `CICAgJjF9oIK` (booking entry), `CICAgJj7z4EK` (booking planned start), `CICAgJiUpoMJ` (session start), and `CICAgOjXh4EK` (case history). Existing runtime identity, service-level maximum of two instances, origins and review configuration were preserved. No extra IAM/rules changes were needed.
+
+Live checks passed real sign-in, tenant/department isolation, malformed query denial, authoritative patient/note writes, idempotent replay, session/booking confirmation, newest-100 indexed history, register Draft/Verified workflow, stale-version rejection, aggregate reporting with known capacity/occupancy, no patient data in report responses, write-admin turnaround changes and read-only mutation denial. A previously booked 15-minute allowance survived setting the synthetic hospital to 30. See [verification](verification.md) for browser evidence and cleanup.
+
+## Earlier partial release (historical)
+
+On 15 October the hardening API/index were deployed while Hosting remained the branding release. That pause was superseded by the theatre publication above; both the hardening frontend and theatre features are now live. The previous rollback targets are API revision `theatre-tracker-api-00004-2hm` and Hosting version `e4e2c9dee7b5db86`. Git baseline `147acf7` / `checkpoint/pre-theatre-register` remains intact. Code/data rollback are distinct; preserve pending device work and use an explicit release rollback if needed.
 
 ## Actual infrastructure
 
-The 16 October [theatre extension](theatre-register.md) has not changed this cloud release. Before publishing it, deploy and confirm READY the five additive indexes in `firebase/firestore.indexes.json`: `theatreEntries(departmentId ASC, operationDate DESC)` and the ASC-date variant; `bookings(departmentId ASC, inAt ASC)`; `bookings(departmentId ASC, start ASC)`; `sessions(departmentId ASC, start ASC)`. Then deploy/test the new API before Hosting. Local health advertises `admin-v1` and `theatre-register-v1`; the frontend predeploy guard now requires both, so it will intentionally reject the current older live API. No schema conversion, rule change or additional IAM was required for the local implementation. Live index readiness/workflows and scale remain unverified for the extension.
+The five additive theatre indexes are deployed and READY. Future releases must preserve index → API → frontend compatibility checks; live health now satisfies the Hosting capability guard. Production-scale hospital workloads remain unverified.
 
 Classic Firebase Hosting serves the React/Vite PWA. The existing Fastify API runs on Cloud Run in `africa-south1` (Johannesburg), alongside the verified Firestore Standard `(default)` database. The API uses the dedicated `theatre-tracker-api` identity with `roles/datastore.user`, `roles/firebaseauth.viewer` and the project custom role `theatreTrackerUserProvisioner` (`firebaseauth.users.create`, `firebaseauth.users.sendEmail`). Source builds use `theatre-tracker-build` with `roles/run.builder`. Both identities belong only to this project; no service-account key was downloaded.
 
-Cloud Run has 1 vCPU, 512 MiB memory, concurrency 20, a 30-second request timeout, request-based CPU allocation and zero minimum/two maximum instances. Browser ingress is public; every application-data endpoint requires a valid Firebase token and current profile permissions. Only the two Firebase Hosting origins receive CORS access. API data responses use no-store; direct client Firestore access is denied. Health exposes only project/mode/readiness and the `admin-v1` release capability. The frontend calls the API directly because Hosting's supported Cloud Run rewrite locations do not include Johannesburg.
+Cloud Run has 1 vCPU, 512 MiB memory, concurrency 20, a 30-second request timeout, request-based CPU allocation and zero minimum/two maximum instances. Browser ingress is public; every application-data endpoint requires a valid Firebase token and current profile permissions. Only the two Firebase Hosting origins receive CORS access. API data responses use no-store; direct client Firestore access is denied. Health exposes project/mode/readiness and the `admin-v1` / `theatre-register-v1` release capabilities. The frontend calls the API directly because Hosting's supported Cloud Run rewrite locations do not include Johannesburg.
 
 The four approved APIs (Cloud Run, Cloud Build, Artifact Registry and IAM) are enabled. Billing is linked. The deployment created the regional build storage and artifact repository. Scaling limits are not a spending cap; a budget alert amount has not been verified. Analytics is not initialised. This release is for fictional review, not real hospital data.
 
@@ -62,11 +68,11 @@ Fictional seeding is already complete. Repeating `setup:review --seed-fictional`
 
 An initial SDK setup error included a short-lived owner gcloud access token in tool output. Quota-project handling and error sanitisation were corrected. After temporary cloud cleanup, Google OAuth revocation returned HTTP 200 and the same token was rejected with HTTP 401. No service-account key was created. Future gcloud deployment/admin work requires owner sign-in again; the deployed service uses its own identity and is unaffected.
 
-## Verification and remaining limits
+## Initial deployment verification (historical)
 
 Typecheck/formatting, 33 unit/storage/sync/config/fixture tests, 14 emulator integration scenarios and both builds passed. Cloud Build built the real container successfully. Live API tests used temporary clinician/recorder/viewer accounts and an isolated temporary hospital: real email/password login; runtime Auth/Firestore permissions; tenant/department/clinical-role isolation; registration and audited idempotent replay; stale-version rejection; simultaneous bookings with exactly one winner; theatre entry/completion; aggregate redaction; direct Firestore denial; disabled-user rejection. Temporary accounts, their profiles and all temporary hospital records were removed after testing.
 
-Chromium verified the live sign-in and authenticated Overview/backlog/case-note form. The final hosted offline/reconnect check was interrupted when the browser session closed, so it is not a verified cloud check. The local production PWA's offline reload, encrypted persistence, automatic replay and 390px layout were verified in prior milestones. Physical phones, Safari/Firefox, real reviewer login and full hospital acceptance remain outstanding. See [verification](verification.md). The client bundle advisory remains.
+Chromium verified the live sign-in and authenticated Overview/backlog/case-note form. At the initial deployment, the hosted offline/reconnect check was interrupted when the browser closed. It subsequently passed on 16 October, as recorded above. The local production PWA's offline reload, encrypted persistence, automatic replay and 390px layout were verified in prior milestones. Physical phones, Safari/Firefox, real reviewer login and full hospital acceptance remain outstanding. See [verification](verification.md). The client bundle advisory remains.
 
 ## References checked
 

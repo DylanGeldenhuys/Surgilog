@@ -27,7 +27,7 @@ Read-only Major/System Admin roles may see patient details inside their assigned
 
 ## Admin tab and account setup
 
-Local theatre extension (16 October, not deployed): configuration write admins can set the hospital turnaround allowance to 15–30 minutes; doctors cannot. Nurses/clerks can create/edit Draft standalone theatre-register entries. Doctors/write admins verify and amend verified records. Read admins view entries; geographic reporting grants expose only aggregate reports. Completed booking details stay Verified and preserve booking identity/timings. See [theatre register](theatre-register.md); these verification conventions still need clinical review.
+Theatre extension (published and live-verified 16 October): configuration write admins can set the hospital turnaround allowance to 15–30 minutes; doctors cannot. Nurses/clerks can create/edit Draft standalone theatre-register entries. Doctors/write admins verify and amend verified records. Read admins view entries; geographic reporting grants expose only aggregate reports. Completed booking details stay Verified and preserve booking identity/timings. See [theatre register](theatre-register.md); these verification conventions still need clinical review.
 
 The Admin tab appears for Super/Major/System Admin roles and doctors. Read-only roles see configuration and scoped staff without mutation buttons. Doctors see staff management for their departments, with no Add hospital/department/theatre actions. Nurses and clerks have no Admin tab and receive 403 from its API.
 
