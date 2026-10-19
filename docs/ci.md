@@ -16,7 +16,7 @@ Emulator integration tests are a separate job. They need Java 21 and the Firebas
 
 `https://theatre-tracker-api-54783611706.africa-south1.run.app`
 
-It then deploys that `dist-review` build to a Firebase Hosting preview channel on site `theatre-tracker-2f2e5`. [FirebaseExtended/action-hosting-deploy](https://github.com/FirebaseExtended/action-hosting-deploy) reads `firebase.json`, so the workflow first runs `scripts/write-preview-firebase-json.mjs`. That step copies Hosting from `firebase.review.json` and omits Auth and Firestore. The channel id is `pr` plus the pull request number. The URL stays the same for later commits on that request and looks like:
+It then deploys that `dist-review` build to a Firebase Hosting preview channel on site `theatre-tracker-2f2e5`. [FirebaseExtended/action-hosting-deploy](https://github.com/FirebaseExtended/action-hosting-deploy) reads `firebase.json`, so the workflow first runs `scripts/write-preview-firebase-json.mjs`. That step copies Hosting from `firebase.review.json` and omits Auth and Firestore. The workflow sets `channelId` to `pr` plus the pull request number, so a branch name is not part of the channel id. An automatic id can keep a `.` from the branch name, and the CORS pattern rejects that. The URL stays the same for later commits on that request and looks like:
 
 `https://theatre-tracker-2f2e5--pr12-a1b2c3d4.web.app`
 
@@ -38,6 +38,8 @@ gcloud iam service-accounts create github-hosting-preview \
 
 2. Grant Hosting deploy access, and read-only access to the Firebase web API key. The Hosting action's CLI reads that key during deploy. Cloud Run Viewer is not required: this app does not rewrite Hosting to Cloud Run.
 
+`roles/firebasehosting.admin` can also manage the live Hosting channel, not only preview channels. There is no Google-managed preview-only role. A leaked key for this service account can overwrite the live site's static files. Keep live releases on a separate identity. The manual live deploy in [deployment](deployment.md) stays on the owner account, not this service account.
+
 ```sh
 gcloud projects add-iam-policy-binding theatre-tracker-2f2e5 \
   --member="serviceAccount:github-hosting-preview@theatre-tracker-2f2e5.iam.gserviceaccount.com" \
@@ -52,7 +54,7 @@ gcloud projects add-iam-policy-binding theatre-tracker-2f2e5 \
   --project=theatre-tracker-2f2e5
 ```
 
-3. Let preview deploys add and remove Auth authorized domains without user administration. `roles/firebaseauth.admin` can create, update and delete Auth users, so it is not used. The custom role in [config/github-hosting-preview-role.yaml](../config/github-hosting-preview-role.yaml) has only `firebaseauth.configs.get` and `firebaseauth.configs.update`. Those permissions can change Auth project configuration, including the authorized-domain list. They cannot create or delete users.
+3. Let preview deploys add and remove Auth authorized domains without user administration. `roles/firebaseauth.admin` can create, update and delete Auth users, so it is not used. The custom role in [config/github-hosting-preview-role.yaml](../config/github-hosting-preview-role.yaml) has only `firebaseauth.configs.get` and `firebaseauth.configs.update`. `firebaseauth.configs.update` can change Auth project configuration beyond the authorized-domain list, including sign-in providers and other project Auth settings. It cannot create or delete users. That is narrower than `roles/firebaseauth.admin`, and the key still needs to stay private.
 
 ```sh
 gcloud iam roles create githubHostingPreviewDomains \
@@ -69,7 +71,7 @@ gcloud projects add-iam-policy-binding theatre-tracker-2f2e5 \
 
 The CLI then adds `theatre-tracker-2f2e5--pr<number>-<hash>.web.app` when the channel is deployed, and removes expired channel hostnames for this site on a later deploy. If this role is skipped, the channel still deploys and the CLI warns `Unable to add channel domain to Firebase Auth.` Sign-in fails until the hostname is added by hand. Firebase Auth does not accept a wildcard. Add the hostname only, with no `https://`, at Firebase console → Authentication → Settings → Authorized domains. The hostname is stable for that pull request.
 
-4. Create a JSON key, store it as a GitHub secret, and delete the local file. The secret name must be exactly `FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5`.
+4. Create a JSON key, store it as a GitHub secret, and delete the local file. The secret name must be exactly `FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5`. The key is long-lived. A later replacement is Workload Identity Federation, so GitHub Actions can receive a short-lived token and no JSON key is stored. This workflow still uses the key.
 
 ```sh
 gcloud iam service-accounts keys create /tmp/github-hosting-preview.json \

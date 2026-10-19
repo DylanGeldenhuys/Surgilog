@@ -50,10 +50,14 @@ describe('environment isolation', () => {
     expect(() => serverConfig({ ...review, PORT: 'invalid' })).toThrow('PORT');
   });
   it('allows preview channels only for the theatre-tracker-2f2e5 review site', () => {
+    // Preview workflow channel id is pr plus the pull-request number. Firebase appends the hash.
     const preview = 'https://theatre-tracker-2f2e5--pr12-a1b2c3d4.web.app';
     const firebaseApp = 'https://theatre-tracker-2f2e5--pr12-a1b2c3d4.firebaseapp.com';
     expect(isReviewPreviewChannelOrigin(preview)).toBe(true);
     expect(isReviewPreviewChannelOrigin(firebaseApp)).toBe(true);
+    expect(
+      isReviewPreviewChannelOrigin('https://theatre-tracker-2f2e5--pr2-a1b2c3d4.web.app'),
+    ).toBe(true);
     expect(
       isReviewPreviewChannelOrigin(
         `https://theatre-tracker-2f2e5--${'a'}${'b'.repeat(38)}c.web.app`,
@@ -72,6 +76,8 @@ describe('environment isolation', () => {
       'https://theatre-tracker-2f2e5--PR12-abc.web.app',
       'https://theatre-tracker-2f2e5--pr12-a1b2c3d4.web.app:443',
       `https://theatre-tracker-2f2e5--${'a'}${'b'.repeat(39)}c.web.app`,
+      // A branch-derived channel can keep a dot. The preview workflow does not use that id.
+      'https://theatre-tracker-2f2e5--pr12-feature.name-a1b2c3d4.web.app',
     ])
       expect(isReviewPreviewChannelOrigin(origin), origin).toBe(false);
     const other = serverConfig({
