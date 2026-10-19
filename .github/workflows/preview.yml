@@ -1,0 +1,125 @@
+name: Preview
+
+on:
+  pull_request:
+
+permissions:
+  checks: write
+  contents: read
+  deployments: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Review hosting preview
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check for the hosting deploy secret
+        id: secret
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5 }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping Firebase Hosting preview. Repository secret FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5 is not set. See docs/ci.md."
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment when the preview secret is missing
+        if: steps.secret.outputs.present != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- surgilog-preview-skip -->';
+            const body = [
+              marker,
+              'Firebase Hosting preview was not deployed.',
+              '',
+              'The repository secret `FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5` is not set. Add it using the one-time steps in `docs/ci.md`, then re-run this workflow. This check did not deploy the API, Hosting, or Firestore.',
+            ].join('\n');
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+            const existing = comments.find(
+              (comment) => comment.user?.type === 'Bot' && comment.body?.includes(marker),
+            );
+            if (existing) {
+              if (existing.body !== body) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                  body,
+                });
+              }
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Remove a stale skipped-preview comment
+        if: steps.secret.outputs.present == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- surgilog-preview-skip -->';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+            for (const comment of comments) {
+              if (comment.user?.type === 'Bot' && comment.body?.includes(marker)) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: comment.id,
+                });
+              }
+            }
+
+      - uses: actions/checkout@v4
+        if: steps.secret.outputs.present == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.secret.outputs.present == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - if: steps.secret.outputs.present == 'true'
+        run: npm ci
+
+      - name: Build the review web app against the existing API
+        if: steps.secret.outputs.present == 'true'
+        run: npm run build:review -- --api-url https://theatre-tracker-api-54783611706.africa-south1.run.app
+
+      - name: Write a hosting-only Firebase config
+        if: steps.secret.outputs.present == 'true'
+        run: node scripts/write-preview-firebase-json.mjs --overwrite-firebase-json
+
+      - name: Deploy the preview channel
+        if: steps.secret.outputs.present == 'true'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5 }}
+          projectId: theatre-tracker-2f2e5
+          expires: 7d
+          firebaseToolsVersion: 15.32.1

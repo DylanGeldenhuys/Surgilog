@@ -91,6 +91,12 @@ npm audit
 
 Domain tests cover deadlines, month boundaries and metric cohorts. Integration tests create and remove only their own synthetic fixtures and verify authentication, hospital/department/role isolation, demographic and case updates, patient duplication, hold/release clocks, concurrent booking, cancellation, completion, revocation, audit receipts and denied direct Firestore access. Browser verification is recorded in [docs/verification.md](docs/verification.md).
 
+## Continuous integration and pull request previews
+
+Pull requests and pushes to `main` run install, typecheck, unit tests, `format:check` and the production build. Emulator integration tests run in a separate job. A pull request from this repository can also publish a temporary Firebase Hosting preview of the review web app. That preview does not deploy the API or Firestore, and merging does not publish the live site.
+
+The preview workflow skips, with a pull-request comment, until the `FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5` secret exists. One-time setup, Auth authorized domains and the CORS limit are in [docs/ci.md](docs/ci.md).
+
 Stop local services with Ctrl+C and allow emulator export to finish. The next start imports `.emulator-data` when present. The first CLI run may download the Firebase tools and emulator binaries. Abruptly killing processes can lose emulator changes since the last export; this is a development environment.
 
 ## Current limits

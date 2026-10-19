@@ -16,6 +16,14 @@ Run `npm ci` then `npm run dev`. App 127.0.0.1:5173, API :8787, Auth :9099, Fire
 
 Stack actually used: React/TypeScript/Vite, plain CSS, native dialog/forms, Lucide, Recharts, Zod, Papa Parse; Firebase Auth SDK; Fastify/Admin SDK API; Firestore Standard emulator; Dexie/Web Crypto vault. A custom React workspace hook handles refresh, projection and replay. Tailwind/shadcn, TanStack Query/Router and React Hook Form were early recommendations, not installed implementations.
 
+## CI and pull-request previews — 19 October 2026
+
+GitHub Actions is in source and not yet enabled on the repository until this branch merges. Pull requests and pushes to `main` run `npm ci`, typecheck, unit tests, `format:check` and the production build. Emulator integration, admin and theatre scenarios run in a separate job against `demo-theatre-tracker` only. Same-repository pull requests can publish a Firebase Hosting preview of the review web app on `theatre-tracker-2f2e5`, expiring after 7 days and calling the existing review API. Forks are skipped. If `FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5` is unset, the preview job succeeds without deploying and comments on the pull request. It does not deploy the API or Firestore, and it does not publish the live site.
+
+Source CORS now accepts Hosting preview-channel origins for site `theatre-tracker-2f2e5` only. The running API still allowlists the two live Hosting origins until the next API release. Auth authorized domains are not wildcards; the preview service account can add the channel hostname, or Dylan adds it in the Auth console. Exact setup is in [ci.md](ci.md). This change set was not deployed.
+
+Local checks on this branch: 85 unit tests, typecheck, formatting, local and review builds, actionlint, and the emulator script (20 integration, 7 admin, 9 theatre) passed.
+
 ## Repository renamed and changes pushed — 19 October 2026
 
 Dylan renamed the GitHub repository to **DylanGeldenhuys/Surgilog** and requested all changes be pushed. `origin` now uses `git@github.com:DylanGeldenhuys/Surgilog.git`. Pushed **feature/theatre-register** (including the deployed work through `8316819`) and tag **checkpoint/pre-theatre-register** (`147acf7`); the feature branch tracks its remote. GitHub's default `main` remains at `77b8519`; no merge or force push was performed. Local `main` remains the working rollback checkpoint at `147acf7`. Firebase project/URLs and local storage identifiers are unchanged.
