@@ -1,6 +1,6 @@
 # Project handover
 
-Updated: 16 October 2026, Africa/Johannesburg.
+Updated: 19 October 2026, Africa/Johannesburg.
 
 ## People and confirmed direction
 
@@ -10,11 +10,17 @@ Confirmed: desktop/phone installable PWA; Firebase/GCP; multiple hospital tenant
 
 ## Actual status
 
-A working local v0.1 implementation now exists. It has been built and exercised with synthetic records. Email/Password Auth, API-only Firestore rules/indexes, Cloud Run API and Firebase Hosting are deployed to the fictional-data review project. The website is https://theatre-tracker-2f2e5.web.app. The Admin tab and confirmed role hierarchy are also published (6 October 2026), with live provisioning/permission checks passed. It is not connected to a hospital or clinically approved. Dylan requested a rollback checkpoint before extending theatre functionality: `main` and tag `checkpoint/pre-theatre-register` point to **147acf7**. New work is on **feature/theatre-register**; inspect its working tree. The extension is now published to the fictional-data review; nothing was pushed to a Git remote.
+A working local v0.1 implementation now exists. It has been built and exercised with synthetic records. Email/Password Auth, API-only Firestore rules/indexes, Cloud Run API and Firebase Hosting are deployed to the fictional-data review project. The website is https://theatre-tracker-2f2e5.web.app. The Admin tab and confirmed role hierarchy are also published (6 October 2026), with live provisioning/permission checks passed. It is not connected to a hospital or clinically approved. Dylan requested a rollback checkpoint before extending theatre functionality: `main` and tag `checkpoint/pre-theatre-register` point to **147acf7**. New work is on **feature/theatre-register**; inspect its working tree. The extension is published to the fictional-data review and its feature branch is now pushed to GitHub; see the repository milestone below.
 
 Run `npm ci` then `npm run dev`. App 127.0.0.1:5173, API :8787, Auth :9099, Firestore :8080, emulator UI :4000. For service-worker/offline reload testing, run `npm run build` then `npm run preview` separately at :4173 while the backend/emulators run. Java 21 is installed via Homebrew on this Mac; launcher detects it. Full instructions and synthetic demo accounts are in [README](../README.md).
 
 Stack actually used: React/TypeScript/Vite, plain CSS, native dialog/forms, Lucide, Recharts, Zod, Papa Parse; Firebase Auth SDK; Fastify/Admin SDK API; Firestore Standard emulator; Dexie/Web Crypto vault. A custom React workspace hook handles refresh, projection and replay. Tailwind/shadcn, TanStack Query/Router and React Hook Form were early recommendations, not installed implementations.
+
+## Repository renamed and changes pushed — 19 October 2026
+
+Dylan renamed the GitHub repository to **DylanGeldenhuys/Surgilog** and requested all changes be pushed. `origin` now uses `git@github.com:DylanGeldenhuys/Surgilog.git`. Pushed **feature/theatre-register** (including the deployed work through `8316819`) and tag **checkpoint/pre-theatre-register** (`147acf7`); the feature branch tracks its remote. GitHub's default `main` remains at `77b8519`; no merge or force push was performed. Local `main` remains the working rollback checkpoint at `147acf7`. Firebase project/URLs and local storage identifiers are unchanged.
+
+Dylan is leaving physical-phone testing and clinical feedback to the reviewers as they try the app. Those checks remain unreported, not failed or approved; do not keep requesting a separate phone test from Dylan. The [review guide](review-acceptance.md) remains available to Leo/Tobela and the review team.
 
 ## Phone/browser follow-up and review pack — 16 October 2026
 

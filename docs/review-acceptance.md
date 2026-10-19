@@ -2,12 +2,14 @@
 
 Prepared 16 October 2026 for Dylan, Leo and Tobela. Use only fictional patients on the [review site](https://theatre-tracker-2f2e5.web.app). These are checks to perform, not completed acceptance results. Engineering evidence is in [verification](verification.md).
 
+On 19 October Dylan confirmed the reviewers will perform the human/physical-phone checks as they try the app. No separate phone-test response is required from Dylan; the results below remain pending.
+
 ## Review record
 
 | Review | Person | Device/version | Date | Result |
 | --- | --- | --- | --- | --- |
-| iPhone Safari and installed app | Dylan | To record | Pending | Not run/reported |
-| Android Chrome and installed app | Dylan | To record | Pending | Not run/reported |
+| iPhone Safari and installed app | Review team | To record | Pending | Not run/reported |
+| Android Chrome and installed app | Review team | To record | Pending | Not run/reported |
 | Backlog and theatre workflow | Leo | — | Pending | Awaiting review |
 | Register and reporting definitions | Tobela, with Leo | — | Pending | Awaiting review |
 
