@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Prototype API-only model: profiles and hospitals/{id}/{collection}/{id}.
+    // All client reads/writes (including signed-in users) are denied. The Admin
+    // SDK bypasses these rules; tenant access, roles and validation live in the
+    // API. No client operation is permitted, so no allow-path validator exists.
+    match /{document=**} { allow read, write: if false; }
+  }
+}

@@ -1,0 +1,2311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Global Surgical Backlog Monitor (Copy)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.25.6/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.js"></script>
+<style>
+  :root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0A1120; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useEffect } = React;
+const { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
+
+/* ---------------------------------------------------------------------- */
+/* Icons — inline SVGs replacing lucide-react (not usable in a published  */
+/* page, which only loads scripts as UMD tags from a fixed CDN allowlist) */
+/* ---------------------------------------------------------------------- */
+
+function IconBase({ size = 16, color = "currentColor", style, title, children, ...rest }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style} {...rest}>
+      {title && <title>{title}</title>}
+      {children}
+    </svg>
+  );
+}
+
+const ChevronRight = (p) => <IconBase {...p}><polyline points="9 18 15 12 9 6" /></IconBase>;
+const TriangleAlert = (p) => <IconBase {...p}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></IconBase>;
+const Clock = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></IconBase>;
+const ArrowUp = (p) => <IconBase {...p}><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></IconBase>;
+const ArrowDown = (p) => <IconBase {...p}><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></IconBase>;
+const ArrowLeft = (p) => <IconBase {...p}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></IconBase>;
+const Activity = (p) => <IconBase {...p}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></IconBase>;
+const Pencil = (p) => <IconBase {...p}><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></IconBase>;
+const X = (p) => <IconBase {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></IconBase>;
+const Users = (p) => <IconBase {...p}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>;
+const Trash2 = (p) => <IconBase {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></IconBase>;
+const UserPlus = (p) => <IconBase {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></IconBase>;
+const Upload = (p) => <IconBase {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></IconBase>;
+const CheckCircle2 = (p) => <IconBase {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>;
+const FileWarning = (p) => <IconBase {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="15"/><line x1="12" y1="17.5" x2="12.01" y2="17.5"/></IconBase>;
+const ArrowUpDown = (p) => <IconBase {...p}><path d="M8 3v18"/><polyline points="4 7 8 3 12 7"/><path d="M16 21V3"/><polyline points="12 17 16 21 20 17"/></IconBase>;
+const Shield = (p) => <IconBase {...p}><path d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6z"/></IconBase>;
+const LockIcon = (p) => <IconBase {...p}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></IconBase>;
+const GripVertical = ({ size = 16, color = "currentColor", style, ...rest }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={style} {...rest}>
+    <circle cx="9" cy="5" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="9" cy="19" r="1.2"/>
+    <circle cx="15" cy="5" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="15" cy="19" r="1.2"/>
+  </svg>
+);
+
+/* ---------------------------------------------------------------------- */
+/* Tokens                                                                  */
+/* ---------------------------------------------------------------------- */
+
+const C = {
+  bg: "#0A1120",
+  surface: "#111B30",
+  surface2: "#182544",
+  border: "#24314F",
+  text: "#E7ECF6",
+  textDim: "#8592AD",
+  textFaint: "#5B6884",
+  accent: "#45D6C5",
+  accentDim: "#1F4A47",
+  danger: "#E5484D",
+  dangerDim: "#3A1E22",
+  warn: "#F0A93C",
+  warnDim: "#3A2E17",
+  good: "#3FCB8A",
+  goodDim: "#1B3A2C",
+};
+
+const FONTS = `
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap');
+`;
+
+/* ---------------------------------------------------------------------- */
+/* Seed data — shaped to mirror the schema (hospital > department > case)  */
+/* ---------------------------------------------------------------------- */
+
+const TODAY = new Date("2026-07-30");
+
+// Where the reference backend (server.js) listens when running locally.
+// Only reachable if the person viewing this artifact has `node server.js`
+// running on their own machine — see the "Use live backend" toggle on the
+// login screen.
+const API_BASE = "http://localhost:8787/api";
+
+function decodeJwtPayload(token) {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+  try {
+    return JSON.parse(atob(b64));
+  } catch {
+    return null;
+  }
+}
+
+const RESIDENCY_POLICIES = {
+  "South Africa": {
+    law: "POPIA",
+    fullName: "Protection of Personal Information Act 4 of 2013",
+    note:
+      "Health information is 'special personal information' under POPIA and may not be processed unless an exception applies. " +
+      "Transferring identifiable case-level records outside South Africa requires an adequacy basis, the patient's consent, or " +
+      "Information Regulator authorisation — it isn't a default. Aggregated, de-identified statistics (counts, average wait) " +
+      "aren't personal information once no individual can be identified from them, and may cross the border freely.",
+  },
+  "United Kingdom": {
+    law: "UK GDPR / DPA 2018",
+    fullName: "UK GDPR, as supplemented by the Data Protection Act 2018 and the Data (Use and Access) Act 2025",
+    note:
+      "Health information is 'special category data' under UK GDPR Article 9. Sending identifiable case-level records outside " +
+      "the UK is a 'restricted transfer' and needs an adequacy basis or an approved transfer mechanism (e.g. the UK's " +
+      "International Data Transfer Agreement) — it isn't a default. Since 5 February 2026, transfer risk assessments must " +
+      "meet a 'not materially lower' standard of protection, tightened from the earlier 'essentially equivalent' test. " +
+      "Aggregated, de-identified statistics aren't personal data once no individual can be identified from them, and may " +
+      "cross the border freely.",
+  },
+};
+const daysAgo = (n) => { const d = new Date(TODAY); d.setDate(d.getDate() - n); return d; };
+const fmtDate = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const fmtFullDate = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const isoDate = (d) => d.toISOString().slice(0, 10);
+
+const SURGEONS = {
+  Cardiac: ["Dr Novak", "Dr Adeyemi"],
+  Orthopedics: ["Dr Botha", "Dr Lindqvist"],
+  General: ["Dr Osei", "Dr Marchetti"],
+};
+
+const PROCEDURES = {
+  Cardiac: ["CABG", "Valve repair", "Pacemaker insertion"],
+  Orthopedics: ["Total knee replacement", "Hip replacement", "ACL reconstruction"],
+  General: ["Cholecystectomy", "Hernia repair", "Appendectomy"],
+};
+
+// Fictional patient names only — no real individuals. Kept distinct from the
+// staff NAME_POOL below so patient and staff records are never confusable.
+const PATIENT_NAME_POOL = [
+  "Thandiwe Mokoena", "Pieter van Zyl", "Naledi Dlamini", "Sipho Nkosi",
+  "Oliver Bennett", "Amara Okafor", "Freya Campbell", "Rajesh Patel",
+  "Emily Tremblay", "Liam Fitzgerald", "Sofia Rodriguez", "Noah Chen",
+  "Wanjiru Kamau", "Otieno Odhiambo", "Amina Hassan", "Kiptoo Rotich",
+  "Miriam Steyn", "Bongani Zulu", "Charlotte Hughes", "Grace Wambui",
+];
+
+const makeDOB = (ageYears, dayOffset) => {
+  const d = new Date(TODAY);
+  d.setFullYear(d.getFullYear() - ageYears);
+  d.setDate(d.getDate() - dayOffset);
+  return isoDate(d);
+};
+
+// Age is deliberately never stored — it's derived from DOB wherever it's
+// shown, so it can't silently go stale the way a stored age field would as
+// time passes. Same principle a real backend should follow: compute it in
+// the query/API layer, don't persist it.
+const ageFromDOB = (dobIso) => {
+  const dob = new Date(dobIso);
+  let age = TODAY.getFullYear() - dob.getFullYear();
+  const hasHadBirthdayThisYear =
+    TODAY.getMonth() > dob.getMonth() || (TODAY.getMonth() === dob.getMonth() && TODAY.getDate() >= dob.getDate());
+  if (!hasHadBirthdayThisYear) age -= 1;
+  return age;
+};
+
+const GENDER_POOL = ["Female", "Male"];
+
+// Deterministic, clearly-synthetic phone numbers — not real, not tied to any
+// actual national numbering plan. Good enough for a prototype; a real system
+// would pull this from the hospital's own patient record, not generate it.
+const makePhone = (seed, i) => {
+  const n = 1000000000 + ((seed * 7919 + i * 104729) % 899999999);
+  const s = String(n);
+  return `+${s.slice(0, 2)} ${s.slice(2, 5)} ${s.slice(5, 8)} ${s.slice(8)}`;
+};
+
+function makeCases(specialty, count, seed) {
+  const cases = [];
+  for (let i = 0; i < count; i++) {
+    const r = (seed * 37 + i * 91) % 100;
+    const urgency = r < 15 ? "P1" : r < 45 ? "P2" : "P3";
+    const waitDays = urgency === "P1" ? 150 + (r % 100) : urgency === "P2" ? 80 + (r % 130) : 20 + (r % 100);
+    const scheduled = r % 5 === 0;
+    cases.push({
+      id: `PT-${88000 + seed * 100 + i}`,
+      patientName: PATIENT_NAME_POOL[(seed * 3 + i) % PATIENT_NAME_POOL.length],
+      dob: makeDOB(20 + ((seed * 11 + i * 5) % 65), (seed + i) % 27),
+      gender: GENDER_POOL[(seed + i * 2) % GENDER_POOL.length],
+      phone: makePhone(seed, i),
+      procedure: PROCEDURES[specialty][r % 3],
+      surgeon: SURGEONS[specialty][r % 2],
+      urgency,
+      waitDays,
+      waitlistDate: daysAgo(waitDays),
+      status: scheduled ? "Scheduled" : "Waitlisted",
+      scheduledDate: scheduled ? isoDate(daysAgo(-((r % 10) + 2))) : null,
+    });
+  }
+  return cases;
+}
+
+function makeTrend(base, drift) {
+  return Array.from({ length: 6 }, (_, i) => ({
+    month: ["Feb", "Mar", "Apr", "May", "Jun", "Jul"][i],
+    backlog: Math.round(base + drift * i),
+  }));
+}
+
+const HOSPITALS = [
+  {
+    id: "h1", name: "Groote Schuur", country: "South Africa", region: "Africa", state: "Western Cape", district: "City of Cape Town",
+    residency: { jurisdiction: "South Africa", law: "POPIA", required: true },
+    departments: [
+      { id: "d1", name: "Cardiac surgery", cases: makeCases("Cardiac", 9, 1), trend: makeTrend(140, -3), orUtil: 81 },
+      { id: "d2", name: "Orthopedics", cases: makeCases("Orthopedics", 11, 2), trend: makeTrend(210, -5), orUtil: 76 },
+    ],
+  },
+  {
+    id: "h2", name: "St Thomas'", country: "United Kingdom", region: "Europe", state: "England", district: "Lambeth",
+    residency: { jurisdiction: "United Kingdom", law: "UK GDPR / DPA 2018", required: true },
+    departments: [
+      { id: "d3", name: "Cardiac surgery", cases: makeCases("Cardiac", 14, 3), trend: makeTrend(268, 8), orUtil: 78 },
+      { id: "d4", name: "General surgery", cases: makeCases("General", 10, 4), trend: makeTrend(180, 6), orUtil: 71 },
+    ],
+  },
+  {
+    id: "h3", name: "Toronto General", country: "Canada", region: "North America", state: "Ontario", district: "Toronto",
+    departments: [
+      { id: "d5", name: "Orthopedics", cases: makeCases("Orthopedics", 8, 5), trend: makeTrend(120, -6), orUtil: 84 },
+      { id: "d6", name: "Cardiac surgery", cases: makeCases("Cardiac", 6, 6), trend: makeTrend(95, -4), orUtil: 88 },
+    ],
+  },
+  {
+    id: "h4", name: "Kenyatta National", country: "Kenya", region: "Africa", state: "Nairobi County", district: "Nairobi Central",
+    departments: [
+      { id: "d7", name: "General surgery", cases: makeCases("General", 9, 7), trend: makeTrend(100, -4), orUtil: 79 },
+      { id: "d8", name: "Orthopedics", cases: makeCases("Orthopedics", 7, 8), trend: makeTrend(88, -3), orUtil: 82 },
+    ],
+  },
+  {
+    id: "h5", name: "Tygerberg", country: "South Africa", region: "Africa", state: "Western Cape", district: "City of Cape Town",
+    residency: { jurisdiction: "South Africa", law: "POPIA", required: true },
+    departments: [
+      { id: "d9", name: "General surgery", cases: makeCases("General", 8, 9), trend: makeTrend(110, -2), orUtil: 74 },
+      { id: "d10", name: "Orthopedics", cases: makeCases("Orthopedics", 6, 10), trend: makeTrend(70, -3), orUtil: 80 },
+    ],
+  },
+];
+
+const REGIONS = ["All regions", ...Array.from(new Set(HOSPITALS.map((h) => h.region)))];
+const REAL_REGIONS = REGIONS.filter((r) => r !== "All regions");
+const LEVELS = ["global", "region", "country", "state", "district", "hospital", "department"];
+
+const countriesInRegion = (region) => Array.from(new Set(HOSPITALS.filter((h) => h.region === region).map((h) => h.country)));
+const statesInCountry = (country) => Array.from(new Set(HOSPITALS.filter((h) => h.country === country).map((h) => h.state)));
+const hospitalsInState = (state) => HOSPITALS.filter((h) => h.state === state);
+
+/* ---------------------------------------------------------------------- */
+/* Seed users — one hospital admin, one scheduler, one dept head per dept  */
+/* ---------------------------------------------------------------------- */
+
+const NAME_POOL = ["A. Kimura", "B. Ndlovu", "C. Fischer", "D. Alvarez", "E. Osei", "F. Larsen", "G. Patel", "H. Novak", "I. Rossi", "J. Byrne"];
+const DEMO_PASSWORD = "demo1234";
+
+const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+function makeUsers(hospital, seed) {
+  const mk = (idx, role, extra) => {
+    const name = NAME_POOL[idx % NAME_POOL.length];
+    return {
+      id: `u${seed}-${role}${extra?.deptId ? "-" + extra.deptId : ""}`,
+      name,
+      role,
+      hospitalId: hospital.id,
+      email: `${slugify(name)}@${slugify(hospital.name)}.example`,
+      password: DEMO_PASSWORD,
+      ...extra,
+    };
+  };
+  const users = [mk(seed, "hospital_admin"), mk(seed + 1, "scheduler")];
+  hospital.departments.forEach((d, i) => users.push(mk(seed + 2 + i, "dept_head", { deptId: d.id })));
+  return users;
+}
+
+const SEED_USERS = Object.fromEntries(HOSPITALS.map((h, i) => [h.id, makeUsers(h, i)]));
+
+const AGGREGATE_ACCOUNTS = [
+  { id: "acc-global", name: "N. Achebe", role: "global_viewer", email: "n.achebe@system.example", password: DEMO_PASSWORD },
+  { id: "acc-region", name: "P. Mahlangu", role: "regional_viewer", region: "Africa", email: "p.mahlangu@system.example", password: DEMO_PASSWORD },
+  { id: "acc-country", name: "R. Naidoo", role: "country_viewer", region: "Africa", country: "South Africa", email: "r.naidoo@system.example", password: DEMO_PASSWORD },
+  { id: "acc-state", name: "T. Coetzee", role: "state_viewer", region: "Africa", country: "South Africa", state: "Western Cape", email: "t.coetzee@system.example", password: DEMO_PASSWORD },
+  { id: "acc-district", name: "M. van der Merwe", role: "district_viewer", region: "Africa", country: "South Africa", state: "Western Cape", district: "City of Cape Town", email: "m.vandermerwe@system.example", password: DEMO_PASSWORD },
+];
+
+/* ---------------------------------------------------------------------- */
+/* Stats helpers                                                           */
+/* ---------------------------------------------------------------------- */
+
+const percentile = (arr, p) => {
+  if (!arr.length) return 0;
+  const s = [...arr].sort((a, b) => a - b);
+  return s[Math.floor((s.length - 1) * p)];
+};
+
+function deptStats(dept) {
+  if (dept.liveStats) return dept.liveStats; // real numbers from /backlog-summary, used when case-level rows are blocked or just to avoid recomputing client-side
+  const waits = dept.cases.map((c) => c.waitDays);
+  const overdue = dept.cases.filter((c) => c.urgency === "P1" && c.waitDays > 200).length;
+  return {
+    backlog: dept.cases.filter((c) => c.status === "Waitlisted").length,
+    avgWait: Math.round(waits.reduce((a, b) => a + b, 0) / (waits.length || 1)),
+    p90: percentile(waits, 0.9),
+    overdue,
+    trendDir: dept.trend[5].backlog - dept.trend[0].backlog,
+  };
+}
+
+function statusOf(stats) {
+  if (stats.overdue > 2 || stats.avgWait > 190) return "critical";
+  if (stats.trendDir > 0) return "rising";
+  return "improving";
+}
+
+const STATUS_STYLE = {
+  critical: { bg: C.dangerDim, fg: C.danger, label: "Critical" },
+  rising: { bg: C.warnDim, fg: C.warn, label: "Rising" },
+  improving: { bg: C.goodDim, fg: C.good, label: "Improving" },
+};
+
+const URGENCY_STYLE = {
+  P1: { bg: C.dangerDim, fg: C.danger },
+  P2: { bg: C.warnDim, fg: C.warn },
+  P3: { bg: C.goodDim, fg: C.good },
+};
+
+/* ---------------------------------------------------------------------- */
+/* Small UI atoms                                                          */
+/* ---------------------------------------------------------------------- */
+
+function Pill({ bg, fg, children }) {
+  return (
+    <span
+      className="text-xs px-2 py-0.5 rounded-full font-medium inline-block"
+      style={{ background: bg, color: fg }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function MetricCard({ label, value, sub, subColor, mono = true }) {
+  return (
+    <div className="rounded-xl p-4" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+      <div className="text-xs mb-2" style={{ color: C.textDim, fontFamily: "Inter" }}>{label}</div>
+      <div
+        className="text-2xl"
+        style={{ color: C.text, fontFamily: mono ? "'IBM Plex Mono'" : "'Space Grotesk'", fontWeight: 600 }}
+      >
+        {value}
+      </div>
+      {sub && <div className="text-xs mt-1" style={{ color: subColor || C.textFaint, fontFamily: "Inter" }}>{sub}</div>}
+    </div>
+  );
+}
+
+function Pulse() {
+  return (
+    <svg width="72" height="24" viewBox="0 0 72 24" aria-hidden="true">
+      <polyline
+        points="0,12 14,12 19,4 24,20 29,12 40,12 45,8 50,16 55,12 72,12"
+        fill="none" stroke={C.accent} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+        style={{ filter: `drop-shadow(0 0 3px ${C.accent}66)` }}
+      >
+        <animate attributeName="stroke-dasharray" from="0,140" to="140,0" dur="2.2s" repeatCount="indefinite" />
+      </polyline>
+    </svg>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Global overview                                                         */
+/* ---------------------------------------------------------------------- */
+
+function Overview({ hospitals: allHospitals, lockedLabel, onSelectHospital }) {
+  const [region, setRegion] = useState(lockedLabel || "All regions");
+
+  const hospitals = useMemo(
+    () => allHospitals.filter((h) => (lockedLabel ? true : region === "All regions" || h.region === region)),
+    [allHospitals, region, lockedLabel]
+  );
+
+  const allDepts = useMemo(() => hospitals.flatMap((h) => h.departments.map((d) => ({ ...d, hospital: h }))), [hospitals]);
+  const allCases = useMemo(() => allDepts.flatMap((d) => d.cases), [allDepts]);
+
+  const totalBacklog = allCases.filter((c) => c.status === "Waitlisted").length;
+  const avgWait = Math.round(allCases.reduce((a, c) => a + c.waitDays, 0) / (allCases.length || 1));
+  const p90 = percentile(allCases.map((c) => c.waitDays), 0.9);
+  const completed = Math.round(totalBacklog * 0.14);
+  const overdue = allCases.filter((c) => c.urgency === "P1" && c.waitDays > 200).length;
+
+  const bySpecialty = useMemo(() => {
+    const m = {};
+    allDepts.forEach((d) => {
+      const key = d.name;
+      m[key] = (m[key] || 0) + d.cases.filter((c) => c.status === "Waitlisted").length;
+    });
+    return Object.entries(m).map(([name, backlog]) => ({ name, backlog }));
+  }, [allDepts]);
+
+  const alerts = useMemo(() => {
+    return allDepts
+      .map((d) => ({ d, stats: deptStats(d) }))
+      .filter(({ stats }) => stats.overdue > 0)
+      .sort((a, b) => b.stats.overdue - a.stats.overdue)
+      .slice(0, 4);
+  }, [allDepts]);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-3">
+          <Activity size={20} color={C.accent} />
+          <h1 style={{ fontFamily: "'Space Grotesk'", fontWeight: 700, fontSize: 20, color: C.text }}>
+            Global surgical backlog
+          </h1>
+        </div>
+        <Pulse />
+      </div>
+      <div className="text-xs mb-5" style={{ color: C.textFaint, fontFamily: "Inter" }}>
+        Live · last synced 6 minutes ago
+      </div>
+
+      <div className="flex gap-2 mb-5 flex-wrap items-center">
+        {lockedLabel ? (
+          <span className="text-sm px-3 py-1.5 rounded-lg" style={{ background: C.surface2, color: C.textDim, border: `1px solid ${C.border}`, fontFamily: "Inter" }}>
+            {lockedLabel}
+          </span>
+        ) : (
+          <select
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            className="text-sm px-3 py-1.5 rounded-lg"
+            style={{ background: C.surface2, color: C.text, border: `1px solid ${C.border}`, fontFamily: "Inter" }}
+          >
+            {REGIONS.map((r) => <option key={r}>{r}</option>)}
+          </select>
+        )}
+        <select
+          className="text-sm px-3 py-1.5 rounded-lg"
+          style={{ background: C.surface2, color: C.textDim, border: `1px solid ${C.border}`, fontFamily: "Inter" }}
+        >
+          <option>Last 30 days</option>
+          <option>Last 90 days</option>
+        </select>
+      </div>
+
+      <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+        <MetricCard label="Global backlog" value={totalBacklog.toLocaleString()} sub={<span className="flex items-center gap-1"><ArrowUp size={12} />3.1% vs last month</span>} subColor={C.danger} />
+        <MetricCard label="Avg wait" value={`${avgWait}d`} sub={`P90: ${p90}d`} />
+        <MetricCard label="Completed (30d)" value={completed.toLocaleString()} sub={<span className="flex items-center gap-1"><ArrowDown size={12} style={{ transform: "rotate(180deg)" }} />5.4% vs last month</span>} subColor={C.good} />
+        <MetricCard label="Overdue P1 cases" value={overdue} sub="Past clinical SLA" subColor={C.danger} />
+      </div>
+
+      <div className="mb-6">
+        <div className="text-xs mb-2" style={{ color: C.textDim, fontFamily: "Inter" }}>Backlog by specialty</div>
+        <div className="rounded-xl p-4" style={{ background: C.surface, border: `1px solid ${C.border}`, height: 180 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={bySpecialty} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <CartesianGrid vertical={false} stroke={C.border} />
+              <XAxis dataKey="name" tick={{ fill: C.textDim, fontSize: 11, fontFamily: "Inter" }} axisLine={{ stroke: C.border }} tickLine={false} />
+              <YAxis tick={{ fill: C.textDim, fontSize: 11, fontFamily: "Inter" }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, fontFamily: "Inter" }} labelStyle={{ color: C.text }} cursor={{ fill: C.surface2 }} />
+              <Bar dataKey="backlog" fill={C.accent} radius={[4, 4, 0, 0]} maxBarSize={40} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <div className="text-xs mb-2" style={{ color: C.textDim, fontFamily: "Inter" }}>Hospitals</div>
+        <div className="rounded-xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+          <table className="w-full" style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                {["Hospital", "Backlog", "Avg wait", "Status", ""].map((h) => (
+                  <th key={h} className="text-left text-xs font-normal px-4 py-2" style={{ color: C.textDim, borderBottom: `1px solid ${C.border}`, fontFamily: "Inter" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {hospitals.map((h) => {
+                const cases = h.departments.flatMap((d) => d.cases);
+                const backlog = cases.filter((c) => c.status === "Waitlisted").length;
+                const wait = Math.round(cases.reduce((a, c) => a + c.waitDays, 0) / (cases.length || 1));
+                const worst = h.departments.map(deptStats).reduce((a, b) => (b.avgWait > a.avgWait ? b : a));
+                const st = STATUS_STYLE[statusOf(worst)];
+                return (
+                  <tr
+                    key={h.id}
+                    onClick={() => onSelectHospital(h.id)}
+                    className="cursor-pointer transition-colors"
+                    style={{ borderBottom: `1px solid ${C.border}` }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = C.surface2)}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <td className="px-4 py-3 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>
+                      <span className="inline-flex items-center gap-1.5">
+                        {h.name}, {h.country}
+                        {h.residency && <Shield size={12} color={C.textFaint} title={`Data residency: ${h.residency.law}`} />}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm" style={{ color: C.text, fontFamily: "'IBM Plex Mono'" }}>{backlog}</td>
+                    <td className="px-4 py-3 text-sm" style={{ color: C.text, fontFamily: "'IBM Plex Mono'" }}>{wait}d</td>
+                    <td className="px-4 py-3"><Pill bg={st.bg} fg={st.fg}>{st.label}</Pill></td>
+                    <td className="px-4 py-3 text-right"><ChevronRight size={16} color={C.textFaint} /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs mb-2" style={{ color: C.textDim, fontFamily: "Inter" }}>Alerts</div>
+        <div className="flex flex-col gap-2">
+          {alerts.map(({ d, stats }) => (
+            <div key={d.id} className="flex items-center gap-3 text-sm rounded-lg p-3" style={{ background: C.surface, border: `1px solid ${C.border}`, fontFamily: "Inter", color: C.text }}>
+              <TriangleAlert size={16} color={C.danger} style={{ flexShrink: 0 }} />
+              <span>{d.hospital.name} {d.name.toLowerCase()} has {stats.overdue} P1 case{stats.overdue > 1 ? "s" : ""} past the 200-day SLA.</span>
+            </div>
+          ))}
+          {alerts.length === 0 && (
+            <div className="text-sm p-3" style={{ color: C.textFaint, fontFamily: "Inter" }}>No active SLA breaches for this selection.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Hospital view — department cards                                        */
+/* ---------------------------------------------------------------------- */
+
+const SORT_ACCESSORS = {
+  id: (c) => c.id,
+  patientName: (c) => c.patientName,
+  deptName: (c) => c.deptName,
+  procedure: (c) => c.procedure,
+  surgeon: (c) => c.surgeon,
+  urgency: (c) => URGENCY_RANK[c.urgency],
+  waitDays: (c) => c.waitDays,
+  status: (c) => c.status,
+};
+
+function SortHeader({ label, sortKey, active, dir, onClick }) {
+  return (
+    <th
+      onClick={() => onClick(sortKey)}
+      className="text-left text-xs font-normal px-3 py-2 select-none cursor-pointer"
+      style={{ color: active ? C.text : C.textDim, borderBottom: `1px solid ${C.border}`, fontFamily: "Inter" }}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {active ? (dir === "asc" ? <ArrowUp size={11} /> : <ArrowDown size={11} />) : <ArrowUpDown size={11} color={C.textFaint} />}
+      </span>
+    </th>
+  );
+}
+
+function HospitalView({ hospital, onBack, onSelectDept, canViewCaseLevel }) {
+  const [sortKey, setSortKey] = useState("waitDays");
+  const [sortDir, setSortDir] = useState("desc");
+
+  const residency = hospital.residency;
+  const blocked = residency?.required && !canViewCaseLevel;
+  const policy = residency ? RESIDENCY_POLICIES[residency.jurisdiction] : null;
+
+  const allCases = useMemo(
+    () => hospital.departments.flatMap((d) => d.cases.map((c) => ({ ...c, deptId: d.id, deptName: d.name }))),
+    [hospital]
+  );
+
+  const sorted = useMemo(() => {
+    const accessor = SORT_ACCESSORS[sortKey];
+    const arr = [...allCases].sort((a, b) => {
+      const av = accessor(a), bv = accessor(b);
+      if (typeof av === "string") return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      return sortDir === "asc" ? av - bv : bv - av;
+    });
+    return arr;
+  }, [allCases, sortKey, sortDir]);
+
+  const toggleSort = (key) => {
+    if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("desc"); }
+  };
+
+  return (
+    <div>
+      {onBack && (
+        <button onClick={onBack} className="flex items-center gap-1 text-xs mb-4" style={{ color: C.textDim, fontFamily: "Inter", background: "none", border: "none", cursor: "pointer" }}>
+          <ArrowLeft size={14} /> All hospitals
+        </button>
+      )}
+      <div className="flex items-center gap-2 mb-1">
+        <h1 style={{ fontFamily: "'Space Grotesk'", fontWeight: 700, fontSize: 20, color: C.text }}>{hospital.name}</h1>
+        {residency && (
+          <span className="inline-flex items-center gap-1" title={`${policy?.law} — ${policy?.fullName}`}>
+            <Shield size={13} color={C.textFaint} />
+          </span>
+        )}
+      </div>
+      <div className="text-xs mb-5" style={{ color: C.textFaint, fontFamily: "Inter" }}>
+        {hospital.country}{residency && ` · data residency: ${policy?.law}`}
+      </div>
+
+      <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+        {hospital.departments.map((d) => {
+          const stats = deptStats(d);
+          const st = STATUS_STYLE[statusOf(stats)];
+          return (
+            <div
+              key={d.id}
+              onClick={() => !blocked && onSelectDept(d.id)}
+              className="rounded-xl p-4 transition-transform"
+              style={{ background: C.surface, border: `1px solid ${C.border}`, cursor: blocked ? "default" : "pointer" }}
+              onMouseEnter={(e) => { if (!blocked) e.currentTarget.style.borderColor = C.accent; }}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-medium" style={{ color: C.text, fontFamily: "Inter" }}>{d.name}</div>
+                <Pill bg={st.bg} fg={st.fg}>{st.label}</Pill>
+              </div>
+              <div className="flex gap-4">
+                <div>
+                  <div className="text-lg" style={{ color: C.text, fontFamily: "'IBM Plex Mono'", fontWeight: 600 }}>{stats.backlog}</div>
+                  <div className="text-xs" style={{ color: C.textFaint, fontFamily: "Inter" }}>backlog</div>
+                </div>
+                <div>
+                  <div className="text-lg" style={{ color: C.text, fontFamily: "'IBM Plex Mono'", fontWeight: 600 }}>{stats.avgWait}d</div>
+                  <div className="text-xs" style={{ color: C.textFaint, fontFamily: "Inter" }}>avg wait</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {blocked ? (
+        <div className="rounded-xl p-4 flex gap-3" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+          <LockIcon size={16} color={C.textFaint} style={{ flexShrink: 0, marginTop: 2 }} />
+          <div>
+            <div className="text-sm mb-1" style={{ color: C.text, fontFamily: "Inter", fontWeight: 500 }}>
+              Case-level records are not shown outside {residency.jurisdiction}
+            </div>
+            <div className="text-xs" style={{ color: C.textDim, fontFamily: "Inter", lineHeight: 1.5 }}>
+              {policy?.note} Only the aggregated department stats above are shown to your role.
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div className="text-xs mb-2" style={{ color: C.textDim, fontFamily: "Inter" }}>
+            All cases · click a column to sort, click a row to open its department
+          </div>
+          <div className="rounded-xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+            <table className="w-full" style={{ borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <SortHeader label="Patient ref" sortKey="id" active={sortKey === "id"} dir={sortDir} onClick={toggleSort} />
+                  <SortHeader label="Patient" sortKey="patientName" active={sortKey === "patientName"} dir={sortDir} onClick={toggleSort} />
+                  <th className="text-left text-xs font-normal px-3 py-2" style={{ color: C.textDim, borderBottom: `1px solid ${C.border}`, fontFamily: "Inter" }}>DOB (age)</th>
+                  <th className="text-left text-xs font-normal px-3 py-2" style={{ color: C.textDim, borderBottom: `1px solid ${C.border}`, fontFamily: "Inter" }}>Gender</th>
+                  <th className="text-left text-xs font-normal px-3 py-2" style={{ color: C.textDim, borderBottom: `1px solid ${C.border}`, fontFamily: "Inter" }}>Contact</th>
+                  <SortHeader label="Department" sortKey="deptName" active={sortKey === "deptName"} dir={sortDir} onClick={toggleSort} />
+                  <SortHeader label="Procedure" sortKey="procedure" active={sortKey === "procedure"} dir={sortDir} onClick={toggleSort} />
+                  <SortHeader label="Surgeon" sortKey="surgeon" active={sortKey === "surgeon"} dir={sortDir} onClick={toggleSort} />
+                  <SortHeader label="Urgency" sortKey="urgency" active={sortKey === "urgency"} dir={sortDir} onClick={toggleSort} />
+                  <SortHeader label="Wait" sortKey="waitDays" active={sortKey === "waitDays"} dir={sortDir} onClick={toggleSort} />
+                  <SortHeader label="Status" sortKey="status" active={sortKey === "status"} dir={sortDir} onClick={toggleSort} />
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((c) => (
+                  <tr
+                    key={`${c.deptId}-${c.id}`}
+                    onClick={() => onSelectDept(c.deptId)}
+                    className="cursor-pointer transition-colors"
+                    style={{ borderBottom: `1px solid ${C.border}` }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = C.surface2)}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "'IBM Plex Mono'" }}>{c.id}</td>
+                    <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>{c.patientName}</td>
+                    <td className="px-3 py-2 text-sm" style={{ color: C.textDim, fontFamily: "'IBM Plex Mono'" }}>{fmtFullDate(new Date(c.dob))} ({ageFromDOB(c.dob)})</td>
+                    <td className="px-3 py-2 text-sm" style={{ color: C.textDim, fontFamily: "Inter" }}>{c.gender}</td>
+                    <td className="px-3 py-2 text-sm" style={{ color: C.textDim, fontFamily: "'IBM Plex Mono'" }}>{c.phone}</td>
+                    <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>{c.deptName}</td>
+                    <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>{c.procedure}</td>
+                    <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>{c.surgeon}</td>
+                    <td className="px-3 py-2"><Pill bg={URGENCY_STYLE[c.urgency].bg} fg={URGENCY_STYLE[c.urgency].fg}>{c.urgency}</Pill></td>
+                    <td className="px-3 py-2 text-sm" style={{ color: c.waitDays > 200 ? C.danger : C.text, fontFamily: "'IBM Plex Mono'" }}>{c.waitDays}d</td>
+                    <td className="px-3 py-2 text-sm" style={{ color: C.textDim, fontFamily: "Inter" }}>{c.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Edit case                                                                */
+/* ---------------------------------------------------------------------- */
+
+const selectStyle = {
+  background: C.surface2, color: C.text, border: `1px solid ${C.border}`,
+  borderRadius: 8, padding: "6px 8px", fontSize: 13, fontFamily: "Inter", width: "100%",
+};
+
+function Field({ label, children }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs" style={{ color: C.textDim, fontFamily: "Inter" }}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+const URGENCY_RANK = { P1: 1, P2: 2, P3: 3 };
+
+function ConfirmDragDowngrade({ caseData, newUrgency, onConfirm, onCancel }) {
+  const [reason, setReason] = useState("");
+  return (
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50 px-4"
+      style={{ background: "rgba(6,10,20,0.65)" }}
+      onClick={onCancel}
+    >
+      <div
+        className="rounded-xl p-5 w-full"
+        style={{ background: C.surface, border: `1px solid ${C.danger}`, maxWidth: 320 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <TriangleAlert size={18} color={C.danger} />
+          <div className="text-sm font-medium" style={{ color: C.text, fontFamily: "Inter" }}>Confirm priority downgrade</div>
+        </div>
+        <div className="text-sm mb-4" style={{ color: C.textDim, fontFamily: "Inter", lineHeight: 1.5 }}>
+          Dropping <span style={{ fontFamily: "'IBM Plex Mono'" }}>{caseData.id}</span> here moves it from{" "}
+          <strong style={{ color: C.text }}>{caseData.urgency}</strong> to{" "}
+          <strong style={{ color: C.text }}>{newUrgency}</strong>. It will drop out of the P1 SLA watch list.
+        </div>
+        <Field label="Clinical reason for downgrade (required)">
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            placeholder="e.g. Reassessed at pre-op review, patient stable, deferring to..."
+            style={{ ...selectStyle, resize: "none", fontFamily: "Inter" }}
+          />
+        </Field>
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={onCancel}
+            className="flex-1 text-sm py-2 rounded-lg"
+            style={{ background: C.surface2, color: C.textDim, border: `1px solid ${C.border}`, fontFamily: "Inter", cursor: "pointer" }}
+          >
+            Cancel move
+          </button>
+          <button
+            onClick={() => reason.trim() && onConfirm(reason.trim())}
+            disabled={!reason.trim()}
+            className="flex-1 text-sm py-2 rounded-lg"
+            style={{
+              background: reason.trim() ? C.danger : C.surface2, color: reason.trim() ? "#2A0C0E" : C.textFaint,
+              fontFamily: "Inter", fontWeight: 600, border: "none", cursor: reason.trim() ? "pointer" : "not-allowed",
+            }}
+          >
+            Confirm downgrade
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditCaseModal({ caseData, surgeons, canEditUrgency, canEditSchedule, onSave, onClose }) {
+  const [urgency, setUrgency] = useState(caseData.urgency);
+  const [gender, setGender] = useState(caseData.gender);
+  const [surgeon, setSurgeon] = useState(caseData.surgeon);
+  const [status, setStatus] = useState(caseData.status);
+  const [scheduledDate, setScheduledDate] = useState(caseData.scheduledDate || isoDate(daysAgo(-7)));
+  const [confirming, setConfirming] = useState(false);
+  const [reason, setReason] = useState("");
+
+  const isDowngrade = canEditUrgency && URGENCY_RANK[urgency] > URGENCY_RANK[caseData.urgency];
+
+  const buildPatch = (extra = {}) => ({
+    urgency,
+    gender,
+    surgeon,
+    status,
+    scheduledDate: status === "Scheduled" ? scheduledDate : null,
+    ...extra,
+  });
+
+  const handleSaveClick = () => {
+    if (isDowngrade) {
+      setConfirming(true);
+    } else {
+      onSave(buildPatch());
+    }
+  };
+
+  if (confirming) {
+    return (
+      <div
+        className="fixed inset-0 flex items-center justify-center z-50 px-4"
+        style={{ background: "rgba(6,10,20,0.65)" }}
+        onClick={onClose}
+      >
+        <div
+          className="rounded-xl p-5 w-full"
+          style={{ background: C.surface, border: `1px solid ${C.danger}`, maxWidth: 320 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <TriangleAlert size={18} color={C.danger} />
+            <div className="text-sm font-medium" style={{ color: C.text, fontFamily: "Inter" }}>
+              Confirm priority downgrade
+            </div>
+          </div>
+          <div className="text-sm mb-4" style={{ color: C.textDim, fontFamily: "Inter", lineHeight: 1.5 }}>
+            <span style={{ fontFamily: "'IBM Plex Mono'" }}>{caseData.id}</span> will move from{" "}
+            <strong style={{ color: C.text }}>{caseData.urgency}</strong> to{" "}
+            <strong style={{ color: C.text }}>{urgency}</strong>. This case will drop out of the P1 SLA
+            watch list.
+          </div>
+          <Field label="Clinical reason for downgrade (required)">
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              placeholder="e.g. Reassessed at pre-op review, patient stable, deferring to..."
+              style={{ ...selectStyle, resize: "none", fontFamily: "Inter" }}
+            />
+          </Field>
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={() => setConfirming(false)}
+              className="flex-1 text-sm py-2 rounded-lg"
+              style={{ background: C.surface2, color: C.textDim, border: `1px solid ${C.border}`, fontFamily: "Inter", cursor: "pointer" }}
+            >
+              Go back
+            </button>
+            <button
+              onClick={() => reason.trim() && onSave(buildPatch({ downgradeReason: reason.trim() }))}
+              disabled={!reason.trim()}
+              className="flex-1 text-sm py-2 rounded-lg"
+              style={{
+                background: reason.trim() ? C.danger : C.surface2,
+                color: reason.trim() ? "#2A0C0E" : C.textFaint,
+                fontFamily: "Inter", fontWeight: 600, border: "none",
+                cursor: reason.trim() ? "pointer" : "not-allowed",
+              }}
+            >
+              Confirm downgrade
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50 px-4"
+      style={{ background: "rgba(6,10,20,0.65)" }}
+      onClick={onClose}
+    >
+      <div
+        className="rounded-xl p-5 w-full"
+        style={{ background: C.surface, border: `1px solid ${C.border}`, maxWidth: 320 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm font-medium" style={{ color: C.text, fontFamily: "Inter" }}>
+            Edit case · <span style={{ fontFamily: "'IBM Plex Mono'" }}>{caseData.id}</span>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }} aria-label="Close">
+            <X size={16} color={C.textDim} />
+          </button>
+        </div>
+
+        <div className="rounded-lg p-3 mb-4" style={{ background: C.surface2 }}>
+          <div className="text-sm" style={{ color: C.text, fontFamily: "Inter", fontWeight: 500 }}>{caseData.patientName}</div>
+          <div className="text-xs mt-0.5" style={{ color: C.textFaint, fontFamily: "Inter" }}>
+            DOB <span style={{ fontFamily: "'IBM Plex Mono'" }}>{fmtFullDate(new Date(caseData.dob))}</span> ({ageFromDOB(caseData.dob)}) · {caseData.phone}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <Field label={canEditUrgency ? "Urgency" : "Urgency (clinical roles only)"}>
+            <select value={urgency} onChange={(e) => setUrgency(e.target.value)} disabled={!canEditUrgency} style={{ ...selectStyle, opacity: canEditUrgency ? 1 : 0.5, cursor: canEditUrgency ? "auto" : "not-allowed" }}>
+              <option>P1</option><option>P2</option><option>P3</option>
+            </select>
+          </Field>
+          <Field label="Gender">
+            <select value={gender} onChange={(e) => setGender(e.target.value)} disabled={!canEditSchedule} style={{ ...selectStyle, opacity: canEditSchedule ? 1 : 0.5, cursor: canEditSchedule ? "auto" : "not-allowed" }}>
+              <option>Female</option><option>Male</option>
+            </select>
+          </Field>
+          <Field label="Surgeon">
+            <select value={surgeon} onChange={(e) => setSurgeon(e.target.value)} disabled={!canEditSchedule} style={{ ...selectStyle, opacity: canEditSchedule ? 1 : 0.5, cursor: canEditSchedule ? "auto" : "not-allowed" }}>
+              {surgeons.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </Field>
+          <Field label="Status">
+            <select value={status} onChange={(e) => setStatus(e.target.value)} disabled={!canEditSchedule} style={{ ...selectStyle, opacity: canEditSchedule ? 1 : 0.5, cursor: canEditSchedule ? "auto" : "not-allowed" }}>
+              <option>Waitlisted</option>
+              <option>Scheduled</option>
+              <option>Completed</option>
+              <option>Cancelled</option>
+            </select>
+          </Field>
+          {status === "Scheduled" && (
+            <Field label="Scheduled for">
+              <input
+                type="date"
+                value={scheduledDate}
+                min={isoDate(TODAY)}
+                onChange={(e) => setScheduledDate(e.target.value)}
+                disabled={!canEditSchedule}
+                style={{ ...selectStyle, colorScheme: "dark", opacity: canEditSchedule ? 1 : 0.5, cursor: canEditSchedule ? "auto" : "not-allowed" }}
+              />
+            </Field>
+          )}
+        </div>
+
+        <div className="flex gap-2 mt-5">
+          <button
+            onClick={onClose}
+            className="flex-1 text-sm py-2 rounded-lg"
+            style={{ background: C.surface2, color: C.textDim, border: `1px solid ${C.border}`, fontFamily: "Inter", cursor: "pointer" }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSaveClick}
+            className="flex-1 text-sm py-2 rounded-lg"
+            style={{ background: C.accent, color: "#06231F", fontFamily: "Inter", fontWeight: 600, border: "none", cursor: "pointer" }}
+          >
+            Save changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Department drill-down                                                   */
+/* ---------------------------------------------------------------------- */
+
+function DepartmentView({ hospital, dept, onBackHospital, onUpdateCase, readOnly, perms }) {
+  const [urgency, setUrgency] = useState("All");
+  const [surgeon, setSurgeon] = useState("All");
+  const [editingId, setEditingId] = useState(null);
+  const [sortKey, setSortKey] = useState("waitDays");
+  const [sortDir, setSortDir] = useState("desc");
+  const [draggedId, setDraggedId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+  const [pendingDrag, setPendingDrag] = useState(null); // { caseData, newUrgency }
+
+  const stats = deptStats(dept);
+  const st = STATUS_STYLE[statusOf(stats)];
+  const surgeons = Array.from(new Set(dept.cases.map((c) => c.surgeon)));
+
+  const canDrag = perms.editUrgency && !readOnly && sortKey === "waitDays";
+
+  const toggleSort = (key) => {
+    if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir("desc"); }
+  };
+
+  const filtered = dept.cases
+    .filter((c) => urgency === "All" || c.urgency === urgency)
+    .filter((c) => surgeon === "All" || c.surgeon === surgeon)
+    .sort((a, b) => {
+      const accessor = SORT_ACCESSORS[sortKey];
+      const av = accessor(a), bv = accessor(b);
+      if (typeof av === "string") return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      return sortDir === "asc" ? av - bv : bv - av;
+    });
+
+  const applyPriorityMove = (sourceCase, newUrgency, reason) => {
+    onUpdateCase(dept.id, sourceCase.id, {
+      urgency: newUrgency,
+      ...(reason ? { downgradeReason: reason } : {}),
+    });
+  };
+
+  const handleDrop = (targetCase) => {
+    const sourceCase = filtered.find((c) => c.id === draggedId);
+    setDraggedId(null);
+    setDragOverId(null);
+    if (!sourceCase || sourceCase.id === targetCase.id) return;
+
+    const newUrgency = targetCase.urgency;
+    if (newUrgency === sourceCase.urgency) return; // same band, no priority change
+
+    if (URGENCY_RANK[newUrgency] > URGENCY_RANK[sourceCase.urgency]) {
+      setPendingDrag({ caseData: sourceCase, newUrgency });
+    } else {
+      applyPriorityMove(sourceCase, newUrgency, null);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-1 text-xs mb-2" style={{ color: C.textFaint, fontFamily: "Inter" }}>
+        {onBackHospital ? (
+          <button onClick={onBackHospital} style={{ background: "none", border: "none", color: C.textDim, cursor: "pointer", padding: 0, fontFamily: "Inter" }}>{hospital.name}</button>
+        ) : (
+          <span>{hospital.name}</span>
+        )}
+        <ChevronRight size={12} />
+        <span>{dept.name}</span>
+      </div>
+      <div className="flex items-center justify-between mb-5">
+        <h1 style={{ fontFamily: "'Space Grotesk'", fontWeight: 700, fontSize: 20, color: C.text }}>{dept.name}</h1>
+        <div className="flex items-center gap-2">
+          {readOnly && <Pill bg={C.surface2} fg={C.textDim}>View only</Pill>}
+          <Pill bg={st.bg} fg={st.fg}>{st.label}</Pill>
+        </div>
+      </div>
+
+      <div className="grid gap-3 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
+        <MetricCard label="Backlog" value={stats.backlog} />
+        <MetricCard label="Avg wait" value={`${stats.avgWait}d`} />
+        <MetricCard label="OR utilization" value={dept.orUtil == null ? "—" : `${dept.orUtil}%`} />
+        <MetricCard label="Next OR slot" value={fmtDate(daysAgo(-6))} mono={false} />
+      </div>
+
+      <div className="mb-6">
+        <div className="text-xs mb-2" style={{ color: C.textDim, fontFamily: "Inter" }}>Backlog trend, last 6 months</div>
+        <div className="rounded-xl p-4" style={{ background: C.surface, border: `1px solid ${C.border}`, height: 160 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={dept.trend} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+              <CartesianGrid vertical={false} stroke={C.border} />
+              <XAxis dataKey="month" tick={{ fill: C.textDim, fontSize: 11, fontFamily: "Inter" }} axisLine={{ stroke: C.border }} tickLine={false} />
+              <YAxis tick={{ fill: C.textDim, fontSize: 11, fontFamily: "Inter" }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, fontFamily: "Inter" }} labelStyle={{ color: C.text }} />
+              <Line type="monotone" dataKey="backlog" stroke={stats.trendDir > 0 ? C.danger : C.good} strokeWidth={2} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <div className="text-xs" style={{ color: C.textDim, fontFamily: "Inter" }}>Case queue</div>
+          {perms.editUrgency && (
+            <div className="text-xs mt-0.5" style={{ color: C.textFaint, fontFamily: "Inter" }}>
+              {canDrag ? "Drag a case onto another to change its priority tier" : "Sort by Wait to enable drag-to-reprioritize"}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <select value={urgency} onChange={(e) => setUrgency(e.target.value)} className="text-xs px-2 py-1 rounded-lg" style={{ background: C.surface2, color: C.text, border: `1px solid ${C.border}`, fontFamily: "Inter" }}>
+            {["All", "P1", "P2", "P3"].map((u) => <option key={u}>{u}</option>)}
+          </select>
+          <select value={surgeon} onChange={(e) => setSurgeon(e.target.value)} className="text-xs px-2 py-1 rounded-lg" style={{ background: C.surface2, color: C.text, border: `1px solid ${C.border}`, fontFamily: "Inter" }}>
+            <option>All</option>
+            {surgeons.map((s) => <option key={s}>{s}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="rounded-xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+        <table className="w-full" style={{ borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              {perms.editUrgency && <th className="px-2 py-2" style={{ borderBottom: `1px solid ${C.border}` }}></th>}
+              <SortHeader label="Patient ref" sortKey="id" active={sortKey === "id"} dir={sortDir} onClick={toggleSort} />
+              <SortHeader label="Patient" sortKey="patientName" active={sortKey === "patientName"} dir={sortDir} onClick={toggleSort} />
+              <th className="text-left text-xs font-normal px-3 py-2" style={{ color: C.textDim, borderBottom: `1px solid ${C.border}`, fontFamily: "Inter" }}>DOB (age)</th>
+              <th className="text-left text-xs font-normal px-3 py-2" style={{ color: C.textDim, borderBottom: `1px solid ${C.border}`, fontFamily: "Inter" }}>Gender</th>
+              <th className="text-left text-xs font-normal px-3 py-2" style={{ color: C.textDim, borderBottom: `1px solid ${C.border}`, fontFamily: "Inter" }}>Contact</th>
+              <SortHeader label="Procedure" sortKey="procedure" active={sortKey === "procedure"} dir={sortDir} onClick={toggleSort} />
+              <SortHeader label="Surgeon" sortKey="surgeon" active={sortKey === "surgeon"} dir={sortDir} onClick={toggleSort} />
+              <SortHeader label="Urgency" sortKey="urgency" active={sortKey === "urgency"} dir={sortDir} onClick={toggleSort} />
+              <SortHeader label="Wait" sortKey="waitDays" active={sortKey === "waitDays"} dir={sortDir} onClick={toggleSort} />
+              <SortHeader label="Status" sortKey="status" active={sortKey === "status"} dir={sortDir} onClick={toggleSort} />
+              {!readOnly && <th className="px-3 py-2" style={{ borderBottom: `1px solid ${C.border}` }}></th>}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((c) => (
+              <tr
+                key={c.id}
+                draggable={canDrag}
+                onDragStart={() => setDraggedId(c.id)}
+                onDragOver={(e) => { if (canDrag) { e.preventDefault(); setDragOverId(c.id); } }}
+                onDragLeave={() => setDragOverId((id) => (id === c.id ? null : id))}
+                onDrop={(e) => { e.preventDefault(); handleDrop(c); }}
+                onDragEnd={() => { setDraggedId(null); setDragOverId(null); }}
+                style={{
+                  borderBottom: `1px solid ${C.border}`,
+                  background: dragOverId === c.id && draggedId && draggedId !== c.id ? C.accentDim : "transparent",
+                  opacity: draggedId === c.id ? 0.4 : 1,
+                }}
+              >
+                {perms.editUrgency && (
+                  <td className="px-2 py-2" style={{ cursor: canDrag ? "grab" : "default" }}>
+                    <GripVertical size={14} color={canDrag ? C.textFaint : C.border} />
+                  </td>
+                )}
+                <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "'IBM Plex Mono'" }}>{c.id}</td>
+                <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>{c.patientName}</td>
+                <td className="px-3 py-2 text-sm" style={{ color: C.textDim, fontFamily: "'IBM Plex Mono'" }}>{fmtFullDate(new Date(c.dob))} ({ageFromDOB(c.dob)})</td>
+                <td className="px-3 py-2 text-sm" style={{ color: C.textDim, fontFamily: "Inter" }}>{c.gender}</td>
+                <td className="px-3 py-2 text-sm" style={{ color: C.textDim, fontFamily: "'IBM Plex Mono'" }}>{c.phone}</td>
+                <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>{c.procedure}</td>
+                <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>{c.surgeon}</td>
+                <td className="px-3 py-2"><Pill bg={URGENCY_STYLE[c.urgency].bg} fg={URGENCY_STYLE[c.urgency].fg}>{c.urgency}</Pill></td>
+                <td className="px-3 py-2 text-sm" style={{ color: c.waitDays > 200 ? C.danger : C.text, fontFamily: "'IBM Plex Mono'" }}>{c.waitDays}d</td>
+                <td className="px-3 py-2 text-sm" style={{ color: C.textDim, fontFamily: "Inter" }}>{c.status === "Scheduled" ? `Scheduled ${fmtDate(new Date(c.scheduledDate))}` : c.status}</td>
+                {!readOnly && (
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      onClick={() => setEditingId(c.id)}
+                      aria-label={`Edit case ${c.id}`}
+                      className="transition-colors"
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 4, borderRadius: 6 }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = C.surface2)}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <Pencil size={14} color={C.textDim} />
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan={10 + (perms.editUrgency ? 1 : 0) + (!readOnly ? 1 : 0)} className="px-3 py-6 text-center text-sm" style={{ color: C.textFaint, fontFamily: "Inter" }}>No cases match these filters.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {editingId && !readOnly && (
+        <EditCaseModal
+          caseData={dept.cases.find((c) => c.id === editingId)}
+          surgeons={surgeons}
+          canEditUrgency={perms.editUrgency}
+          canEditSchedule={perms.editSchedule}
+          onClose={() => setEditingId(null)}
+          onSave={(patch) => {
+            onUpdateCase(dept.id, editingId, patch);
+            setEditingId(null);
+          }}
+        />
+      )}
+
+      {pendingDrag && (
+        <ConfirmDragDowngrade
+          caseData={pendingDrag.caseData}
+          newUrgency={pendingDrag.newUrgency}
+          onCancel={() => setPendingDrag(null)}
+          onConfirm={(reason) => {
+            applyPriorityMove(pendingDrag.caseData, pendingDrag.newUrgency, reason);
+            setPendingDrag(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Root                                                                     */
+/* ---------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------- */
+/* User management (hospital admin only)                                   */
+/* ---------------------------------------------------------------------- */
+
+const ROLE_LABEL = { hospital_admin: "Hospital admin", scheduler: "Scheduler", dept_head: "Department head" };
+
+function UserManagementView({ hospital, users, currentUserId, onAdd, onRemove, onBack }) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("scheduler");
+  const [deptId, setDeptId] = useState(hospital.departments[0].id);
+  const [justAdded, setJustAdded] = useState(null);
+
+  const canAdd = name.trim().length > 0;
+
+  const addUser = () => {
+    const email = `${slugify(name.trim())}@${slugify(hospital.name)}.example`;
+    const newUser = {
+      id: `u-${Date.now()}`,
+      name: name.trim(),
+      role,
+      hospitalId: hospital.id,
+      email,
+      password: DEMO_PASSWORD,
+      deptId: role === "dept_head" ? deptId : undefined,
+    };
+    onAdd(newUser);
+    setJustAdded(newUser);
+    setName("");
+  };
+
+  return (
+    <div>
+      <button onClick={onBack} className="flex items-center gap-1 text-xs mb-4" style={{ color: C.textDim, fontFamily: "Inter", background: "none", border: "none", cursor: "pointer" }}>
+        <ArrowLeft size={14} /> Back to {hospital.name}
+      </button>
+      <div className="flex items-center gap-2 mb-5">
+        <Users size={18} color={C.accent} />
+        <h1 style={{ fontFamily: "'Space Grotesk'", fontWeight: 700, fontSize: 20, color: C.text }}>Manage users</h1>
+      </div>
+
+      <div className="rounded-xl overflow-hidden mb-6" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+        <table className="w-full" style={{ borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              {["Name", "Email", "Role", "Scope", ""].map((h) => (
+                <th key={h} className="text-left text-xs font-normal px-4 py-2" style={{ color: C.textDim, borderBottom: `1px solid ${C.border}`, fontFamily: "Inter" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u) => {
+              const isSelf = u.id === currentUserId;
+              return (
+                <tr key={u.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <td className="px-4 py-2.5 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>
+                    {u.name}{isSelf && <span style={{ color: C.textFaint }}> (you)</span>}
+                  </td>
+                  <td className="px-4 py-2.5 text-xs" style={{ color: C.textFaint, fontFamily: "'IBM Plex Mono'" }}>{u.email}</td>
+                  <td className="px-4 py-2.5"><Pill bg={C.surface2} fg={C.textDim}>{ROLE_LABEL[u.role]}</Pill></td>
+                  <td className="px-4 py-2.5 text-sm" style={{ color: C.textDim, fontFamily: "Inter" }}>
+                    {u.role === "dept_head" ? (u.department_name ?? hospital.departments.find((d) => d.id === u.deptId)?.name) : hospital.name}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    <button
+                      onClick={() => !isSelf && onRemove(u.id)}
+                      disabled={isSelf}
+                      aria-label={isSelf ? "You can't remove your own account" : `Remove ${u.name}`}
+                      title={isSelf ? "You can't remove your own account" : undefined}
+                      style={{ background: "none", border: "none", cursor: isSelf ? "not-allowed" : "pointer", padding: 4, borderRadius: 6, opacity: isSelf ? 0.35 : 1 }}
+                    >
+                      <Trash2 size={14} color={C.textFaint} />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="rounded-xl p-4" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+        <div className="text-xs mb-3" style={{ color: C.textDim, fontFamily: "Inter" }}>Add user</div>
+        <div className="flex flex-col gap-3">
+          <Field label="Name">
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" style={selectStyle} />
+          </Field>
+          <Field label="Role">
+            <select value={role} onChange={(e) => setRole(e.target.value)} style={selectStyle}>
+              <option value="hospital_admin">Hospital admin</option>
+              <option value="scheduler">Scheduler</option>
+              <option value="dept_head">Department head</option>
+            </select>
+          </Field>
+          {role === "dept_head" && (
+            <Field label="Department">
+              <select value={deptId} onChange={(e) => setDeptId(e.target.value)} style={selectStyle}>
+                {hospital.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </Field>
+          )}
+        </div>
+        <button
+          onClick={() => canAdd && addUser()}
+          disabled={!canAdd}
+          className="flex items-center justify-center gap-2 w-full text-sm py-2 rounded-lg mt-4"
+          style={{
+            background: canAdd ? C.accent : C.surface2, color: canAdd ? "#06231F" : C.textFaint,
+            fontFamily: "Inter", fontWeight: 600, border: "none", cursor: canAdd ? "pointer" : "not-allowed",
+          }}
+        >
+          <UserPlus size={14} /> Add user
+        </button>
+        {justAdded && (
+          <div className="text-xs mt-3" style={{ color: C.textFaint, fontFamily: "Inter", lineHeight: 1.5 }}>
+            Login for {justAdded.name}: <span style={{ fontFamily: "'IBM Plex Mono'", color: C.textDim }}>{justAdded.email}</span> ·
+            temporary password <span style={{ fontFamily: "'IBM Plex Mono'", color: C.textDim }}>{DEMO_PASSWORD}</span> — share this with them directly, it won't be shown again.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* CSV ingestion                                                           */
+/* ---------------------------------------------------------------------- */
+
+const CSV_HEADER = ["department", "patient_ref", "patient_name", "patient_dob", "patient_gender", "patient_phone", "procedure", "surgeon", "urgency", "waitlist_date", "status"];
+const VALID_URGENCY = ["P1", "P2", "P3"];
+const VALID_STATUS = ["Waitlisted", "Scheduled", "Completed", "Cancelled"];
+const VALID_GENDER = ["Female", "Male"];
+
+const SAMPLE_CSV = `department,patient_ref,patient_name,patient_dob,patient_gender,patient_phone,procedure,surgeon,urgency,waitlist_date,status
+Cardiac surgery,PT-90001,Karabo Sithole,1971-03-12,Male,+27 82 555 0101,CABG,Dr Novak,P1,2026-02-14,Waitlisted
+Cardiac surgery,PT-90002,Elena Marchetti,1985-07-30,Female,+27 83 555 0102,Valve repair,Dr Adeyemi,P2,2026-04-02,Waitlisted
+Orthopedics,PT-90003,Dumisani Khumalo,1960-11-05,Male,+27 84 555 0103,Total knee replacement,Dr Botha,P3,2026-06-10,Scheduled
+Cardiac surgery,,Anna Petrova,1978-01-20,Female,+27 82 555 0104,CABG,Dr Novak,P1,2026-03-01,Waitlisted
+General surgery,PT-90005,Farai Chikanga,1993-09-14,Female,+27 83 555 0105,Hernia repair,Dr Osei,P4,2026-05-11,Waitlisted
+Orthopedics,PT-90006,Lindiwe Mahlangu,1988-04-22,Female,+27 84 555 0106,Hip replacement,Dr Lindqvist,P2,11-05-2026,Waitlisted
+Orthopedics,PT-90007,Sipho Ndlovu,,Male,+27 84 555 0107,ACL reconstruction,Dr Botha,P3,2026-05-20,Waitlisted
+General surgery,PT-90008,Zanele Mbeki,1990-06-18,Unspecified,+27 83 555 0108,Cholecystectomy,Dr Marchetti,P2,2026-04-28,Waitlisted`;
+
+function parseCsv(text, hospital, restrictedDeptId) {
+  const lines = text.trim().split("\n").filter((l) => l.trim().length > 0);
+  if (lines.length < 2) return { valid: [], errors: [{ row: 0, reason: "No data rows found", raw: "" }] };
+
+  const header = lines[0].split(",").map((s) => s.trim().toLowerCase());
+  if (header.join(",") !== CSV_HEADER.join(",")) {
+    return { valid: [], errors: [{ row: 1, reason: `Header must be: ${CSV_HEADER.join(", ")}`, raw: lines[0] }] };
+  }
+
+  const valid = [];
+  const errors = [];
+
+  lines.slice(1).forEach((line, i) => {
+    const rowNum = i + 2;
+    const fields = line.split(",").map((s) => s.trim());
+    if (fields.length !== CSV_HEADER.length) {
+      errors.push({ row: rowNum, reason: `Expected ${CSV_HEADER.length} columns, found ${fields.length}`, raw: line });
+      return;
+    }
+    const [departmentName, patientRef, patientName, patientDobStr, patientGender, patientPhone, procedure, surgeon, urgency, waitlistDateStr, status] = fields;
+
+    const dept = hospital.departments.find((d) => d.name.toLowerCase() === departmentName.toLowerCase());
+    if (!dept) {
+      errors.push({ row: rowNum, reason: `Unknown department "${departmentName}"`, raw: line });
+      return;
+    }
+    if (restrictedDeptId && dept.id !== restrictedDeptId) {
+      errors.push({ row: rowNum, reason: `Outside your department scope`, raw: line });
+      return;
+    }
+    if (!patientRef) {
+      errors.push({ row: rowNum, reason: "Missing patient reference", raw: line });
+      return;
+    }
+    if (!patientName) {
+      errors.push({ row: rowNum, reason: "Missing patient name", raw: line });
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(patientDobStr) || isNaN(new Date(patientDobStr).getTime()) || new Date(patientDobStr) > TODAY) {
+      errors.push({ row: rowNum, reason: `Invalid date of birth "${patientDobStr}" (expected YYYY-MM-DD, not in the future)`, raw: line });
+      return;
+    }
+    if (!VALID_GENDER.includes(patientGender)) {
+      errors.push({ row: rowNum, reason: `Invalid gender "${patientGender}" (expected ${VALID_GENDER.join(", ")})`, raw: line });
+      return;
+    }
+    if (!patientPhone) {
+      errors.push({ row: rowNum, reason: "Missing patient contact number", raw: line });
+      return;
+    }
+    if (!procedure || !surgeon) {
+      errors.push({ row: rowNum, reason: "Missing procedure or surgeon", raw: line });
+      return;
+    }
+    if (!VALID_URGENCY.includes(urgency)) {
+      errors.push({ row: rowNum, reason: `Invalid urgency tier "${urgency}" (expected P1, P2 or P3)`, raw: line });
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(waitlistDateStr) || isNaN(new Date(waitlistDateStr).getTime())) {
+      errors.push({ row: rowNum, reason: `Invalid date "${waitlistDateStr}" (expected YYYY-MM-DD)`, raw: line });
+      return;
+    }
+    if (!VALID_STATUS.includes(status)) {
+      errors.push({ row: rowNum, reason: `Invalid status "${status}"`, raw: line });
+      return;
+    }
+
+    const waitlistDate = new Date(waitlistDateStr);
+    const waitDays = Math.max(0, Math.round((TODAY - waitlistDate) / 86400000));
+
+    valid.push({
+      row: rowNum,
+      deptId: dept.id,
+      deptName: dept.name,
+      caseData: {
+        id: patientRef,
+        patientName,
+        dob: patientDobStr,
+        gender: patientGender,
+        phone: patientPhone,
+        procedure,
+        surgeon,
+        urgency,
+        waitDays,
+        waitlistDate,
+        status,
+        scheduledDate: status === "Scheduled" ? isoDate(daysAgo(-7)) : null,
+      },
+    });
+  });
+
+  return { valid, errors };
+}
+
+function CsvImportView({ hospital, restrictedDeptId, onCommit, onBack }) {
+  const [text, setText] = useState("");
+  const [parsed, setParsed] = useState(null);
+  const [selected, setSelected] = useState({});
+
+  const runValidation = () => {
+    const result = parseCsv(text, hospital, restrictedDeptId);
+    setParsed(result);
+    const sel = {};
+    result.valid.forEach((v) => (sel[v.row] = true));
+    setSelected(sel);
+  };
+
+  const selectedCount = Object.values(selected).filter(Boolean).length;
+
+  const commit = () => {
+    const toCommit = parsed.valid.filter((v) => selected[v.row]);
+    const byDept = {};
+    toCommit.forEach((v) => {
+      byDept[v.deptId] = byDept[v.deptId] || [];
+      byDept[v.deptId].push(v.caseData);
+    });
+    onCommit(byDept, toCommit.length);
+  };
+
+  return (
+    <div>
+      <button onClick={onBack} className="flex items-center gap-1 text-xs mb-4" style={{ color: C.textDim, fontFamily: "Inter", background: "none", border: "none", cursor: "pointer" }}>
+        <ArrowLeft size={14} /> Back to {hospital.name}
+      </button>
+      <div className="flex items-center gap-2 mb-1">
+        <Upload size={18} color={C.accent} />
+        <h1 style={{ fontFamily: "'Space Grotesk'", fontWeight: 700, fontSize: 20, color: C.text }}>Import cases</h1>
+      </div>
+      <div className="text-xs mb-5" style={{ color: C.textFaint, fontFamily: "Inter" }}>
+        {restrictedDeptId
+          ? `Scoped to ${hospital.departments.find((d) => d.id === restrictedDeptId)?.name}`
+          : `${hospital.name} — all departments`}
+      </div>
+
+      {!parsed && (
+        <>
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs" style={{ color: C.textDim, fontFamily: "Inter" }}>Paste CSV</div>
+            <button
+              onClick={() => setText(SAMPLE_CSV)}
+              className="text-xs px-2 py-1 rounded-lg"
+              style={{ background: C.surface2, color: C.textDim, border: `1px solid ${C.border}`, fontFamily: "Inter", cursor: "pointer" }}
+            >
+              Load sample CSV
+            </button>
+          </div>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={10}
+            placeholder={CSV_HEADER.join(",")}
+            style={{ ...selectStyle, fontFamily: "'IBM Plex Mono'", fontSize: 12, resize: "vertical" }}
+          />
+          <button
+            onClick={runValidation}
+            disabled={!text.trim()}
+            className="text-sm py-2 px-4 rounded-lg mt-3"
+            style={{
+              background: text.trim() ? C.accent : C.surface2, color: text.trim() ? "#06231F" : C.textFaint,
+              fontFamily: "Inter", fontWeight: 600, border: "none", cursor: text.trim() ? "pointer" : "not-allowed",
+            }}
+          >
+            Validate
+          </button>
+        </>
+      )}
+
+      {parsed && (
+        <>
+          <div className="flex gap-3 mb-5">
+            <div className="flex items-center gap-2 text-sm" style={{ color: C.good, fontFamily: "Inter" }}>
+              <CheckCircle2 size={15} /> {parsed.valid.length} valid row{parsed.valid.length !== 1 ? "s" : ""}
+            </div>
+            {parsed.errors.length > 0 && (
+              <div className="flex items-center gap-2 text-sm" style={{ color: C.danger, fontFamily: "Inter" }}>
+                <FileWarning size={15} /> {parsed.errors.length} error{parsed.errors.length !== 1 ? "s" : ""}
+              </div>
+            )}
+          </div>
+
+          {parsed.errors.length > 0 && (
+            <div className="mb-6">
+              <div className="text-xs mb-2" style={{ color: C.textDim, fontFamily: "Inter" }}>Error report</div>
+              <div className="rounded-xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.dangerDim}` }}>
+                <table className="w-full" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      {["Row", "Reason", "Raw"].map((h) => (
+                        <th key={h} className="text-left text-xs font-normal px-3 py-2" style={{ color: C.textDim, borderBottom: `1px solid ${C.border}`, fontFamily: "Inter" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parsed.errors.map((e, i) => (
+                      <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td className="px-3 py-2 text-sm" style={{ color: C.danger, fontFamily: "'IBM Plex Mono'" }}>{e.row}</td>
+                        <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>{e.reason}</td>
+                        <td className="px-3 py-2 text-xs" style={{ color: C.textFaint, fontFamily: "'IBM Plex Mono'" }}>{e.raw}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="text-xs mt-2" style={{ color: C.textFaint, fontFamily: "Inter" }}>
+                Fix these rows in your source file and re-upload — valid rows below are unaffected.
+              </div>
+            </div>
+          )}
+
+          {parsed.valid.length > 0 && (
+            <div className="mb-4">
+              <div className="text-xs mb-2" style={{ color: C.textDim, fontFamily: "Inter" }}>Staged for review</div>
+              <div className="rounded-xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+                <table className="w-full" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      {["", "Department", "Patient ref", "Patient", "Procedure", "Urgency", "Status"].map((h) => (
+                        <th key={h} className="text-left text-xs font-normal px-3 py-2" style={{ color: C.textDim, borderBottom: `1px solid ${C.border}`, fontFamily: "Inter" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parsed.valid.map((v) => (
+                      <tr key={v.row} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={!!selected[v.row]}
+                            onChange={(e) => setSelected((prev) => ({ ...prev, [v.row]: e.target.checked }))}
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>{v.deptName}</td>
+                        <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "'IBM Plex Mono'" }}>{v.caseData.id}</td>
+                        <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>{v.caseData.patientName}</td>
+                        <td className="px-3 py-2 text-sm" style={{ color: C.text, fontFamily: "Inter" }}>{v.caseData.procedure}</td>
+                        <td className="px-3 py-2"><Pill bg={URGENCY_STYLE[v.caseData.urgency].bg} fg={URGENCY_STYLE[v.caseData.urgency].fg}>{v.caseData.urgency}</Pill></td>
+                        <td className="px-3 py-2 text-sm" style={{ color: C.textDim, fontFamily: "Inter" }}>{v.caseData.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setParsed(null); setText(""); }}
+              className="text-sm py-2 px-4 rounded-lg"
+              style={{ background: C.surface2, color: C.textDim, border: `1px solid ${C.border}`, fontFamily: "Inter", cursor: "pointer" }}
+            >
+              Start over
+            </button>
+            {parsed.valid.length > 0 && (
+              <button
+                onClick={commit}
+                disabled={selectedCount === 0}
+                className="text-sm py-2 px-4 rounded-lg"
+                style={{
+                  background: selectedCount > 0 ? C.accent : C.surface2, color: selectedCount > 0 ? "#06231F" : C.textFaint,
+                  fontFamily: "Inter", fontWeight: 600, border: "none", cursor: selectedCount > 0 ? "pointer" : "not-allowed",
+                }}
+              >
+                Import {selectedCount} case{selectedCount !== 1 ? "s" : ""}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Auth                                                                     */
+/* ---------------------------------------------------------------------- */
+
+const ROLES = [
+  { id: "global_viewer", label: "Global viewer", level: "global", permissions: { editSchedule: false, editUrgency: false, manageUsers: false }, desc: "All hospitals, aggregated, read-only" },
+  { id: "regional_viewer", label: "Regional viewer", level: "region", permissions: { editSchedule: false, editUrgency: false, manageUsers: false }, desc: "One region, aggregated, read-only" },
+  { id: "country_viewer", label: "Country viewer", level: "country", permissions: { editSchedule: false, editUrgency: false, manageUsers: false }, desc: "One country, aggregated, read-only" },
+  { id: "state_viewer", label: "State/Province viewer", level: "state", permissions: { editSchedule: false, editUrgency: false, manageUsers: false }, desc: "One state or province, aggregated, read-only" },
+  { id: "district_viewer", label: "District viewer", level: "district", permissions: { editSchedule: false, editUrgency: false, manageUsers: false }, desc: "One district, aggregated, read-only" },
+  { id: "hospital_admin", label: "Hospital admin", level: "hospital", permissions: { editSchedule: true, editUrgency: true, manageUsers: true }, desc: "One hospital, full case and urgency edit, manages users" },
+  { id: "scheduler", label: "Scheduler", level: "hospital", permissions: { editSchedule: true, editUrgency: false, manageUsers: false }, desc: "One hospital, can reschedule cases — not urgency" },
+  { id: "dept_head", label: "Department head", level: "department", permissions: { editSchedule: true, editUrgency: true, manageUsers: false }, desc: "One department, full clinical edit" },
+];
+
+function accountToSession(account) {
+  const roleDef = ROLES.find((r) => r.id === account.role);
+  const depth = LEVELS.indexOf(roleDef.level);
+  return {
+    role: account.role,
+    region: depth >= 1 ? account.region : null,
+    country: depth >= 2 ? account.country : null,
+    state: depth >= 3 ? account.state : null,
+    district: depth >= 4 ? account.district : null,
+    hospitalId: depth >= 5 ? account.hospitalId : null,
+    deptId: depth >= 6 ? account.deptId : null,
+  };
+}
+
+function LoginScreen({ usersByHospital, onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [showDemo, setShowDemo] = useState(false);
+  const [useLive, setUseLive] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const allAccounts = [...AGGREGATE_ACCOUNTS, ...Object.values(usersByHospital).flat()];
+
+  const submit = async () => {
+    setError("");
+
+    if (useLive) {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim(), password }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || "Login failed.");
+          setLoading(false);
+          return;
+        }
+        const claims = decodeJwtPayload(data.token);
+        onLogin({
+          live: true,
+          token: data.token,
+          userId: claims.sub,
+          role: claims.role,
+          region: null, country: null, state: null, district: null, // see header note: live mode doesn't resolve these ids to names client-side
+          hospitalId: claims.hospital_id || null,
+          deptId: claims.department_id || null,
+        });
+      } catch {
+        setError(`Could not reach the live backend at ${API_BASE}. Is "node server.js" running on your machine?`);
+      }
+      setLoading(false);
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const account = allAccounts.find((a) => a.email.toLowerCase() === normalizedEmail);
+    if (!account || account.password !== password) {
+      setError("Incorrect email or password.");
+      return;
+    }
+    onLogin(accountToSession(account));
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <style>{FONTS}</style>
+      <div className="w-full px-4" style={{ maxWidth: 360 }}>
+        <div className="flex items-center gap-2 mb-6 justify-center">
+          <Activity size={20} color={C.accent} />
+          <span style={{ fontFamily: "'Space Grotesk'", fontWeight: 700, fontSize: 18, color: C.text }}>
+            Surgical Backlog
+          </span>
+        </div>
+
+        <div className="rounded-xl p-5" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+          <div className="flex flex-col gap-3">
+            <Field label="Email">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submit()}
+                placeholder="you@hospital.example"
+                style={selectStyle}
+                autoComplete="username"
+              />
+            </Field>
+            <Field label="Password">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submit()}
+                placeholder="••••••••"
+                style={selectStyle}
+                autoComplete="current-password"
+              />
+            </Field>
+          </div>
+
+          {error && (
+            <div className="text-xs mt-3" style={{ color: C.danger, fontFamily: "Inter" }}>{error}</div>
+          )}
+
+          <button
+            onClick={submit}
+            disabled={!email.trim() || !password || loading}
+            className="w-full text-sm py-2 rounded-lg mt-4"
+            style={{
+              background: email.trim() && password && !loading ? C.accent : C.surface2,
+              color: email.trim() && password && !loading ? "#06231F" : C.textFaint,
+              fontFamily: "Inter", fontWeight: 600, border: "none",
+              cursor: email.trim() && password && !loading ? "pointer" : "not-allowed",
+            }}
+          >
+            {loading ? "Signing in…" : "Sign in"}
+          </button>
+
+          <label className="flex items-center gap-2 mt-4 text-xs" style={{ color: C.textDim, fontFamily: "Inter", cursor: "pointer" }}>
+            <input type="checkbox" checked={useLive} onChange={(e) => setUseLive(e.target.checked)} />
+            Use live backend (requires <span style={{ fontFamily: "'IBM Plex Mono'" }}>node server.js</span> running locally)
+          </label>
+
+          <button
+            onClick={() => setShowDemo((v) => !v)}
+            className="w-full text-xs mt-3 text-center"
+            style={{ background: "none", border: "none", color: C.textFaint, fontFamily: "Inter", cursor: "pointer" }}
+          >
+            {showDemo ? "Hide demo accounts" : "This is a prototype — show demo accounts"}
+          </button>
+
+          {showDemo && (
+            <div className="mt-2 rounded-lg p-3" style={{ background: C.surface2, maxHeight: 180, overflowY: "auto" }}>
+              <div className="text-xs mb-2" style={{ color: C.textFaint, fontFamily: "Inter" }}>
+                Password for all demo accounts: <span style={{ fontFamily: "'IBM Plex Mono'", color: C.textDim }}>{DEMO_PASSWORD}</span>
+                {useLive && " (same accounts are seeded server-side too)"}
+              </div>
+              {allAccounts.map((a) => (
+                <div key={a.id} className="text-xs py-0.5" style={{ fontFamily: "'IBM Plex Mono'", color: C.textDim }}>
+                  {a.email} <span style={{ color: C.textFaint, fontFamily: "Inter" }}>— {ROLES.find((r) => r.id === a.role)?.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Root                                                                     */
+/* ---------------------------------------------------------------------- */
+
+function App() {
+  const [session, setSession] = useState(null);
+  const [restoringSession, setRestoringSession] = useState(true);
+  const [hospitals, setHospitals] = useState(HOSPITALS);
+  const [usersByHospital, setUsersByHospital] = useState(SEED_USERS);
+  const [hospitalId, setHospitalId] = useState(null);
+  const [deptId, setDeptId] = useState(null);
+  const [showUsers, setShowUsers] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  // ---- live-backend state (only touched when session.live is true) ----
+  const [liveHospitals, setLiveHospitals] = useState([]);
+  const [liveDetail, setLiveDetail] = useState(null); // assembled {id, name, country, residency, departments:[{id,name,cases,trend}]}
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveError, setLiveError] = useState(null);
+  const [liveUsers, setLiveUsers] = useState([]);
+
+  const authHeaders = (token) => ({ Authorization: `Bearer ${token}` });
+
+  function caseToBackendPayload(c) {
+    return {
+      patient_ref: c.id,
+      patient_name: c.patientName,
+      patient_dob: c.dob,
+      patient_gender: c.gender,
+      patient_phone: c.phone,
+      surgeon: c.surgeon,
+      procedure_name: c.procedure,
+      urgency_tier: c.urgency,
+      status: c.status.toLowerCase(),
+      waitlist_date: c.waitlistDate instanceof Date ? isoDate(c.waitlistDate) : c.waitlistDate,
+      scheduled_date: c.scheduledDate || null,
+    };
+  }
+
+  function adaptLiveCase(c) {
+    const waitlistDate = new Date(c.waitlist_date);
+    const waitDays = Math.max(0, Math.round((TODAY - waitlistDate) / 86400000));
+    const statusMap = { waitlisted: "Waitlisted", scheduled: "Scheduled", completed: "Completed", cancelled: "Cancelled" };
+    return {
+      id: c.patient_ref,
+      dbId: c.id,
+      patientName: c.patient_name,
+      dob: c.patient_dob,
+      gender: c.patient_gender,
+      phone: c.patient_phone,
+      procedure: c.procedure_name,
+      surgeon: c.surgeon,
+      urgency: c.urgency_tier,
+      waitDays,
+      waitlistDate,
+      status: statusMap[c.status] || c.status,
+      scheduledDate: c.scheduled_date || null,
+    };
+  }
+
+  async function fetchLiveHospitals() {
+    if (!session?.live) return;
+    try {
+      const res = await fetch(`${API_BASE}/hospitals`, { headers: authHeaders(session.token) });
+      const data = await res.json();
+      if (res.ok) setLiveHospitals(data);
+    } catch {
+      setLiveError(`Could not reach ${API_BASE}. Is the backend still running?`);
+    }
+  }
+
+  async function fetchLiveHospitalDetail(hId) {
+    if (!session?.live) return;
+    setLiveLoading(true);
+    setLiveError(null);
+    try {
+      const meta = liveHospitals.find((h) => h.id === hId);
+      const deptsRes = await fetch(`${API_BASE}/hospitals/${hId}/departments`, { headers: authHeaders(session.token) });
+      const depts = await deptsRes.json();
+      if (!deptsRes.ok) throw new Error(depts.error || "Could not load departments");
+
+      const departments = [];
+      let thinHistoryNote = false;
+      for (const d of depts) {
+        // The aggregate summary never touches patient-identifying columns,
+        // so it's fetched unconditionally — it works whether or not the
+        // case-level fetch below succeeds, which is exactly what makes it
+        // safe for aggregate-scope roles at residency-required hospitals.
+        const summaryRes = await fetch(`${API_BASE}/departments/${d.id}/backlog-summary`, { headers: authHeaders(session.token) });
+        const summary = await summaryRes.json();
+
+        const trend = summary.snapshot_history.length
+          ? summary.snapshot_history.map((s) => ({
+              month: new Date(s.snapshot_date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+              backlog: s.backlog_count,
+            }))
+          : [{ month: "now", backlog: summary.backlog_count }];
+        if (summary.snapshot_count < 2) thinHistoryNote = true;
+
+        const liveStats = {
+          backlog: summary.backlog_count,
+          avgWait: summary.avg_wait_days,
+          p90: summary.p90_wait_days,
+          overdue: summary.overdue_p1_count,
+          trendDir: trend.length > 1 ? trend[trend.length - 1].backlog - trend[0].backlog : 0,
+        };
+
+        const casesRes = await fetch(`${API_BASE}/departments/${d.id}/cases`, { headers: authHeaders(session.token) });
+        const casesData = await casesRes.json();
+        const cases = casesRes.ok ? casesData.map(adaptLiveCase) : [];
+
+        departments.push({
+          id: d.id,
+          name: d.name,
+          cases,
+          trend,
+          liveStats,
+          orUtil: summary.or_utilization_pct,
+          blockedReason: casesRes.ok ? null : casesData,
+        });
+      }
+
+      setLiveDetail({
+        id: hId,
+        name: meta?.name || "Hospital",
+        country: meta?.country || "",
+        residency: meta?.residency_required ? { jurisdiction: meta.country, law: meta.residency_law, required: true } : null,
+        departments,
+      });
+
+      if (thinHistoryNote) {
+        setLiveError(
+          "Trend charts reflect real backlog_snapshot history, but this server has only recorded one or two snapshots so far — " +
+          "call POST /api/departments/:id/snapshot periodically (e.g. from cron) to build up a genuine multi-point trend over time."
+        );
+      }
+    } catch (err) {
+      setLiveError(err.message || "Could not load hospital data");
+      setLiveDetail(null);
+    }
+    setLiveLoading(false);
+  }
+
+  useEffect(() => {
+    if (session?.live && !hospitalId) fetchLiveHospitals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.live, hospitalId]);
+
+  useEffect(() => {
+    if (session?.live && hospitalId) fetchLiveHospitalDetail(hospitalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.live, hospitalId, liveHospitals.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await window.storage.get("session", false);
+        if (!cancelled && result?.value) {
+          const restored = JSON.parse(result.value);
+          setSession(restored);
+          if (restored.hospitalId) setHospitalId(restored.hospitalId);
+          if (restored.deptId) setDeptId(restored.deptId);
+        }
+      } catch {
+        // no persisted session — normal on first visit or if storage is unavailable
+      } finally {
+        if (!cancelled) setRestoringSession(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const login = async (s) => {
+    setSession(s);
+    if (s.hospitalId) setHospitalId(s.hospitalId);
+    if (s.deptId) setDeptId(s.deptId);
+    try {
+      await window.storage.set("session", JSON.stringify(s), false);
+    } catch {
+      // session still works for this tab even if it couldn't be persisted
+    }
+  };
+
+  if (restoringSession) {
+    return (
+      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <style>{FONTS}</style>
+        <Activity size={20} color={C.textFaint} />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <LoginScreen usersByHospital={usersByHospital} onLogin={login} />;
+  }
+
+  const roleDef = ROLES.find((r) => r.id === session.role);
+  const perms = roleDef.permissions;
+  const readOnly = !perms.editSchedule && !perms.editUrgency;
+  const AGGREGATE_LEVELS = ["global", "region", "country", "state", "district"];
+  const canGoGlobal = AGGREGATE_LEVELS.includes(roleDef.level);
+  const canGoHospital = roleDef.level !== "department";
+  const canViewCaseLevel = !AGGREGATE_LEVELS.includes(roleDef.level);
+
+  const visibleHospitals = session.live
+    ? liveHospitals
+    : hospitals.filter(
+        (h) =>
+          (!session.region || h.region === session.region) &&
+          (!session.country || h.country === session.country) &&
+          (!session.state || h.state === session.state) &&
+          (!session.district || h.district === session.district)
+      );
+
+  const hospital = session.live ? liveDetail : hospitals.find((h) => h.id === hospitalId) || null;
+  const dept = hospital?.departments.find((d) => d.id === deptId) || null;
+
+  const currentUserId = session.live
+    ? session.userId
+    : hospital
+    ? (usersByHospital[hospital.id] || []).find(
+        (u) => u.role === session.role && (session.role !== "dept_head" || u.deptId === session.deptId)
+      )?.id
+    : null;
+
+  const signOut = () => {
+    setSession(null);
+    setHospitalId(null);
+    setDeptId(null);
+    try { window.storage.delete("session", false).catch(() => {}); } catch { /* window.storage isn't available in a published page — sign-out still works, it just doesn't clear a persisted session that was never set in the first place */ }
+  };
+
+  async function fetchLiveUsers() {
+    if (!session?.live || !hospitalId) return;
+    try {
+      const res = await fetch(`${API_BASE}/hospitals/${hospitalId}/users`, { headers: authHeaders(session.token) });
+      const data = await res.json();
+      if (res.ok) setLiveUsers(data);
+    } catch {
+      setToast("Could not load users from the live backend");
+      setTimeout(() => setToast(null), 2500);
+    }
+  }
+
+  const addUser = async (user) => {
+    if (session.live) {
+      try {
+        const res = await fetch(`${API_BASE}/hospitals/${hospitalId}/users`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders(session.token) },
+          body: JSON.stringify({ name: user.name, email: user.email, role: user.role, department_id: user.deptId || null }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setToast(data.error || "Could not add user");
+          setTimeout(() => setToast(null), 2500);
+          return;
+        }
+        await fetchLiveUsers();
+        setToast(`${user.name} added — temporary password: ${data.temporary_password}`);
+        setTimeout(() => setToast(null), 4000);
+      } catch {
+        setToast("Could not reach the live backend");
+        setTimeout(() => setToast(null), 2500);
+      }
+      return;
+    }
+
+    setUsersByHospital((prev) => ({ ...prev, [hospitalId]: [...prev[hospitalId], user] }));
+    setToast(`${user.name} added`);
+    setTimeout(() => setToast(null), 2200);
+  };
+
+  const removeUser = async (userId) => {
+    if (userId === currentUserId) return;
+
+    if (session.live) {
+      try {
+        const res = await fetch(`${API_BASE}/users/${userId}`, { method: "DELETE", headers: authHeaders(session.token) });
+        const data = await res.json();
+        if (!res.ok) {
+          setToast(data.error || "Could not remove user");
+          setTimeout(() => setToast(null), 2500);
+          return;
+        }
+        await fetchLiveUsers();
+      } catch {
+        setToast("Could not reach the live backend");
+        setTimeout(() => setToast(null), 2500);
+      }
+      return;
+    }
+
+    setUsersByHospital((prev) => ({ ...prev, [hospitalId]: prev[hospitalId].filter((u) => u.id !== userId) }));
+  };
+
+  const importCases = async (byDept, count) => {
+    if (session.live) {
+      try {
+        for (const [deptIdArg, cases] of Object.entries(byDept)) {
+          const res = await fetch(`${API_BASE}/departments/${deptIdArg}/cases`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authHeaders(session.token) },
+            body: JSON.stringify({ cases: cases.map(caseToBackendPayload) }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setToast(data.error || "Import failed");
+            setTimeout(() => setToast(null), 2500);
+            return;
+          }
+        }
+        await fetchLiveHospitalDetail(hospitalId);
+        setShowImport(false);
+        setToast(`${count} case${count !== 1 ? "s" : ""} imported`);
+        setTimeout(() => setToast(null), 2200);
+      } catch {
+        setToast("Could not reach the live backend");
+        setTimeout(() => setToast(null), 2500);
+      }
+      return;
+    }
+
+    setHospitals((prev) =>
+      prev.map((h) =>
+        h.id !== hospitalId
+          ? h
+          : {
+              ...h,
+              departments: h.departments.map((d) =>
+                byDept[d.id] ? { ...d, cases: [...d.cases, ...byDept[d.id]] } : d
+              ),
+            }
+      )
+    );
+    setShowImport(false);
+    setToast(`${count} case${count !== 1 ? "s" : ""} imported`);
+    setTimeout(() => setToast(null), 2200);
+  };
+
+  const updateCase = async (deptIdArg, caseId, patch) => {
+    if (session.live) {
+      const targetDept = liveDetail?.departments.find((d) => d.id === deptIdArg);
+      const targetCase = targetDept?.cases.find((c) => c.id === caseId);
+      if (!targetCase) return;
+
+      const body = {};
+      if (patch.urgency !== undefined) {
+        body.urgency_tier = patch.urgency;
+        if (patch.downgradeReason) body.reason = patch.downgradeReason;
+      }
+      if (patch.surgeon !== undefined) body.surgeon = patch.surgeon;
+      if (patch.status !== undefined) body.status = patch.status.toLowerCase();
+      if (patch.scheduledDate !== undefined) body.scheduled_date = patch.scheduledDate;
+
+      try {
+        const res = await fetch(`${API_BASE}/cases/${targetCase.dbId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...authHeaders(session.token) },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setToast(data.error || "Update failed");
+          setTimeout(() => setToast(null), 2500);
+          return;
+        }
+        await fetchLiveHospitalDetail(hospitalId); // reload from the server so the UI reflects what was actually persisted, not an optimistic guess
+        setToast(`${caseId} updated`);
+        setTimeout(() => setToast(null), 2200);
+      } catch {
+        setToast("Could not reach the live backend");
+        setTimeout(() => setToast(null), 2500);
+      }
+      return;
+    }
+
+    setHospitals((prev) =>
+      prev.map((h) =>
+        h.id !== hospitalId
+          ? h
+          : {
+              ...h,
+              departments: h.departments.map((d) =>
+                d.id !== deptIdArg
+                  ? d
+                  : { ...d, cases: d.cases.map((c) => (c.id !== caseId ? c : { ...c, ...patch })) }
+              ),
+            }
+      )
+    );
+    setToast(`${caseId} updated`);
+    setTimeout(() => setToast(null), 2200);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg }}>
+      <style>{FONTS}</style>
+      <div className="max-w-4xl mx-auto px-6 pt-5">
+        <div className="flex items-center justify-between mb-4 pb-3" style={{ borderBottom: `1px solid ${C.border}` }}>
+          <div className="text-xs" style={{ color: C.textFaint, fontFamily: "Inter" }}>
+            Signed in as <span style={{ color: C.textDim, fontWeight: 500 }}>{roleDef.label}</span>
+            {session.live && <Pill bg={C.accentDim} fg={C.accent}>Live backend</Pill>}
+            {!session.live && session.region && <span> · {session.region}</span>}
+            {!session.live && session.country && <span> · {session.country}</span>}
+            {!session.live && session.state && <span> · {session.state}</span>}
+            {!session.live && session.district && <span> · {session.district}</span>}
+            {!session.live && session.hospitalId && <span> · {HOSPITALS.find((h) => h.id === session.hospitalId)?.name}</span>}
+            {!session.live && session.deptId && <span> · {HOSPITALS.find((h) => h.id === session.hospitalId)?.departments.find((d) => d.id === session.deptId)?.name}</span>}
+            {session.live && hospital && <span> · {hospital.name}</span>}
+            {session.live && dept && <span> · {dept.name}</span>}
+            {readOnly && <span> · read-only</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            {perms.editSchedule && hospital && !showUsers && !showImport && (
+              <button
+                onClick={() => setShowImport(true)}
+                className="flex items-center gap-1 text-xs px-3 py-1 rounded-lg"
+                style={{ background: C.surface2, color: C.textDim, border: `1px solid ${C.border}`, fontFamily: "Inter", cursor: "pointer" }}
+              >
+                <Upload size={12} /> Import cases
+              </button>
+            )}
+            {perms.manageUsers && hospital && !showUsers && !showImport && (
+              <button
+                onClick={() => { setShowUsers(true); if (session.live) fetchLiveUsers(); }}
+                className="flex items-center gap-1 text-xs px-3 py-1 rounded-lg"
+                style={{ background: C.surface2, color: C.textDim, border: `1px solid ${C.border}`, fontFamily: "Inter", cursor: "pointer" }}
+              >
+                <Users size={12} /> Manage users
+              </button>
+            )}
+            <button
+              onClick={signOut}
+              className="text-xs px-3 py-1 rounded-lg"
+              style={{ background: C.surface2, color: C.textDim, border: `1px solid ${C.border}`, fontFamily: "Inter", cursor: "pointer" }}
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-6 pb-8">
+        {session.live && liveLoading ? (
+          <div className="text-sm py-12 text-center" style={{ color: C.textFaint, fontFamily: "Inter" }}>
+            Loading from live backend…
+          </div>
+        ) : session.live && liveError && !hospital ? (
+          <div className="rounded-xl p-4" style={{ background: C.surface, border: `1px solid ${C.danger}` }}>
+            <div className="text-sm" style={{ color: C.text, fontFamily: "Inter" }}>{liveError}</div>
+          </div>
+        ) : showUsers && hospital ? (
+          <UserManagementView
+            hospital={hospital}
+            users={session.live ? liveUsers : usersByHospital[hospital.id] || []}
+            currentUserId={currentUserId}
+            onAdd={addUser}
+            onRemove={removeUser}
+            onBack={() => setShowUsers(false)}
+          />
+        ) : showImport && hospital ? (
+          <CsvImportView
+            hospital={hospital}
+            restrictedDeptId={roleDef.level === "department" ? session.deptId : null}
+            onCommit={importCases}
+            onBack={() => setShowImport(false)}
+          />
+        ) : (
+          <>
+            {session.live && liveError && hospital && (
+              <div className="rounded-xl p-3 mb-4 text-xs" style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.textDim, fontFamily: "Inter", lineHeight: 1.5 }}>
+                {liveError}
+              </div>
+            )}
+            {!hospital && <Overview hospitals={visibleHospitals} lockedLabel={session.district || session.state || session.country || session.region} onSelectHospital={setHospitalId} />}
+            {hospital && !dept && (
+              <HospitalView hospital={hospital} onBack={canGoGlobal ? () => setHospitalId(null) : null} onSelectDept={setDeptId} canViewCaseLevel={canViewCaseLevel} />
+            )}
+            {hospital && dept && (
+              <DepartmentView
+                hospital={hospital}
+                dept={dept}
+                onBackHospital={canGoHospital ? () => setDeptId(null) : null}
+                onUpdateCase={updateCase}
+                readOnly={readOnly}
+                perms={perms}
+              />
+            )}
+          </>
+        )}
+      </div>
+
+      {toast && (
+        <div
+          className="fixed left-1/2 text-sm px-4 py-2 rounded-lg"
+          style={{
+            bottom: 24, transform: "translateX(-50%)", background: C.surface2,
+            border: `1px solid ${C.border}`, color: C.text, fontFamily: "Inter",
+          }}
+        >
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+
+</script>
+</body>
+</html>
