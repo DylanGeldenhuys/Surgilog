@@ -1,6 +1,16 @@
 # Verification record
 
-Updated 16 October 2026. The theatre extension and matching hardening frontend are published and independently live-verified (see deployment.md). All verification data was synthetic.
+Updated 20 October 2026. The theatre extension and matching hardening frontend are published and independently live-verified (see deployment.md). All verification data was synthetic.
+
+## New branding and typography — 20 October 2026
+
+Replaced the shared logo/name with Dylan's supplied PNG, preserving the source and rendering its complete symbol/name/tagline. New 192/512px icons directly render the S/check symbol on white. Exo 2 600/800 is bundled locally for headings/prominent numbers; DM Sans 400/600 remains for body/forms/tables. The image's exact logo font is unknown; Exo 2 is a chosen visual companion. Also preserved whitespace between the first two mobile headline sentences.
+
+Review build (including TypeScript), build verifier, full formatting and whitespace checks pass. Main bundle remains approximately 1.03 MB / 307 kB gzip; total service-worker precache is about 2.66 MB including the supplied 1 MB artwork. No new unit/API tests were warranted for this presentation-only change; the earlier 84-unit/API results remain historical, not newly rerun claims.
+
+Chromium checked the review build at 320, 390, 1440 and 2560px: document width equals viewport, one logo is present, its left edge aligns with the headline, and Exo 2 loads for headings while DM Sans remains the body font. Inspected desktop/phone screenshots and an isolated sidebar fixture using the actual Brand markup/styles; this was not an authenticated workspace workflow check. The full supplied logo decodes at 1677×938 after an offline reload; Exo 2 remains loaded and the cached new icon returns 200. Synthetic/blank-sign-in screenshots are ignored under `output/playwright/brand-final-*.png` and `brand-phone-settled.png`.
+
+Published from source **ebec09a** on `main`, Hosting **bc6c85fa1661e594** at **07:09:37 SAST**. Live HTML, bundle **index-DLmP0lIE.js**, CSS, image/icon/font bytes, manifest references, worker/update page and headers match the prepared release. API **00006-seh** was unchanged. No live patient writes or new test accounts were needed. Physical-phone/clinical review remains with the reviewers as already agreed.
 
 ## Browser/device follow-up — 16 October 2026
 

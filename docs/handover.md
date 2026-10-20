@@ -22,7 +22,7 @@ Dylan supplied `public/SurgiLog Clinical Register Logo.png` and requested it rep
 
 Dylan also raised font consistency with the new logo. Exo 2 at 600/800 replaces Manrope for headings and prominent numbers, with DM Sans retained for forms/tables/body. This is a visual companion, not a verified identification of the font inside the PNG. Both font families are locally bundled for offline use. The mobile headline now retains a space when its first line break is hidden. Rollback uses tag `checkpoint/pre-theatre-register`, not `main`, since PR #1 merged the feature and release work now continues on `main`.
 
-Implementation is ready for release; build/typecheck/format checks pass. Deployment and final visual evidence will be recorded after publication. No clinical, auth, permissions or backend logic changed.
+Published to Firebase Hosting as **bc6c85fa1661e594** on **20 October at 07:09:37 SAST**, from source commit **ebec09a** on `main`. Bundle **index-DLmP0lIE.js**. Build/typecheck/format checks pass; Chromium checked 320/390/1440/2560px layout, heading/body font loading, aligned logo, and offline logo/icon/font reload. Live HTML/assets/manifest/worker/header hashes match the build. No clinical, auth, permissions or backend logic changed; API remains **00006-seh**. See [verification](verification.md).
 
 ## Repository renamed and changes pushed — 19 October 2026
 

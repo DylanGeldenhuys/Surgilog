@@ -1,16 +1,22 @@
 # Leo's review deployment
 
-Updated 16 October 2026. **Published with fictional data, including the Admin tab and confirmed role hierarchy. Theatre register, reporting and turnaround settings are now published.**
+Updated 20 October 2026. **Published with fictional data, including the Admin tab and confirmed role hierarchy. Theatre register, reporting and turnaround settings are now published.**
 
 - Website: https://theatre-tracker-2f2e5.web.app
 - API: https://theatre-tracker-api-54783611706.africa-south1.run.app
 - Project: `theatre-tracker-2f2e5`; owner account: `dylangeldenhuys1@gmail.com`.
 - API revision: `theatre-tracker-api-00006-seh`, ready with 100% traffic.
-- Hosting version: `80a0e416d643e631`, released 16 October 2026 at 14:15:35 SAST.
+- Hosting version: `bc6c85fa1661e594`, released 20 October 2026 at 07:09:37 SAST.
 - Cloud Build: `9db07c3d-3144-4103-9e1d-8f8e1da1dbdb`.
 - Firestore ruleset: `c20c7b24-ee5c-44cc-a463-521eb8529e87`.
 
 Dylan completed owner sign-in and explicitly approved the API/IAM plan in [review-infrastructure.md](review-infrastructure.md). Email/Password Auth, Firestore rules/indexes, backend and Hosting are deployed. Fictional setup installed 659 documents across two hospitals and three departments. **One explicitly requested permanent Super User was created and verified on 9 October; other reviewer accounts remain deferred.** There is no shared hosted demo account; the local emulator credentials do not work on this website. No email has been sent to Leo.
+
+## Supplied logo and typography release — 20 October 2026
+
+Dylan requested the supplied logo/name image, push to `main` and Firebase release. Source **ebec09a** on `main` includes the complete artwork, new S/check favicon/install icons, Exo 2 heading/numeral fonts and DM Sans body text. Hosted version **bc6c85fa1661e594** contains bundle **index-DLmP0lIE.js** and CSS **index-BJoCunAj.css**. Live HTML/JS/CSS, supplied image, icon/font bytes, manifest, service worker and security/cache headers match the prepared build. The preceding Hosting version is **80a0e416d643e631**.
+
+This was a Hosting-only release. The API revision, Auth, Firestore, account data and IAM were unchanged. Existing install icons can update on the browser/OS's own schedule. [Update SurgiLog](https://theatre-tracker-2f2e5.web.app/api/app-update.html) refreshes cached website assets while retaining saved work; save open forms first.
 
 ## Browser follow-up patch — 16 October 2026
 
