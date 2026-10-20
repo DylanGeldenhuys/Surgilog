@@ -16,6 +16,10 @@ Run `npm ci` then `npm run dev`. App 127.0.0.1:5173, API :8787, Auth :9099, Fire
 
 Stack actually used: React/TypeScript/Vite, plain CSS, native dialog/forms, Lucide, Recharts, Zod, Papa Parse; Firebase Auth SDK; Fastify/Admin SDK API; Firestore Standard emulator; Dexie/Web Crypto vault. A custom React workspace hook handles refresh, projection and replay. Tailwind/shadcn, TanStack Query/Router and React Hook Form were early recommendations, not installed implementations.
 
+## Tagged doctor-review release — 20 October 2026
+
+Published GitHub prerelease [v0.1.0-review.1](https://github.com/DylanGeldenhuys/Surgilog/releases/tag/v0.1.0-review.1) at **e4f7356**, matching the currently deployed app plus verification documentation. This is the first tagged review release, with release notes and the live review link. Rechecked hosted HTML/assets/manifest/worker/update page/headers against the prepared build; all match. Hosting remains **339ebd25e4021603**, API **00006-seh**; no redundant deployment or data changes. Clinical and physical-phone acceptance remain pending.
+
 ## New logo and typography — 20 October 2026
 
 Dylan supplied `public/SurgiLog Clinical Register Logo.png` and requested it replace the old symbol plus live-text name, followed by a push to `main` and Firebase release. The complete supplied symbol/name/tagline is now displayed by the shared Brand component, cropping only outer whitespace at render time. New `surgilog-icon-192.png` / `surgilog-icon-512.png` use the S/check symbol; the original file and historical artwork are preserved. See [design.md](../design.md) for source dimensions, crop geometry, responsive sizes and assets.

@@ -3,6 +3,7 @@
 Updated 20 October 2026. **Published with fictional data, including the Admin tab and confirmed role hierarchy. Theatre register, reporting and turnaround settings are now published.**
 
 - Website: https://theatre-tracker-2f2e5.web.app
+- GitHub review release: [v0.1.0-review.1](https://github.com/DylanGeldenhuys/Surgilog/releases/tag/v0.1.0-review.1), tagged at `e4f7356`.
 - API: https://theatre-tracker-api-54783611706.africa-south1.run.app
 - Project: `theatre-tracker-2f2e5`; owner account: `dylangeldenhuys1@gmail.com`.
 - API revision: `theatre-tracker-api-00006-seh`, ready with 100% traffic.
