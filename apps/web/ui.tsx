@@ -19,12 +19,14 @@ export const inputTime = (v = new Date().toISOString()) =>
 export const fromInput = (v: string) => new Date(`${v}:00+02:00`).toISOString();
 export function Brand() {
   return (
-    <div className="brand-lockup" role="img" aria-label="SurgiLog">
-      <svg className="brand-mark" viewBox="236 47 719 651" aria-hidden="true">
-        <image href="/logo-lockup.png" width="2172" height="724" />
-      </svg>
-      <span aria-hidden="true">SurgiLog</span>
-    </div>
+    <svg
+      className="brand-lockup"
+      viewBox="200 255 1280 425"
+      role="img"
+      aria-label="SurgiLog — The trusted clinical register"
+    >
+      <image href="/SurgiLog Clinical Register Logo.png" width="1677" height="938" />
+    </svg>
   );
 }
 export function PriorityBadge({ value }: { value: Priority }) {

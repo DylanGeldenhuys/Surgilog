@@ -65,7 +65,7 @@ p {
 h1,
 h2,
 h3 {
-  font-family: Manrope, system-ui, sans-serif;
+  font-family: 'Exo 2', system-ui, sans-serif;
   letter-spacing: -0.035em;
 }
 h1 {
@@ -194,25 +194,13 @@ strong {
   margin-bottom: 9px;
 }
 .brand-lockup {
-  display: flex;
-  align-items: center;
-  gap: 0.35em;
-  width: max-content;
-  max-width: 100%;
-  color: var(--ink);
-  font-family: Manrope, system-ui, sans-serif;
-  font-size: 26px;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.04em;
-  white-space: nowrap;
-}
-.brand-mark {
   display: block;
-  width: 2em;
+  width: 100%;
+  max-width: 100%;
   height: auto;
   flex-shrink: 0;
   overflow: hidden;
+  mix-blend-mode: multiply;
 }
 .app-shell {
   min-height: 100vh;
@@ -518,7 +506,7 @@ strong {
 }
 .metric > strong {
   display: block;
-  font-family: Manrope, sans-serif;
+  font-family: 'Exo 2', sans-serif;
   font-size: 34px;
   letter-spacing: -1.5px;
   color: #25475c;
@@ -921,7 +909,7 @@ td .procedure-name {
   letter-spacing: 1px;
 }
 .utilisation-number {
-  font-family: Manrope, sans-serif;
+  font-family: 'Exo 2', sans-serif;
   font-size: 62px;
   font-weight: 650;
   letter-spacing: -3px;
@@ -1681,7 +1669,7 @@ td .procedure-name {
 .login-story .brand-lockup {
   position: relative;
   z-index: 1;
-  font-size: clamp(42px, 3.6vw, 54px);
+  width: clamp(320px, 34vw, 620px);
 }
 .login-story:after {
   content: '';
@@ -2263,7 +2251,7 @@ td .procedure-name {
     padding: 25px 25px 28px;
   }
   .login-story .brand-lockup {
-    font-size: 36px;
+    width: 340px;
   }
   .story-body {
     padding: 32px 0 0;
@@ -2602,7 +2590,7 @@ fieldset:disabled {
 }
 .register-metric strong {
   font:
-    800 28px Manrope,
+    800 28px 'Exo 2',
     sans-serif;
   color: var(--ink);
 }

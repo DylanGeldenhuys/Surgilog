@@ -1,6 +1,6 @@
 # SurgiLog — design and brand guide
 
-Version 0.4 · Updated 16 October 2026 · Working brand for the app
+Version 0.5 · Updated 20 October 2026 · Working brand for the app
 
 This is the shared reference for the app, presentations, documents and future brand assets. It records the **current implementation** and gives **reuse guidance** for new work. Dylan leads development; Leo provides clinical/product direction. This is a working identity, not a completed institutional brand programme.
 
@@ -13,7 +13,7 @@ Use this guide instead of the earlier proposed palette in planning documents. Va
 | Product name | **SurgiLog** — one word, with capital S and L |
 | Product description | Surgical backlog and theatre tracking for South African hospital teams |
 | Primary audience | Doctors, scrub sisters, clerks, scheduling teams and hospital managers |
-| Current tagline | None in the application interface |
+| Current tagline | **The trusted clinical register** — embedded in the supplied logo artwork |
 | Current headline | **Every patient. Every theatre. Every day.** |
 | Supporting line | **Built for South African hospital teams** |
 | Personality | Calm, clear, practical, trustworthy and human |
@@ -87,18 +87,18 @@ Keep clinical priority, case status, readiness and sync state visually separate.
 
 | Role | Typeface | Weights currently bundled | Reuse guidance |
 | --- | --- | --- | --- |
-| Headings, wordmark, major numbers | **Manrope** | 600, 800 | 800 for prominent titles; 600 for supporting headings |
+| Headings and major numbers | **Exo 2** | 600, 800 | Squared geometric companion to the supplied logo; 800 for prominent titles, 600 for supporting headings |
 | Body, controls, tables, labels | **DM Sans** | 400, 600 | 400 for reading; 600 for emphasis and controls |
 | Fallback | `system-ui, sans-serif` | Platform-dependent | Use when the brand fonts are unavailable |
 
-Font references: [Manrope](https://fonts.google.com/specimen/Manrope), [DM Sans](https://fonts.google.com/specimen/DM+Sans). The application bundles local font files through Fontsource so they remain available offline. The installed packages include their font licence files; carry the relevant notices with redistributed font assets.
+Font references: [Exo 2](https://fonts.google.com/specimen/Exo+2), [DM Sans](https://fonts.google.com/specimen/DM+Sans). The application bundles local font files through Fontsource so they remain available offline. The installed packages include their font licence files; carry the relevant notices with redistributed font assets.
 
 ### Current type scale
 
 | Element | Desktop size | Notes |
 | --- | --- | --- |
-| Login hero | 57px | Manrope; 48px/41px at narrower desktop/tablet breakpoints |
-| Page heading | 31px | Manrope; 1.25 line-height; typically 25–26px on smaller screens |
+| Login hero | 57px | Exo 2; 48px/41px at narrower desktop/tablet breakpoints |
+| Page heading | 31px | Exo 2; 1.25 line-height; typically 25–26px on smaller screens |
 | Login form heading | 25px | Manrope; 1.4 line-height |
 | Dialog heading | 20px | 19px on small phones |
 | General section heading | 18px | Panel titles use 16px |
@@ -114,23 +114,24 @@ The CSS also requests intermediate weights such as 650 and 750, while only the f
 
 ## Logo, wordmark and icons
 
-![Current SurgiLog square logo](public/icon-512.png)
+![Current SurgiLog supplied logo](<public/SurgiLog Clinical Register Logo.png>)
 
-Dylan renamed the product to **SurgiLog** on 13 October 2026. The interface pairs the supplied mark—three masked theatre staff in front of an organised schedule—with a single-line SurgiLog wordmark in Manrope 800 and interface Ink. The original Theatre Tracker artwork remains untouched in the brand archive; its old lettering is no longer displayed in the application.
+On 19 October 2026 Dylan supplied the new SurgiLog artwork and requested the complete image replace both the old theatre-team symbol and the live-text wordmark. It combines a navy S, a turquoise check/list symbol, navy/turquoise SurgiLog lettering and the tagline **The trusted clinical register**. The artwork determines the logo colours and lettering; the existing interface colours remain. Exo 2 (600/800) now replaces Manrope for headings and prominent numbers to complement the squared lettering; DM Sans (400/600) remains for tables, forms and body text. Exo 2 is a visual pairing, not a confirmed identification of the font embedded in the image.
 
 | Asset | Location | Use |
 | --- | --- | --- |
-| Horizontal master PNG | [docs/brand/logo-lockup-master.png](docs/brand/logo-lockup-master.png) | Original supplied Theatre Tracker artwork; historical archive |
-| Square mark master PNG | [docs/brand/logo-mark-master.png](docs/brand/logo-mark-master.png) | Original supplied transparent artwork; archive and export source |
-| Horizontal runtime PNG | [public/logo-lockup.png](public/logo-lockup.png) | Optimised source cropped at render time to show only the supplied theatre-team mark |
-| Install icon, 192px | [public/icon-192.png](public/icon-192.png) | Small app-install asset |
-| Install icon, 512px | [public/icon-512.png](public/icon-512.png) | Larger app-install asset |
-| Live logo component | `Brand()` in [apps/web/ui.tsx](apps/web/ui.tsx) | Application placement and accessible product-name text |
-| Colour swatches | [docs/brand-palette.svg](docs/brand-palette.svg) | Import into design tools or reference in a presentation |
+| Supplied master/runtime PNG | [SurgiLog Clinical Register Logo.png](<public/SurgiLog Clinical Register Logo.png>) | Original 1677×938 image, preserved unchanged; full logo/name/tagline |
+| Install icon, 192px | [public/surgilog-icon-192.png](public/surgilog-icon-192.png) | New S/check symbol; favicon, Apple touch icon and smaller install icon |
+| Install icon, 512px | [public/surgilog-icon-512.png](public/surgilog-icon-512.png) | New S/check symbol; larger install icon |
+| Logo component | `Brand()` in [apps/web/ui.tsx](apps/web/ui.tsx) | Shared accessible image on sign-in and navigation |
+| Historical artwork | `docs/brand/`, `public/logo-lockup.png`, `public/icon-192.png`, `public/icon-512.png` | Earlier Theatre Tracker/theatre-team assets, retained as history |
+| Colour swatches | [docs/brand-palette.svg](docs/brand-palette.svg) | Interface palette reference; not a sampled palette of the new logo |
 
-The horizontal lockup uses a 26px wordmark in application navigation, a fluid 42–54px wordmark on desktop sign-in, and 36px on phone sign-in. The mark is two font-size units wide, followed by a 0.35em gap; wordmark letter spacing is −0.04em. Transparent source padding and the old lettering are cropped at render time so the visible mark aligns with the sign-in headline. SurgiLog is rendered as live text in interface Ink; the theatre-team mark retains its original colours. The PWA icons are exact proportional reductions of the supplied square master. The browser favicon and Apple touch icon use the 192px mark. There is not yet an approved vector, monochrome or reversed logo set.
+The shared SVG displays the supplied PNG through viewBox `200 255 1280 425`, removing its outer whitespace at render time without editing the source. The entire symbol, name and tagline remain visible, with the original proportions. Navigation fills the available sidebar width. Sign-in scales from 320–620px with a 34vw preferred width; phones use up to 340px, always constrained by their container. The image aligns with the sign-in content. Multiply compositing blends the source's light background into the pale login surface. Accessible text is “SurgiLog — The trusted clinical register”; there is no duplicate live wordmark.
 
-**Reuse guidance:** keep at least one-quarter of the square mark’s width clear around it. Start with a minimum 32px mark, then check legibility at the final size. Use a clean white or pale-blue background. Keep the supplied proportions, transparency and colours intact. Resize from the archived master, without stretching or removing individual people from the mark. Use the supplied mark beside the new SurgiLog name, preserving the spelling and capitalisation. Use Manrope 800 and interface Ink for the wordmark; do not reuse the archived Theatre Tracker lettering in new materials.
+The square icons are direct browser-rendered crops of the supplied symbol on white, without the name/tagline. Export source window: x=180, y=190, width=height=560. Clip polygon `(190,220) (725,220) (725,330) (690,330) (690,720) (190,720)` isolates the complete S/check from the adjacent lettering; render proportionally at 192/512px. The source is opaque, not a transparent or vector master. Do not claim a vector, monochrome or transparent variant exists. Preserve previous masters and obtain a new approved export before redesigning the artwork.
+
+**Reuse guidance:** use the complete supplied lockup for presentations and other brand placements, and the symbol-only icons for square placements. Preserve proportions, lettering, tagline and colours; do not add a separate SurgiLog wordmark beside the full logo. Keep clear space around the artwork and check the embedded tagline's legibility at the final size. Use white or a light surface.
 
 UI icons come from **Lucide**, using simple outline strokes. Common sizes are 14–20px in controls and 20–24px for stronger emphasis. Pair unfamiliar icons with labels and give icon-only controls accessible names. Continue this outline style in supporting illustrations and presentation diagrams.
 
