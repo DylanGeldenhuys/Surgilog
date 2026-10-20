@@ -6,11 +6,15 @@ Updated 20 October 2026. **Published with fictional data, including the Admin ta
 - API: https://theatre-tracker-api-54783611706.africa-south1.run.app
 - Project: `theatre-tracker-2f2e5`; owner account: `dylangeldenhuys1@gmail.com`.
 - API revision: `theatre-tracker-api-00006-seh`, ready with 100% traffic.
-- Hosting version: `bc6c85fa1661e594`, released 20 October 2026 at 07:09:37 SAST.
+- Hosting version: `339ebd25e4021603`, released 20 October 2026 at 07:15:51 SAST.
 - Cloud Build: `9db07c3d-3144-4103-9e1d-8f8e1da1dbdb`.
 - Firestore ruleset: `c20c7b24-ee5c-44cc-a463-521eb8529e87`.
 
 Dylan completed owner sign-in and explicitly approved the API/IAM plan in [review-infrastructure.md](review-infrastructure.md). Email/Password Auth, Firestore rules/indexes, backend and Hosting are deployed. Fictional setup installed 659 documents across two hospitals and three departments. **One explicitly requested permanent Super User was created and verified on 9 October; other reviewer accounts remain deferred.** There is no shared hosted demo account; the local emulator credentials do not work on this website. No email has been sent to Leo.
+
+## Original typography restored — 20 October 2026
+
+Dylan explicitly chose to keep the original app fonts. Source **2a40964** restores Manrope 600/800 and retains DM Sans 400/600, the new supplied logo and S/check icons. Hosting **339ebd25e4021603** contains **index-CO4y9vUW.js** / **index-CCHzJJUn.css**. Live asset checks and Chromium confirm the restored fonts. This Hosting-only correction supersedes the Exo 2 typography in the preceding release below; backend and data are unchanged.
 
 ## Supplied logo and typography release — 20 October 2026
 

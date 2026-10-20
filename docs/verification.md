@@ -2,6 +2,12 @@
 
 Updated 20 October 2026. The theatre extension and matching hardening frontend are published and independently live-verified (see deployment.md). All verification data was synthetic.
 
+## Original fonts restored — 20 October 2026
+
+Dylan declined the proposed font change. Source **2a40964**, Hosting **339ebd25e4021603** (07:15:51 SAST), restores locally bundled Manrope 600/800 and keeps DM Sans 400/600. Supplied SurgiLog logo and icons remain intact. The Exo 2 release below is historical and superseded.
+
+Formatting and review build/typecheck/config verification pass. Chromium confirms Manrope headings, DM Sans body text, loaded font assets and no horizontal overflow at 390/1440px. An offline reload successfully loads Manrope and decodes the full supplied image. Live HTML/JS/CSS, logo/icon/font bytes, manifest, worker/update page and security/cache headers match the build. The live update flow displays the restored fonts. Bundle **index-CO4y9vUW.js**, CSS **index-CCHzJJUn.css**. No clinical/backend changes or unit/API reruns were needed; the existing bundle-size advisory remains.
+
 ## New branding and typography — 20 October 2026
 
 Replaced the shared logo/name with Dylan's supplied PNG, preserving the source and rendering its complete symbol/name/tagline. New 192/512px icons directly render the S/check symbol on white. Exo 2 600/800 is bundled locally for headings/prominent numbers; DM Sans 400/600 remains for body/forms/tables. The image's exact logo font is unknown; Exo 2 is a chosen visual companion. Also preserved whitespace between the first two mobile headline sentences.
