@@ -98,8 +98,8 @@ import {
 } from '../../shared/domain.ts';
 import '@fontsource/dm-sans/latin-400.css';
 import '@fontsource/dm-sans/latin-600.css';
-import '@fontsource/exo-2/latin-600.css';
-import '@fontsource/exo-2/latin-800.css';
+import '@fontsource/manrope/latin-600.css';
+import '@fontsource/manrope/latin-800.css';
 import './styles.css';
 
 type Page = 'register' | 'overview' | 'backlog' | 'theatres' | 'reports' | 'sync' | 'admin';

@@ -65,7 +65,7 @@ p {
 h1,
 h2,
 h3 {
-  font-family: 'Exo 2', system-ui, sans-serif;
+  font-family: Manrope, system-ui, sans-serif;
   letter-spacing: -0.035em;
 }
 h1 {
@@ -506,7 +506,7 @@ strong {
 }
 .metric > strong {
   display: block;
-  font-family: 'Exo 2', sans-serif;
+  font-family: Manrope, sans-serif;
   font-size: 34px;
   letter-spacing: -1.5px;
   color: #25475c;
@@ -909,7 +909,7 @@ td .procedure-name {
   letter-spacing: 1px;
 }
 .utilisation-number {
-  font-family: 'Exo 2', sans-serif;
+  font-family: Manrope, sans-serif;
   font-size: 62px;
   font-weight: 650;
   letter-spacing: -3px;
@@ -2590,7 +2590,7 @@ fieldset:disabled {
 }
 .register-metric strong {
   font:
-    800 28px 'Exo 2',
+    800 28px Manrope,
     sans-serif;
   color: var(--ink);
 }

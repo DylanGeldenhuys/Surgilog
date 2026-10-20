@@ -1,6 +1,6 @@
 # SurgiLog — design and brand guide
 
-Version 0.5 · Updated 20 October 2026 · Working brand for the app
+Version 0.6 · Updated 20 October 2026 · Working brand for the app
 
 This is the shared reference for the app, presentations, documents and future brand assets. It records the **current implementation** and gives **reuse guidance** for new work. Dylan leads development; Leo provides clinical/product direction. This is a working identity, not a completed institutional brand programme.
 
@@ -87,18 +87,18 @@ Keep clinical priority, case status, readiness and sync state visually separate.
 
 | Role | Typeface | Weights currently bundled | Reuse guidance |
 | --- | --- | --- | --- |
-| Headings and major numbers | **Exo 2** | 600, 800 | Squared geometric companion to the supplied logo; 800 for prominent titles, 600 for supporting headings |
+| Headings and major numbers | **Manrope** | 600, 800 | Original app typography retained at Dylan’s request; 800 for prominent titles, 600 for supporting headings |
 | Body, controls, tables, labels | **DM Sans** | 400, 600 | 400 for reading; 600 for emphasis and controls |
 | Fallback | `system-ui, sans-serif` | Platform-dependent | Use when the brand fonts are unavailable |
 
-Font references: [Exo 2](https://fonts.google.com/specimen/Exo+2), [DM Sans](https://fonts.google.com/specimen/DM+Sans). The application bundles local font files through Fontsource so they remain available offline. The installed packages include their font licence files; carry the relevant notices with redistributed font assets.
+Font references: [Manrope](https://fonts.google.com/specimen/Manrope), [DM Sans](https://fonts.google.com/specimen/DM+Sans). The application bundles local font files through Fontsource so they remain available offline. The installed packages include their font licence files; carry the relevant notices with redistributed font assets.
 
 ### Current type scale
 
 | Element | Desktop size | Notes |
 | --- | --- | --- |
-| Login hero | 57px | Exo 2; 48px/41px at narrower desktop/tablet breakpoints |
-| Page heading | 31px | Exo 2; 1.25 line-height; typically 25–26px on smaller screens |
+| Login hero | 57px | Manrope; 48px/41px at narrower desktop/tablet breakpoints |
+| Page heading | 31px | Manrope; 1.25 line-height; typically 25–26px on smaller screens |
 | Login form heading | 25px | Manrope; 1.4 line-height |
 | Dialog heading | 20px | 19px on small phones |
 | General section heading | 18px | Panel titles use 16px |
@@ -116,7 +116,7 @@ The CSS also requests intermediate weights such as 650 and 750, while only the f
 
 ![Current SurgiLog supplied logo](<public/SurgiLog Clinical Register Logo.png>)
 
-On 19 October 2026 Dylan supplied the new SurgiLog artwork and requested the complete image replace both the old theatre-team symbol and the live-text wordmark. It combines a navy S, a turquoise check/list symbol, navy/turquoise SurgiLog lettering and the tagline **The trusted clinical register**. The artwork determines the logo colours and lettering; the existing interface colours remain. Exo 2 (600/800) now replaces Manrope for headings and prominent numbers to complement the squared lettering; DM Sans (400/600) remains for tables, forms and body text. Exo 2 is a visual pairing, not a confirmed identification of the font embedded in the image.
+On 19 October 2026 Dylan supplied the new SurgiLog artwork and requested the complete image replace both the old theatre-team symbol and the live-text wordmark. It combines a navy S, a turquoise check/list symbol, navy/turquoise SurgiLog lettering and the tagline **The trusted clinical register**. The artwork determines the logo colours and lettering; the existing interface colours remain. Dylan explicitly chose to retain the original app fonts on 20 October: Manrope (600/800) for headings and prominent numbers, and DM Sans (400/600) for tables, forms and body text. The brief Exo 2 change is superseded. The exact font embedded in the supplied image remains unidentified; do not change the app typography to match it without a new request.
 
 | Asset | Location | Use |
 | --- | --- | --- |
