@@ -799,29 +799,29 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
                             <CartesianGrid
                               strokeDasharray="3 4"
                               vertical={false}
-                              stroke="#edf1f4"
+                              stroke="var(--divider)"
                             />
                             <XAxis
                               dataKey="name"
                               axisLine={false}
                               tickLine={false}
-                              tick={{ fill: '#7b8a9a', fontSize: 12 }}
+                              tick={{ fill: 'var(--muted)', fontSize: 12 }}
                             />
                             <YAxis
                               allowDecimals={false}
                               axisLine={false}
                               tickLine={false}
                               width={25}
-                              tick={{ fill: '#7b8a9a', fontSize: 11 }}
+                              tick={{ fill: 'var(--muted)', fontSize: 11 }}
                             />
                             <Tooltip
-                              cursor={{ fill: '#f3f7fa' }}
-                              contentStyle={{ borderRadius: 10, border: '1px solid #e0e7ed' }}
+                              cursor={{ fill: 'var(--wash)' }}
+                              contentStyle={{ borderRadius: 10, border: '1px solid var(--border)' }}
                             />
                             <Bar
                               dataKey="completed"
                               name="Completed"
-                              fill="#3f91b8"
+                              fill="var(--chart)"
                               radius={[5, 5, 0, 0]}
                             />
                           </BarChart>
@@ -1205,7 +1205,7 @@ function BacklogTrend({ metrics }: { metrics: Metrics }) {
       <div className="backlog-trend-chart" aria-label="Backlog by priority over time">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={metrics.backlogTrend} margin={{ left: -18, right: 10 }}>
-            <CartesianGrid stroke="#edf2f5" vertical={false} />
+            <CartesianGrid stroke="var(--divider)" vertical={false} />
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
             <YAxis
               allowDecimals={false}

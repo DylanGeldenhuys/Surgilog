@@ -1,6 +1,6 @@
 # SurgiLog — design and brand guide
 
-Version 0.6 · Updated 20 October 2026 · Working brand for the app
+Version 0.7 (local palette preview) · Updated 20 October 2026 · Working brand for the app
 
 This is the shared reference for the app, presentations, documents and future brand assets. It records the **current implementation** and gives **reuse guidance** for new work. Dylan leads development; Leo provides clinical/product direction. This is a working identity, not a completed institutional brand programme.
 
@@ -17,49 +17,51 @@ Use this guide instead of the earlier proposed palette in planning documents. Va
 | Current headline | **Every patient. Every theatre. Every day.** |
 | Supporting line | **Built for South African hospital teams** |
 | Personality | Calm, clear, practical, trustworthy and human |
-| Visual direction | Light blue and white, silver-grey structure, dark blue-grey text and restrained gold accents |
+| Visual direction | Deep navy and turquoise, white and pale-aqua surfaces; gold reserved for existing clinical/reporting distinctions |
 | Core idea | Help teams see waiting patients, organise theatre time and understand recorded treatment activity |
 
 Keep the product name intact in hospital-specific materials: “SurgiLog · [Hospital name]”. Place hospital identity alongside it with a clear separator. Hospital names and departments are workspace context, not different product brands.
 
 ## Colour palette
 
-![SurgiLog core palette: blue, pale blue, white, mist, silver, slate, ink and gold.](docs/brand-palette.svg)
+**Preview status — 20 October 2026:** Dylan requested a trial using the new logo colours. The navy/turquoise palette below is implemented locally on `preview/logo-palette`; it is not approved for release or deployed. The published `v0.1.0-review.1` still uses the former blue/grey palette. Fonts, logo artwork, layout and clinical priority/status meanings are preserved.
 
-### Core colours — current
 
-Use HEX for digital work. RGB values below use sRGB. “Silver” is a flat cool grey, not a metallic finish.
+![SurgiLog preview palette: navy, turquoise, action teal, pale aqua, white, mist, silver and slate.](docs/brand-palette.svg)
 
-| Name | HEX | RGB | Role / existing CSS |
+### Core colours — local preview
+
+Use HEX for digital work (sRGB). Navy and turquoise are representative samples of the supplied raster logo, not official master/vector values. The logo itself is unchanged. Action teal is deliberately darker for readable controls.
+
+| Name | HEX | RGB | Role / CSS |
 | --- | --- | --- | --- |
-| Theatre blue | `#176B9A` | `23, 107, 154` | Primary buttons, links, brand tile, browser theme; `--blue` |
-| Clinical white | `#FFFFFF` | `255, 255, 255` | Cards, forms, navigation and reversed button text; `--surface` |
-| Mist | `#F4F7FA` | `244, 247, 250` | Main application background |
-| Pale blue | `#F0F6FA` | `240, 246, 250` | Login story background and information panels |
-| Selected blue | `#EAF4FA` | `234, 244, 250` | Active navigation background |
-| Silver | `#E3EAF0` | `227, 234, 240` | Panel borders and dividers; `--border` |
-| Ink | `#203A4A` | `32, 58, 74` | Headings and strong text; `--ink` |
-| Body ink | `#243949` | `36, 57, 73` | Default body text |
-| Slate | `#748595` | `116, 133, 149` | Muted accents and secondary UI styling; `--muted` |
-| Gold | `#B69048` | `182, 144, 72` | Restrained brand accent; `--gold` |
-| Strong secondary text | `#42586A` | `66, 88, 106` | Existing secondary button text; preferred for readable small secondary copy in new materials |
+| Logo navy | `#08203C` | `8, 32, 60` | Headings and strong numbers; `--ink` |
+| Logo turquoise | `#08B0C8` | `8, 176, 200` | Brand reference; use for decoration, not small text on white; `--brand-turquoise` |
+| Action teal | `#00788A` | `0, 120, 138` | Buttons, links, focus outline, selected navigation text, browser theme; `--action` (`--blue` alias) |
+| Large accent text | `#00899D` | `0, 137, 157` | Login “Every day.” and decorative icons; `--accent-text` |
+| Clinical white | `#FFFFFF` | `255, 255, 255` | Cards, controls and button text; `--surface` |
+| Mist | `#F4F8F9` | `244, 248, 249` | App canvas/install splash; `--canvas` |
+| Pale aqua | `#EEF8FA` | `238, 248, 250` | Login story and information panels; `--wash` |
+| Selected aqua | `#E2F4F7` | `226, 244, 247` | Active navigation and selections; `--selected` |
+| Silver | `#DBE8EC` | `219, 232, 236` | Borders; `--border` |
+| Body ink | `#263E50` | `38, 62, 80` | Default text; `--body-ink` |
+| Secondary text | `#405E6D` | `64, 94, 109` | Supporting text; `--secondary` |
+| Slate | `#5B7380` | `91, 115, 128` | Muted text; `--muted` |
 
-**Reuse guidance:** let white and pale surfaces dominate. Use blue to direct attention to actions and navigation. Use gold for a small dot, rule, highlight or icon detail. Keep large areas of gold out of operational screens. A useful starting point for a presentation is roughly 80% light surfaces, 15% blue/ink and 5% gold or supporting accents; this is a composition guide, not a measured property of the app.
+White and pale surfaces dominate; navy anchors the text and teal indicates actions. Existing gold, green, purple and red retain clinical/workflow/reporting meanings. The sign-in review label now uses teal rather than decorative gold.
 
-### Supporting colours — current
+### Supporting colours — local preview
 
 | Use | Value |
 | --- | --- |
-| Supplied logo artwork | Preserve the embedded blue, pale-blue, silver and navy gradients; do not sample one tint and redraw it as a flat substitute |
-| Focus outline | `#88C4E9` |
-| Main activity chart bars | `#3F91B8` |
-| Gold metric icon / background | `#BF9A53` / `#FAF4E8` |
-| Green metric icon / background | `#50927D` / `#EAF6F1` |
-| Error text / background / border | `#A25349` / `#FCF0ED` / `#F3DDD5` |
-| Pending-entry badge text / background | `#AE8B47` / `#FAF3E5` |
-| Install splash background | `#F4F8FB` |
+| Activity chart | `#0898AC` (`--chart`) |
+| Soft surface / divider / track | `#F8FBFC` / `#EAF1F3` / `#CEE8ED` |
+| Gold metric icon / background (unchanged) | `#BF9A53` / `#FAF4E8` |
+| Green metric icon / background (unchanged) | `#50927D` / `#EAF6F1` |
+| Error text / background / border (unchanged) | `#A25349` / `#FCF0ED` / `#F3DDD5` |
+| Pending-entry badge text / background (unchanged) | `#AE8B47` / `#FAF3E5` |
 
-The supplied logo is the current brand master. Its artwork contains gradients and highlights beyond the flat interface palette. Preserve those values in the logo itself; use the core palette above for surrounding layouts rather than creating near-matching logo variants.
+The original logo contains textured gradients. Preserve the artwork; use these flat interface tokens around it. Turquoise `#08B0C8` on white has only 2.61:1 contrast, so it is not the action/text colour. Key preview text/background contrast pairs were calculated; this does not replace a full accessibility audit. Existing clinical semantic colours are unchanged in this preview.
 
 ### Clinical and workflow colours
 
@@ -116,7 +118,7 @@ The CSS also requests intermediate weights such as 650 and 750, while only the f
 
 ![Current SurgiLog supplied logo](<public/SurgiLog Clinical Register Logo.png>)
 
-On 19 October 2026 Dylan supplied the new SurgiLog artwork and requested the complete image replace both the old theatre-team symbol and the live-text wordmark. It combines a navy S, a turquoise check/list symbol, navy/turquoise SurgiLog lettering and the tagline **The trusted clinical register**. The artwork determines the logo colours and lettering; the existing interface colours remain. Dylan explicitly chose to retain the original app fonts on 20 October: Manrope (600/800) for headings and prominent numbers, and DM Sans (400/600) for tables, forms and body text. The brief Exo 2 change is superseded. The exact font embedded in the supplied image remains unidentified; do not change the app typography to match it without a new request.
+On 19 October 2026 Dylan supplied the new SurgiLog artwork and requested the complete image replace both the old theatre-team symbol and the live-text wordmark. It combines a navy S, a turquoise check/list symbol, navy/turquoise SurgiLog lettering and the tagline **The trusted clinical register**. The artwork determines the logo colours and lettering; the surrounding interface now trials the navy/turquoise palette above. Dylan explicitly chose to retain the original app fonts on 20 October: Manrope (600/800) for headings and prominent numbers, and DM Sans (400/600) for tables, forms and body text. The brief Exo 2 change is superseded. The exact font embedded in the supplied image remains unidentified; do not change the app typography to match it without a new request.
 
 | Asset | Location | Use |
 | --- | --- | --- |
@@ -125,7 +127,7 @@ On 19 October 2026 Dylan supplied the new SurgiLog artwork and requested the com
 | Install icon, 512px | [public/surgilog-icon-512.png](public/surgilog-icon-512.png) | New S/check symbol; larger install icon |
 | Logo component | `Brand()` in [apps/web/ui.tsx](apps/web/ui.tsx) | Shared accessible image on sign-in and navigation |
 | Historical artwork | `docs/brand/`, `public/logo-lockup.png`, `public/icon-192.png`, `public/icon-512.png` | Earlier Theatre Tracker/theatre-team assets, retained as history |
-| Colour swatches | [docs/brand-palette.svg](docs/brand-palette.svg) | Interface palette reference; not a sampled palette of the new logo |
+| Colour swatches | [docs/brand-palette.svg](docs/brand-palette.svg) | Local preview palette reference, with sampled brand colours and darker action teal |
 
 The shared SVG displays the supplied PNG through viewBox `200 255 1280 425`, removing its outer whitespace at render time without editing the source. The entire symbol, name and tagline remain visible, with the original proportions. Navigation fills the available sidebar width. Sign-in scales from 320–620px with a 34vw preferred width; phones use up to 340px, always constrained by their container. The image aligns with the sign-in content. Multiply compositing blends the source's light background into the pale login surface. Accessible text is “SurgiLog — The trusted clinical register”; there is no duplicate live wordmark.
 
@@ -191,13 +193,16 @@ The following ratios were calculated from the exact opaque sRGB values above aga
 
 | Pair | Approximate contrast | Reuse decision |
 | --- | --- | --- |
-| Blue `#176B9A` / white | 5.82:1 | Suitable for normal button/link text |
-| Ink `#203A4A` / white | 11.89:1 | Preferred for readable headings and body copy |
-| Strong secondary `#42586A` / white | 7.41:1 | Preferred for small secondary copy |
-| Slate `#748595` / white | 3.80:1 | Does not meet the normal-text target |
-| Gold `#B69048` / white | 2.97:1 | Use decoratively, not for readable text on white |
+| Action teal `#00788A` / white | 5.18:1 | Buttons and links |
+| Action teal / selected aqua | 4.57:1 | Selected navigation labels |
+| Navy `#08203C` / white | 16.38:1 | Headings and strong numbers |
+| Secondary `#405E6D` / white | 6.91:1 | Supporting copy |
+| Slate `#5B7380` / pale aqua | 4.62:1 | Muted copy on light surfaces |
+| Accent `#00899D` / pale aqua | 3.84:1 | Large hero text; not small text |
+| Logo turquoise / white | 2.61:1 | Decoration only |
+| Gold `#B69048` / white | 2.97:1 | Existing semantic accent; not normal text target |
 
-Some current small labels and pastel status badges need a contrast/readability pass. Keep their semantic hues, but use a darker text treatment in new designs and check the actual text/background pair. The app has a 3px light-blue focus outline; test its visibility on the final surface. Aim for at least 44px touch areas in new phone controls; the current compact controls are not all that large.
+Some current small labels and pastel status badges need a contrast/readability pass. Keep their semantic hues, but use a darker text treatment in new designs and check the actual text/background pair. The app has a 3px action-teal focus outline; test its visibility on the final surface. Aim for at least 44px touch areas in new phone controls; the current compact controls are not all that large.
 
 Always combine colour with words, icons or another distinguishable cue. This is especially important for urgency, errors and sync state. [W3C colour guidance](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html).
 
@@ -221,9 +226,9 @@ The current app relies on typography, outline icons and data rather than photogr
 
 **Suggested starting layouts for reuse:**
 
-- **Presentation:** white background, blue title, ink body text, a narrow gold rule and the symbol in one consistent corner. Charts use the app’s semantic mappings.
+- **Presentation:** white background, navy title, ink body text, a narrow teal rule and the symbol in one consistent corner. Charts use the app’s semantic mappings.
 - **Document/report:** a small wordmark, document title, hospital/department and reporting period. Use quiet borders and labelled tables; retain readable contrast in greyscale.
-- **Website or announcement:** pale-blue field, Manrope headline, DM Sans body, a single blue primary action and restrained gold detail.
+- **Website or announcement:** pale-aqua field, navy Manrope headline, DM Sans body and a single teal primary action.
 - **Print:** provide the vector asset and sRGB palette to the designer/printer for conversion with the actual print profile and a proof. No Pantone or CMYK brand standard has been defined.
 
 ## Copyable starting tokens
@@ -232,18 +237,18 @@ These portable names are aliases for the current core values, suitable for a new
 
 ```css
 :root {
-  --tt-blue: #176b9a;
+  --tt-blue: #00788a;
   --tt-white: #ffffff;
-  --tt-background: #f4f7fa;
-  --tt-pale-blue: #f0f6fa;
-  --tt-selected: #eaf4fa;
-  --tt-border: #e3eaf0;
-  --tt-ink: #203a4a;
-  --tt-body: #243949;
-  --tt-secondary-text: #42586a;
-  --tt-muted: #748595;
+  --tt-background: #f4f8f9;
+  --tt-pale-blue: #eef8fa;
+  --tt-selected: #e2f4f7;
+  --tt-border: #dbe8ec;
+  --tt-ink: #08203c;
+  --tt-body: #263e50;
+  --tt-secondary-text: #405e6d;
+  --tt-muted: #5b7380;
   --tt-gold: #b69048;
-  --tt-focus: #88c4e9;
+  --tt-focus: #00788a;
   --tt-font-body: 'DM Sans', system-ui, sans-serif;
   --tt-font-heading: 'Manrope', system-ui, sans-serif;
   --tt-radius-control: 8px;
@@ -254,7 +259,7 @@ These portable names are aliases for the current core values, suitable for a new
 
 ## Maintaining consistency
 
-The local Theatre register and Performance extension uses the same white panels, mist background, Ink headings and standard inputs/buttons. Register rows expose Draft/Verified as text; status is never conveyed by colour alone. Dates/times identify SAST and reporting scope. Charts use primary blue `#176b9a` for counts, green `#50927d` for utilisation, restrained gold `#b69048` for turnaround and muted blue `#6a9ab5` for first entry. Unknown/future observations stay blank. Tables wrap headings and names; report columns fit their panels instead of inheriting the wide patient-table layout. On phones, charts/breakdowns stack in one column and KPI cards use two columns. The executive print view omits navigation/controls, keeps hospital/department/period/generated time and metric definitions, and contains aggregates only. These patterns add no new brand identity.
+The local Theatre register and Performance extension uses the same white panels, mist background, Ink headings and standard inputs/buttons. Register rows expose Draft/Verified as text; status is never conveyed by colour alone. Dates/times identify SAST and reporting scope. Charts use action teal `#00788a` for counts, green `#50927d` for utilisation, restrained gold `#b69048` for turnaround and navy `#08203c` for first entry. Unknown/future observations stay blank. Tables wrap headings and names; report columns fit their panels instead of inheriting the wide patient-table layout. On phones, charts/breakdowns stack in one column and KPI cards use two columns. The executive print view omits navigation/controls, keeps hospital/department/period/generated time and metric definitions, and contains aggregates only. These patterns add no new brand identity.
 
 Keep this file, the palette SVG and the app styles aligned when a design decision changes. Update current values explicitly; label new proposals until implemented. Link approved new logo variants here when created. Dark mode, vector/monochrome/reversed logo exports, print specifications and a full accessibility pass remain future design work.
 

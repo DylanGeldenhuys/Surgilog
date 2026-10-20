@@ -10,8 +10,8 @@ export default defineConfig({
         name: 'SurgiLog',
         short_name: 'SurgiLog',
         description: 'A clearer path to surgery',
-        theme_color: '#176b9a',
-        background_color: '#f4f8fb',
+        theme_color: '#00788a',
+        background_color: '#f4f8f9',
         display: 'standalone',
         icons: [
           { src: '/surgilog-icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
