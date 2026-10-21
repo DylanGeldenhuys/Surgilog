@@ -43,6 +43,28 @@ export const genderOptions = [
   'Not recorded',
 ] as const;
 export type Gender = (typeof genderOptions)[number];
+/** WHO ICD-10, the revision used in South Africa. This is not ICD-11. */
+export const ICD10_SYSTEM = 'icd-10-who' as const;
+export type Icd10Coding = {
+  system: typeof ICD10_SYSTEM;
+  /**
+   * Format-validated code only. A later catalogue lookup can add a display
+   * name or edition on this object without changing `system` or `code`.
+   */
+  code: string;
+};
+/** Category plus an optional decimal extension, for example K35 or K35.8. */
+export const icd10CodePattern = /^[A-Z]\d{2}(\.[A-Z0-9]{1,4})?$/;
+export const diagnosisTextSchema = z.string().trim().max(500);
+export const icd10CodeSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .max(16)
+  .refine(
+    (value) => value === '' || icd10CodePattern.test(value),
+    'Enter a WHO ICD-10 code such as K35 or K35.8',
+  );
 export type CaseStatus =
   'Waiting' | 'Scheduled' | 'In theatre' | 'Completed' | 'On hold' | 'Closed';
 export type Membership = { hospitalId: string; role: Role; departments: string[] };
@@ -90,6 +112,10 @@ export type SurgicalCase = {
   patientId: string;
   departmentId: string;
   procedure: string;
+  /** Free-text diagnosis captured before the procedure. Absent when not recorded. */
+  diagnosis?: string;
+  /** Optional WHO ICD-10 coding. Absent when not recorded, including older entries. */
+  icd10?: Icd10Coding;
   surgeon: string;
   priority: Priority;
   priorityAssignedBy?: string;
@@ -219,6 +245,8 @@ export const newCaseSchema = z
     phone: z.string().trim().max(40),
     departmentId: id,
     procedure: short,
+    diagnosis: diagnosisTextSchema.optional(),
+    icd10Code: icd10CodeSchema.optional(),
     surgeon: z.string().max(160),
     priority: z.enum(['P1', 'P2', 'P3']),
     priorityAssignedBy: z.string().trim().min(2).max(160).optional(),
@@ -263,6 +291,21 @@ export const operationSchema = z.discriminatedUnion('type', [
           caseId: id,
           version: z.number().int().positive(),
           notes: z.string().trim().max(2000),
+          reason: z.string().trim().min(3).max(1000),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
+      type: z.literal('diagnosis'),
+      data: z
+        .object({
+          caseId: id,
+          version: z.number().int().positive(),
+          diagnosis: diagnosisTextSchema,
+          icd10Code: icd10CodeSchema,
           reason: z.string().trim().min(3).max(1000),
         })
         .strict(),
@@ -379,6 +422,30 @@ export type Pending = {
   status: 'pending' | 'conflict' | 'rejected' | 'resolved';
   error?: string;
 };
+export function applyDiagnosis<T extends object>(
+  record: T,
+  diagnosis: string | undefined,
+  icd10Code: string | undefined,
+): Omit<T, 'diagnosis' | 'icd10'> & { diagnosis?: string; icd10?: Icd10Coding } {
+  const next: Omit<T, 'diagnosis' | 'icd10'> & { diagnosis?: string; icd10?: Icd10Coding } = {
+    ...record,
+  };
+  const text = diagnosis?.trim() ?? '';
+  const code = icd10Code?.trim().toUpperCase() ?? '';
+  if (code && !icd10CodePattern.test(code))
+    throw new Error('Enter a WHO ICD-10 code such as K35 or K35.8.');
+  if (text) next.diagnosis = text;
+  else delete next.diagnosis;
+  if (code) next.icd10 = { system: ICD10_SYSTEM, code };
+  else delete next.icd10;
+  return next;
+}
+export function diagnosisLabel(entry: { diagnosis?: string; icd10?: { code?: string } }) {
+  const text = entry.diagnosis?.trim() ?? '';
+  const code = entry.icd10?.code?.trim() ?? '';
+  if (text && code) return `${text} · ${code}`;
+  return text || code;
+}
 export const canConfigure = (role: Role) =>
   ['super_user', 'major_write', 'system_admin_write'].includes(role);
 export const canClinical = (role: Role) =>
@@ -398,7 +465,7 @@ export const canOperate = (role: Role, op: Operation) =>
       : canRecord(role)
     : op.type === 'session' || op.type === 'book'
       ? canSchedule(role)
-      : ['register', 'patient', 'case-notes', 'theatre-entry'].includes(op.type)
+      : ['register', 'patient', 'case-notes', 'diagnosis', 'theatre-entry'].includes(op.type)
         ? canEditPatient(role)
         : canClinical(role);
 export const roleLabels: Record<Role, string> = {

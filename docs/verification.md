@@ -1,6 +1,14 @@
 # Verification record
 
-Updated 20 October 2026. The theatre extension and matching hardening frontend are published and independently live-verified (see deployment.md). All verification data was synthetic.
+Updated 21 October 2026. The theatre extension and matching hardening frontend are published and independently live-verified (see deployment.md). All verification data was synthetic.
+
+## Optional backlog diagnosis — 21 October 2026 (not deployed)
+
+Local only, from `main` `f514cf6`. No hosting, API, rules, index or Firestore deployment. The hosted project was not contacted.
+
+`npm test`: 90 tests, 12 files. `npm run test:integration`: 21 checks, including an optional diagnosis that is omitted when blank, a recorder registration with `k35.8` stored as WHO ICD-10 `K35.8`, idempotent replay, rejection of `11A`, nurse/clerk correction, coordinator and viewer denial, cross-department and completed-case denial, stale version conflict, clearing the field, workspace visibility for the clinician, and absence of the diagnosis text from the aggregate report and the viewer workspace. `npm run test:admin`: 7 checks. `npm run test:theatre`: 9 checks. `npm run typecheck`, `npm run format:check` and `npm run build` pass. The existing main-bundle size advisory remains.
+
+Chromium at `http://127.0.0.1:5173` with the local emulators and synthetic Groote Schuur data: backlog row and case dialog show `Cholelithiasis · K80.2` with the procedure; a new case left blank shows Not recorded; `11A` stays on the form with the plain message “Enter a WHO ICD-10 code such as K35 or K35.8”; `k35.8` saves as `K35.8` and appears under the procedure; theatre planning shows a coded booking and leaves an uncoded booking unchanged. No console errors. Navy/turquoise layout was left as already merged. Physical phones were not rechecked.
 
 ## Logo-palette preview — 20 October 2026 (not deployed)
 

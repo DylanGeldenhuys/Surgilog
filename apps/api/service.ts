@@ -1,8 +1,10 @@
 import { saveTheatreEntry } from './theatre.ts';
 import type { TheatreEntry } from '../../shared/theatre.ts';
 import { createHash } from 'node:crypto';
+import { FieldValue } from 'firebase-admin/firestore';
 import { db } from './firebase.ts';
 import {
+  applyDiagnosis,
   dueDate,
   metrics,
   operationSchema,
@@ -37,6 +39,15 @@ export class ApiError extends Error {
     super(message);
     this.status = status;
   }
+}
+function caseDocumentUpdate(c: SurgicalCase, diagnosisEdited: boolean) {
+  if (!diagnosisEdited) return c;
+  // Clearing a diagnosis must remove the stored field. Older cases never had one.
+  return {
+    ...c,
+    diagnosis: c.diagnosis ?? FieldValue.delete(),
+    icd10: c.icd10 ?? FieldValue.delete(),
+  };
 }
 function requireThat(value: unknown, status: number, message: string): asserts value {
   if (!value) throw new ApiError(status, message);
@@ -597,26 +608,30 @@ export async function execute(uid: string, hid: string, input: unknown) {
         phone: d.phone,
         version: 1,
       };
-      const c: SurgicalCase = {
-        id: d.caseId,
-        patientId,
-        departmentId: dep,
-        procedure: d.procedure,
-        surgeon: d.surgeon,
-        priority: d.priority,
-        ...(d.priorityAssignedBy ? { priorityAssignedBy: d.priorityAssignedBy } : {}),
-        priorityHistory: [{ priority: d.priority, at: d.listedAt }],
-        listedAt: d.listedAt,
-        urgencyAt: d.urgencyAt,
-        dueAt: dueDate(d.urgencyAt, d.priority),
-        readiness: d.readiness,
-        duration: null,
-        notes: d.notes,
-        status: 'Waiting',
-        version: 1,
-        createdAt: now,
-        updatedAt: now,
-      };
+      const c = applyDiagnosis(
+        {
+          id: d.caseId,
+          patientId,
+          departmentId: dep,
+          procedure: d.procedure,
+          surgeon: d.surgeon,
+          priority: d.priority,
+          ...(d.priorityAssignedBy ? { priorityAssignedBy: d.priorityAssignedBy } : {}),
+          priorityHistory: [{ priority: d.priority, at: d.listedAt }],
+          listedAt: d.listedAt,
+          urgencyAt: d.urgencyAt,
+          dueAt: dueDate(d.urgencyAt, d.priority),
+          readiness: d.readiness,
+          duration: null,
+          notes: d.notes,
+          status: 'Waiting',
+          version: 1,
+          createdAt: now,
+          updatedAt: now,
+        },
+        d.diagnosis,
+        d.icd10Code,
+      ) as SurgicalCase;
       if (!existing.exists) {
         tx.create(patientRef, patient);
         tx.create(registry, { patientId });
@@ -784,6 +799,14 @@ export async function execute(uid: string, hid: string, input: unknown) {
           reason = op.data.reason;
           updated.notes = op.data.notes;
         }
+        if (op.type === 'diagnosis') {
+          reason = op.data.reason;
+          const next = applyDiagnosis(updated, op.data.diagnosis, op.data.icd10Code);
+          delete updated.diagnosis;
+          delete updated.icd10;
+          if (next.diagnosis) updated.diagnosis = next.diagnosis;
+          if (next.icd10) updated.icd10 = next.icd10;
+        }
         if (op.type === 'book') {
           const d = op.data;
           requireThat(
@@ -911,7 +934,7 @@ export async function execute(uid: string, hid: string, input: unknown) {
           tx.update(br, changed);
           changes.booking = changed;
         }
-        tx.update(cr, updated);
+        tx.update(cr, caseDocumentUpdate(updated, op.type === 'diagnosis'));
         changes.surgicalCase = updated;
         after = updated;
       }

@@ -2,6 +2,18 @@
 
 Updated: 21 October 2026, Africa/Johannesburg.
 
+## Optional backlog diagnosis — 21 October 2026
+
+Leo asked for a diagnosis on backlog entries, captured before the procedure. The owner approved it. Implemented in the working tree from `main` at `f514cf6`. Not deployed. Hosted Firestore was not read or written.
+
+The case may store an optional free-text diagnosis (500 characters) and an optional WHO ICD-10 code, the revision used in South Africa. The code is format-only: a letter, two digits, then an optional decimal and 1–4 characters, for example `K35` or `K35.8`. It is stored in upper case as `{ system: 'icd-10-who', code }` so a catalogue lookup can be added later without treating the value as ICD-11. There is no code list or search. Blank values are omitted, so entries created before this field stay valid. No migration runs.
+
+Nurses, clerks, doctors and write admins can record it, the same roles that edit case notes. Read-only admins and reporting viewers cannot. A change requires a reason. The audit event is `diagnosis` and keeps the before/after case, as other case edits do. API logs do not include the text or code. Overview aggregates still contain no patient rows. Registration, correction, the encrypted outbox and local projection all carry the fields. Optional CSV columns are `diagnosis` and `icd10`.
+
+The backlog table, case dialog and theatre-planning row show a recorded diagnosis with the procedure. The case facts say Not recorded when it is absent. Completed or closed cases cannot be changed, matching case notes.
+
+Local checks: 90 unit tests, 21 emulator integration checks, 7 admin checks and 9 theatre checks. Typecheck, formatting and the production build pass. Chromium on the local Vite app confirmed an existing coded fixture, a blank entry, rejection of `11A` with the plain WHO ICD-10 message, saving `k35.8` as `K35.8`, a new synthetic case with both fields empty, and a booked case showing its diagnosis under the procedure. The temporary emulator rows from that check are local only.
+
 ## People and confirmed direction
 
 Dylan develops the app with Leo, the doctor/product collaborator. Build **SurgiLog**, a South African surgical backlog and theatre operations app (renamed from Theatre Tracker on 13 October 2026). Leo's `Global Surgical Backlog Monitor (Copy) (1).html` is the product reference; preserve it. His Claude conversation has not arrived and is not a prerequisite.

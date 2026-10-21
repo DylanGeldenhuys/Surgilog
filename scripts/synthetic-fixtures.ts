@@ -1,7 +1,9 @@
 import {
   dueDate,
+  ICD10_SYSTEM,
   saDay,
   type Hospital,
+  type Icd10Coding,
   type Patient,
   type SurgicalCase,
   type TheatreSession,
@@ -87,6 +89,44 @@ export function syntheticDocuments(now = new Date()) {
               'ACL reconstruction',
               'Shoulder arthroscopy',
             ];
+      const syntheticDiagnoses: Record<string, { diagnosis: string; icd10: Icd10Coding }> = {
+        'Laparoscopic cholecystectomy': {
+          diagnosis: 'Cholelithiasis',
+          icd10: { system: ICD10_SYSTEM, code: 'K80.2' },
+        },
+        'Inguinal hernia repair': {
+          diagnosis: 'Inguinal hernia',
+          icd10: { system: ICD10_SYSTEM, code: 'K40.9' },
+        },
+        Thyroidectomy: {
+          diagnosis: 'Nontoxic goitre',
+          icd10: { system: ICD10_SYSTEM, code: 'E04.9' },
+        },
+        Colonoscopy: {
+          diagnosis: 'Rectal bleeding',
+          icd10: { system: ICD10_SYSTEM, code: 'K62.5' },
+        },
+        Haemorrhoidectomy: {
+          diagnosis: 'Haemorrhoids',
+          icd10: { system: ICD10_SYSTEM, code: 'K64.9' },
+        },
+        'Total knee replacement': {
+          diagnosis: 'Osteoarthritis of knee',
+          icd10: { system: ICD10_SYSTEM, code: 'M17.1' },
+        },
+        'Hip replacement': {
+          diagnosis: 'Osteoarthritis of hip',
+          icd10: { system: ICD10_SYSTEM, code: 'M16.1' },
+        },
+        'ACL reconstruction': {
+          diagnosis: 'Tear of cruciate ligament of knee',
+          icd10: { system: ICD10_SYSTEM, code: 'S83.5' },
+        },
+        'Shoulder arthroscopy': {
+          diagnosis: 'Rotator cuff syndrome',
+          icd10: { system: ICD10_SYSTEM, code: 'M75.1' },
+        },
+      };
       const sessions: TheatreSession[] = [];
       for (let day = -6; day <= 3; day++) {
         const date = saDay(new Date(+new Date(`${today}T12:00:00+02:00`) + day * 86400000));
@@ -138,6 +178,8 @@ export function syntheticDocuments(now = new Date()) {
           createdAt: ago(15 + i),
           updatedAt: ago(1),
         };
+        // Half of the fictional rows keep the older shape, with no diagnosis stored.
+        if (i % 2 === 0) Object.assign(c, syntheticDiagnoses[c.procedure]);
         c.dueAt = dueDate(c.urgencyAt, c.priority);
         const registered = structuredClone(c);
         if (i < 12) {

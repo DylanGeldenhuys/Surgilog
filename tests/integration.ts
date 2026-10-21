@@ -852,6 +852,150 @@ try {
       }
     },
   );
+  await check('diagnosis is optional, format-checked, scoped and audited', async () => {
+    const legacy = (await root.collection('cases').doc('case-one').get()).data()!;
+    assert.equal('diagnosis' in legacy, false);
+    assert.equal('icd10' in legacy, false);
+    const plain = register('diagnosis-absent');
+    await expectStatus(await send('clinician', plain), 200);
+    const absent = (await root.collection('cases').doc('diagnosis-absent').get()).data()!;
+    assert.equal('diagnosis' in absent, false);
+    assert.equal('icd10' in absent, false);
+    const coded = register('diagnosis-coded');
+    if (coded.type !== 'register') throw new Error('Invalid fixture');
+    coded.data.diagnosis = '  Synthetic appendicitis  ';
+    coded.data.icd10Code = 'k35.8';
+    coded.data.priorityAssignedBy = 'Dr Synthetic';
+    coded.data.readiness = 'Needs assessment';
+    const accepted = await send('recorder', coded);
+    await expectStatus(accepted, 200);
+    assert.equal(accepted.data.changes.surgicalCase.diagnosis, 'Synthetic appendicitis');
+    assert.deepEqual(accepted.data.changes.surgicalCase.icd10, {
+      system: 'icd-10-who',
+      code: 'K35.8',
+    });
+    const replay = await send('recorder', coded);
+    await expectStatus(replay, 200);
+    assert.equal(replay.data.replayed, true);
+    await expectStatus(
+      await send(
+        'clinician',
+        op('register', { ...coded.data, caseId: 'diagnosis-bad', icd10Code: '11A' }),
+      ),
+      400,
+    );
+    assert.equal((await root.collection('cases').doc('diagnosis-bad').get()).exists, false);
+    const correction = op('diagnosis', {
+      caseId: 'diagnosis-coded',
+      version: 1,
+      diagnosis: 'Synthetic mesenteric adenitis',
+      icd10Code: '',
+      reason: 'Synthetic diagnosis correction',
+    });
+    await expectStatus(await send('coordinator', correction), 403);
+    await expectStatus(await send('viewer', correction), 403);
+    await expectStatus(await send('recorder', correction), 200);
+    const edited = (await root.collection('cases').doc('diagnosis-coded').get()).data()!;
+    assert.equal(edited.diagnosis, 'Synthetic mesenteric adenitis');
+    assert.equal('icd10' in edited, false);
+    assert.equal(edited.version, 2);
+    assert.equal(edited.procedure, 'Synthetic surgery');
+    const audit = (await root.collection('audit').doc(correction.id).get()).data()!;
+    assert.equal(audit.action, 'diagnosis');
+    assert.equal(audit.reason, 'Synthetic diagnosis correction');
+    assert.equal(audit.before.diagnosis, 'Synthetic appendicitis');
+    assert.equal(audit.before.icd10.code, 'K35.8');
+    assert.equal(audit.after.diagnosis, 'Synthetic mesenteric adenitis');
+    assert.equal(audit.after.icd10, undefined);
+    const workspace = await request(
+      'clinician',
+      `/api/hospitals/${hid}/workspace?departmentId=general`,
+    );
+    await expectStatus(workspace, 200);
+    assert.equal(
+      workspace.data.cases.find((item: { id: string }) => item.id === 'diagnosis-coded').diagnosis,
+      'Synthetic mesenteric adenitis',
+    );
+    const overview = await request(
+      'clinician',
+      `/api/reporting/overview?hospitalId=${hid}&departmentId=general`,
+    );
+    await expectStatus(overview, 200);
+    assert.equal(JSON.stringify(overview.data).includes('Synthetic mesenteric adenitis'), false);
+    const viewer = await request('viewer', `/api/hospitals/${hid}/workspace?departmentId=general`);
+    assert.equal(JSON.stringify(viewer.data).includes('Synthetic mesenteric adenitis'), false);
+    await root
+      .collection('cases')
+      .doc('diagnosis-private')
+      .set({
+        ...edited,
+        id: 'diagnosis-private',
+        departmentId: 'private',
+      });
+    await expectStatus(
+      await send(
+        'clinician',
+        op('diagnosis', {
+          caseId: 'diagnosis-private',
+          version: 2,
+          diagnosis: 'Synthetic cross-department diagnosis',
+          icd10Code: 'K35',
+          reason: 'Synthetic department check',
+        }),
+      ),
+      403,
+    );
+    await root
+      .collection('cases')
+      .doc('diagnosis-done')
+      .set({
+        ...edited,
+        id: 'diagnosis-done',
+        status: 'Completed',
+      });
+    await expectStatus(
+      await send(
+        'clinician',
+        op('diagnosis', {
+          caseId: 'diagnosis-done',
+          version: 2,
+          diagnosis: 'Synthetic late change',
+          icd10Code: '',
+          reason: 'Synthetic closed-case check',
+        }),
+      ),
+      409,
+    );
+    await expectStatus(
+      await send(
+        'clinician',
+        op('diagnosis', {
+          caseId: 'diagnosis-coded',
+          version: 1,
+          diagnosis: 'Stale synthetic diagnosis',
+          icd10Code: 'K35',
+          reason: 'Synthetic stale edit',
+        }),
+      ),
+      409,
+    );
+    const cleared = await send(
+      'clinician',
+      op('diagnosis', {
+        caseId: 'diagnosis-coded',
+        version: 2,
+        diagnosis: '   ',
+        icd10Code: '',
+        reason: 'Synthetic diagnosis cleared',
+      }),
+    );
+    await expectStatus(cleared, 200);
+    const finalCase = (await root.collection('cases').doc('diagnosis-coded').get()).data()!;
+    assert.equal('diagnosis' in finalCase, false);
+    assert.equal('icd10' in finalCase, false);
+    assert.equal(finalCase.version, 3);
+    assert.equal(cleared.data.changes.surgicalCase.diagnosis, undefined);
+  });
   await check('revocation is rechecked before replaying accepted operations', async () => {
     await db
       .doc(`profiles/${users[0]}`)

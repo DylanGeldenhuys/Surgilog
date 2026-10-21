@@ -1,6 +1,8 @@
 import { projectedEntry } from '../../shared/theatre.ts';
 import {
+  applyDiagnosis,
   dueDate,
+  type SurgicalCase,
   type Workspace,
   type Pending,
   type OperationResult,
@@ -39,26 +41,32 @@ export function projected(base: Workspace, pending: Pending[]) {
           phone: d.phone,
           version: 1,
         });
-      w.cases.push({
-        id: d.caseId,
-        patientId,
-        departmentId: d.departmentId,
-        procedure: d.procedure,
-        surgeon: d.surgeon,
-        priority: d.priority,
-        ...(d.priorityAssignedBy ? { priorityAssignedBy: d.priorityAssignedBy } : {}),
-        priorityHistory: [{ priority: d.priority, at: d.listedAt }],
-        listedAt: d.listedAt,
-        urgencyAt: d.urgencyAt,
-        dueAt: dueDate(d.urgencyAt, d.priority),
-        readiness: d.readiness,
-        duration: null,
-        notes: d.notes,
-        status: 'Waiting',
-        version: 1,
-        createdAt: op.occurredAt,
-        updatedAt: op.occurredAt,
-      });
+      w.cases.push(
+        applyDiagnosis(
+          {
+            id: d.caseId,
+            patientId,
+            departmentId: d.departmentId,
+            procedure: d.procedure,
+            surgeon: d.surgeon,
+            priority: d.priority,
+            ...(d.priorityAssignedBy ? { priorityAssignedBy: d.priorityAssignedBy } : {}),
+            priorityHistory: [{ priority: d.priority, at: d.listedAt }],
+            listedAt: d.listedAt,
+            urgencyAt: d.urgencyAt,
+            dueAt: dueDate(d.urgencyAt, d.priority),
+            readiness: d.readiness,
+            duration: null,
+            notes: d.notes,
+            status: 'Waiting',
+            version: 1,
+            createdAt: op.occurredAt,
+            updatedAt: op.occurredAt,
+          },
+          d.diagnosis,
+          d.icd10Code,
+        ) as SurgicalCase,
+      );
       continue;
     }
     if (op.type === 'patient') {
@@ -89,6 +97,13 @@ export function projected(base: Workspace, pending: Pending[]) {
     if (op.type === 'readiness') c.readiness = op.data.readiness;
     if (op.type === 'hold') c.status = op.data.hold ? 'On hold' : 'Waiting';
     if (op.type === 'case-notes') c.notes = op.data.notes;
+    if (op.type === 'diagnosis') {
+      const next = applyDiagnosis(c, op.data.diagnosis, op.data.icd10Code);
+      if (next.diagnosis) c.diagnosis = next.diagnosis;
+      else delete c.diagnosis;
+      if (next.icd10) c.icd10 = next.icd10;
+      else delete c.icd10;
+    }
     if (op.type === 'activity') {
       const b = w.bookings.find((b) => b.id === op.data.bookingId);
       if (!b) continue;

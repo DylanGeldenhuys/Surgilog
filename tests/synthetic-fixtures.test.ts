@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { syntheticDocuments } from '../scripts/synthetic-fixtures.ts';
-import type { Booking, SurgicalCase } from '../shared/domain.ts';
+import { icd10CodePattern, type Booking, type SurgicalCase } from '../shared/domain.ts';
 
 describe('shared local/review fictional fixtures', () => {
   const documents = syntheticDocuments(new Date('2026-10-05T10:00:00Z'));
@@ -23,5 +23,21 @@ describe('shared local/review fictional fixtures', () => {
       expect(records.has(`${root}/audit/seed-book-${booking.id}`)).toBe(true);
       expect(Date.parse(booking.end)).toBeGreaterThan(Date.parse(booking.start));
     }
+  });
+  it('stores a WHO ICD-10 diagnosis on some fictional cases and leaves others unset', () => {
+    const cases = documents
+      .filter(({ path }) => path.includes('/cases/'))
+      .map(({ data }) => data as SurgicalCase);
+    const coded = cases.filter((item) => item.icd10);
+    expect(coded.length).toBeGreaterThan(0);
+    expect(coded.length).toBeLessThan(cases.length);
+    for (const item of coded) {
+      expect(item.diagnosis?.length).toBeGreaterThan(0);
+      expect(item.icd10?.system).toBe('icd-10-who');
+      expect(item.icd10?.code).toMatch(icd10CodePattern);
+    }
+    expect(cases.some((item) => item.diagnosis === undefined && item.icd10 === undefined)).toBe(
+      true,
+    );
   });
 });

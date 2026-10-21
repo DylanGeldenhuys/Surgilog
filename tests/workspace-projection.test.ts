@@ -200,6 +200,64 @@ it('updates patient demographics in all cached departments without touching anot
   expect(updated.workspaces['another/general'].patients[0].phone).toBe('123');
 });
 
+it('projects an optional diagnosis onto a new or existing backlog case', () => {
+  const base = data();
+  expect(base.workspaces['h/general'].cases[0].diagnosis).toBeUndefined();
+  const registration: Pending = {
+    ...entry,
+    operation: {
+      ...entry.operation,
+      type: 'register',
+      data: {
+        caseId: 'diagnosed',
+        patientRef: 'SYN-NEW',
+        patientName: 'Synthetic diagnosed',
+        dob: '',
+        gender: 'Not recorded',
+        phone: '',
+        departmentId: 'general',
+        procedure: 'Synthetic appendicectomy',
+        diagnosis: 'Synthetic appendicitis',
+        icd10Code: 'K35.8',
+        surgeon: 'Test',
+        priority: 'P1',
+        listedAt: now,
+        urgencyAt: now,
+        readiness: 'Needs assessment',
+        notes: '',
+      },
+    },
+  };
+  const created = projected(base.workspaces['h/general'], [registration]).cases.find(
+    (item) => item.id === 'diagnosed',
+  );
+  expect(created).toMatchObject({
+    diagnosis: 'Synthetic appendicitis',
+    icd10: { system: 'icd-10-who', code: 'K35.8' },
+    version: 1,
+  });
+  const correction: Pending = {
+    ...entry,
+    operation: {
+      ...entry.operation,
+      id: 'diagnosis-edit',
+      type: 'diagnosis',
+      data: {
+        caseId: 'case',
+        version: 1,
+        diagnosis: '',
+        icd10Code: 'K35',
+        reason: 'Synthetic code only',
+      },
+    },
+  };
+  const corrected = projected(base.workspaces['h/general'], [correction]).cases[0];
+  expect(corrected.diagnosis).toBeUndefined();
+  expect(corrected.icd10).toEqual({ system: 'icd-10-who', code: 'K35' });
+  expect(corrected.notes).toBe('original');
+  expect(corrected.version).toBe(2);
+});
+
 it('links a further case to a prepared patient by normalised hospital reference', () => {
   const registration: Pending = {
     ...entry,

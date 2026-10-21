@@ -83,6 +83,7 @@ import {
   saDay,
   compareInstants,
   ageYears,
+  diagnosisLabel,
   type Workspace,
   type Metrics,
   type ReportingWorkspace,
@@ -336,7 +337,7 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
               (status === 'Requires action' && caseNeedsAttention(c, w.bookings)) ||
               status === c.status) &&
             (priority === 'All' || c.priority.startsWith(priority)) &&
-            `${p?.name} ${p?.ref} ${c.procedure} ${c.surgeon}`
+            `${p?.name} ${p?.ref} ${c.procedure} ${c.diagnosis ?? ''} ${c.icd10?.code ?? ''} ${c.surgeon}`
               .toLowerCase()
               .includes(query.toLowerCase())
           );
@@ -893,7 +894,7 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
                       <Search size={17} />
                       <input
                         aria-label="Search backlog"
-                        placeholder="Search patient, reference, procedure…"
+                        placeholder="Search patient, reference, procedure, diagnosis…"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                       />
@@ -948,9 +949,9 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
                     <span className="small muted">Use Manage to update a patient or case</span>
                   </div>
                   <div className="backlog-guide">
-                    Open <strong>Manage</strong> to edit patient details or case notes, update
-                    readiness, and temporarily place a case on hold. Held cases stay in the backlog
-                    and their waiting clock continues.
+                    Open <strong>Manage</strong> to edit patient details, diagnosis or case notes,
+                    update readiness, and temporarily place a case on hold. Held cases stay in the
+                    backlog and their waiting clock continues.
                   </div>
                   <CaseTable w={w!} cases={visibleBacklog} onSelect={openCase} />
                   {filtered.length > BACKLOG_PAGE_SIZE && (
@@ -1302,6 +1303,7 @@ function CaseTable({
                 {!compact && <td className="demographic-cell">{p?.phone || 'Not recorded'}</td>}
                 <td>
                   <span className="procedure-name">{c.procedure}</span>
+                  {diagnosisLabel(c) && <small>{diagnosisLabel(c)}</small>}
                   {outcomeNeeded && (
                     <small className="attention-label">Surgery outcome not recorded</small>
                   )}
@@ -1448,6 +1450,7 @@ function Theatres({
                         <span className="session-patient">
                           <strong>{p?.name}</strong>
                           <span>{c.procedure}</span>
+                          {diagnosisLabel(c) && <small>{diagnosisLabel(c)}</small>}
                           <small>
                             {p?.ref} ·{' '}
                             {operatingMinutes
@@ -1512,7 +1515,12 @@ function CaseDetail({
     };
   }, [w.hospital.id, c.id, c.version, p.version]);
   return (
-    <Modal title={p.name} subtitle={`${p.ref} · ${c.procedure}`} onClose={onClose} wide>
+    <Modal
+      title={p.name}
+      subtitle={`${p.ref} · ${c.procedure}${diagnosisLabel(c) ? ` · ${diagnosisLabel(c)}` : ''}`}
+      onClose={onClose}
+      wide
+    >
       <div className="modal-body">
         <div className="case-badges">
           <PriorityBadge value={c.priority} />
@@ -1551,6 +1559,11 @@ function CaseDetail({
               {canEditPatient(role) && isOutstanding(c) && (
                 <button className="button" onClick={() => onAction('case-notes')}>
                   Update case notes
+                </button>
+              )}
+              {canEditPatient(role) && isOutstanding(c) && (
+                <button className="button" onClick={() => onAction('diagnosis')}>
+                  Update diagnosis
                 </button>
               )}
               {canClinical(role) && isOutstanding(c) && (
@@ -1605,6 +1618,14 @@ function CaseDetail({
           </section>
         )}
         <div className="case-facts">
+          <div>
+            <span>Diagnosis</span>
+            <strong>{c.diagnosis?.trim() || 'Not recorded'}</strong>
+          </div>
+          <div>
+            <span>ICD-10</span>
+            <strong>{c.icd10?.code || 'Not recorded'}</strong>
+          </div>
           {c.priorityAssignedBy && (
             <div>
               <span>Initial priority assigned by</span>
@@ -1860,10 +1881,12 @@ function ImportForm({
               Paste CSV using the header below. All imported cases enter the waiting list for
               clinical readiness review. Listing dates use 08:00 SAST. For every priority,
               urgency_at must include the assessment time and timezone that starts the treatment
-              clock (for example 2026-10-01T10:30:00+02:00).
+              clock (for example 2026-10-01T10:30:00+02:00). Optional diagnosis and icd10 columns
+              record the pre-procedure diagnosis; icd10 is a WHO ICD-10 code such as K35.8. Leave
+              both blank when they are not known.
             </p>
             <code className="csv-header">
-              patient_ref,patient_name,dob,gender,phone,procedure,surgeon,priority,listed_at,urgency_at
+              patient_ref,patient_name,dob,gender,phone,procedure,surgeon,priority,listed_at,urgency_at,diagnosis,icd10
             </code>
             <textarea
               className="csv-input"
