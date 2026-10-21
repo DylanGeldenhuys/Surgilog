@@ -1,6 +1,6 @@
 # Project handover
 
-Updated: 20 October 2026, Africa/Johannesburg.
+Updated: 21 October 2026, Africa/Johannesburg.
 
 ## People and confirmed direction
 
@@ -15,6 +15,14 @@ A working local v0.1 implementation now exists. It has been built and exercised 
 Run `npm ci` then `npm run dev`. App 127.0.0.1:5173, API :8787, Auth :9099, Firestore :8080, emulator UI :4000. For service-worker/offline reload testing, run `npm run build` then `npm run preview` separately at :4173 while the backend/emulators run. Java 21 is installed via Homebrew on this Mac; launcher detects it. Full instructions and synthetic demo accounts are in [README](../README.md).
 
 Stack actually used: React/TypeScript/Vite, plain CSS, native dialog/forms, Lucide, Recharts, Zod, Papa Parse; Firebase Auth SDK; Fastify/Admin SDK API; Firestore Standard emulator; Dexie/Web Crypto vault. A custom React workspace hook handles refresh, projection and replay. Tailwind/shadcn, TanStack Query/Router and React Hook Form were early recommendations, not installed implementations.
+
+## Logo palette approved; pull request open — 21 October 2026
+
+Dylan requested a preview using the supplied logo's colours. Implemented on **preview/logo-palette**, starting from main **521320c**. Navy **#08203C**, representative logo turquoise **#08B0C8**, darker action teal **#00788A**, pale aqua **#EEF8FA**, and stronger secondary text now style the actual app. Shared CSS tokens cover buttons, navigation, forms, overview and register/report accents; browser/update-page colours match. Manrope/DM Sans, layout, logo assets and clinical priority/status/readiness colours are preserved. [design.md](../design.md) and the palette SVG describe the approved palette, pending merge and deployment.
+
+Preview: **http://127.0.0.1:5173/**, with the existing Firestore emulator, restarted local API at 8787, and Auth emulator at 9099 imported from the saved pre-register snapshot. Existing Firestore data was not reset. Synthetic doctor sign-in, overview, backlog and opening/cancelling the registration dialog were checked; no patient writes. Chromium inspected desktop/390px screenshots and confirmed no document overflow, original fonts and navy headings. Format check and production build/typecheck pass; existing bundle advisory remains. Calculated action contrast is 5.18:1 on white and 4.57:1 on selected aqua. This is not a complete accessibility audit or clinical regression run. Screenshots are under ignored `output/playwright/palette-*.png`.
+
+**Dylan approved the palette on 21 October and requested a branch for merging.** Pushed `preview/logo-palette` and opened [PR #3](https://github.com/DylanGeldenhuys/Surgilog/pull/3) into `main`, with the existing preview checks recorded. Not merged or deployed. Published release remains `v0.1.0-review.1` / Hosting **339ebd25e4021603**. The previous visual design remains on `main` until the PR is merged.
 
 ## Tagged doctor-review release — 20 October 2026
 

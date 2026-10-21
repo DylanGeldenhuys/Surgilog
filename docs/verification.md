@@ -2,6 +2,10 @@
 
 Updated 20 October 2026. The theatre extension and matching hardening frontend are published and independently live-verified (see deployment.md). All verification data was synthetic.
 
+## Logo-palette preview — 20 October 2026 (not deployed)
+
+Production build/typecheck and full formatting pass. Chromium used local synthetic doctor sign-in, overview, backlog and an opened/cancelled registration form; desktop 1440px and phone 390px have no document overflow. Manrope/DM Sans still load, heading colour resolves to navy, supplied image unchanged. Desktop login/overview/backlog and phone overview screenshots were inspected under `output/playwright/palette-*.png`. Priority/status/readiness CSS declarations and P1/P2/P3 chart colours remain unchanged. Main navigation/action contrast is 5.18:1 on white and 4.57:1 on selected aqua; muted text is 4.62:1 on pale aqua. No new clinical tests, live writes, release or deployment. Existing bundle warning and semantic badge contrast limitations remain.
+
 ## Original fonts restored — 20 October 2026
 
 Dylan declined the proposed font change. Source **2a40964**, Hosting **339ebd25e4021603** (07:15:51 SAST), restores locally bundled Manrope 600/800 and keeps DM Sans 400/600. Supplied SurgiLog logo and icons remain intact. The Exo 2 release below is historical and superseded.

@@ -154,10 +154,10 @@ export function TheatreReports({
           </p>
           <div className="register-charts">
             {[
-              ['Completed operations', 'cases', '#176b9a'],
+              ['Completed operations', 'cases', 'var(--action)'],
               ['Utilisation (%)', 'utilisation', '#50927d'],
               ['Turnaround (minutes)', 'turnaround', '#b69048'],
-              ['First theatre entry (SAST)', 'starting', '#6a9ab5'],
+              ['First theatre entry (SAST)', 'starting', 'var(--ink)'],
             ].map(([title, key, color]) => (
               <section className="panel" key={key}>
                 <h3>{title}</h3>
