@@ -1,6 +1,6 @@
 # SurgiLog — design and brand guide
 
-Version 0.7 (local palette preview) · Updated 20 October 2026 · Working brand for the app
+Version 0.7 (approved palette; pending merge) · Updated 21 October 2026 · Working brand for the app
 
 This is the shared reference for the app, presentations, documents and future brand assets. It records the **current implementation** and gives **reuse guidance** for new work. Dylan leads development; Leo provides clinical/product direction. This is a working identity, not a completed institutional brand programme.
 
@@ -24,12 +24,12 @@ Keep the product name intact in hospital-specific materials: “SurgiLog · [Hos
 
 ## Colour palette
 
-**Preview status — 20 October 2026:** Dylan requested a trial using the new logo colours. The navy/turquoise palette below is implemented locally on `preview/logo-palette`; it is not approved for release or deployed. The published `v0.1.0-review.1` still uses the former blue/grey palette. Fonts, logo artwork, layout and clinical priority/status meanings are preserved.
+**Status — 21 October 2026:** Dylan approved the navy/turquoise preview and requested it be pushed for merging. The palette below is implemented on `preview/logo-palette` in [PR #3](https://github.com/DylanGeldenhuys/Surgilog/pull/3); it is not yet merged or deployed. The published `v0.1.0-review.1` still uses the former blue/grey palette. Fonts, logo artwork, layout and clinical priority/status meanings are preserved.
 
 
 ![SurgiLog preview palette: navy, turquoise, action teal, pale aqua, white, mist, silver and slate.](docs/brand-palette.svg)
 
-### Core colours — local preview
+### Core colours — approved, pending merge
 
 Use HEX for digital work (sRGB). Navy and turquoise are representative samples of the supplied raster logo, not official master/vector values. The logo itself is unchanged. Action teal is deliberately darker for readable controls.
 
@@ -50,7 +50,7 @@ Use HEX for digital work (sRGB). Navy and turquoise are representative samples o
 
 White and pale surfaces dominate; navy anchors the text and teal indicates actions. Existing gold, green, purple and red retain clinical/workflow/reporting meanings. The sign-in review label now uses teal rather than decorative gold.
 
-### Supporting colours — local preview
+### Supporting colours — approved, pending merge
 
 | Use | Value |
 | --- | --- |
