@@ -360,7 +360,7 @@ export function OperationForm({
                 >
                   <input
                     name="icd10Code"
-                    maxLength={16}
+                    maxLength={8}
                     placeholder="e.g. K35.8"
                     autoCapitalize="characters"
                     autoCorrect="off"
@@ -483,7 +483,7 @@ export function OperationForm({
               >
                 <input
                   name="icd10Code"
-                  maxLength={16}
+                  maxLength={8}
                   defaultValue={c!.icd10?.code ?? ''}
                   placeholder="e.g. K35.8"
                   autoCapitalize="characters"

@@ -357,16 +357,29 @@ describe('pre-procedure diagnosis', () => {
     expect(diagnosisLabel(stored)).toBe('');
   });
   it('accepts WHO ICD-10 format only and stores the code for a later lookup', () => {
-    for (const code of ['K35', 'k35.8', ' A00.0 ', 'S72.001A', 'M17.1', 'Z99']) {
+    for (const code of ['K35', 'k35.8', ' A00.0 ', 'M17.1', 'Z99', 'S72.00']) {
       const parsed = operationSchema.parse({
         ...registration,
         data: { ...registration.data, diagnosis: '  Synthetic appendicitis  ', icd10Code: code },
       });
       if (parsed.type !== 'register') throw new Error('expected registration');
       expect(parsed.data.diagnosis).toBe('Synthetic appendicitis');
-      expect(parsed.data.icd10Code).toMatch(/^[A-Z]\d{2}(\.[A-Z0-9]{1,4})?$/);
+      expect(parsed.data.icd10Code).toMatch(/^[A-Z]\d{2}(\.\d{1,2})?$/);
     }
-    for (const code of ['11A', 'K3', 'K355', 'K35.', 'K35.12345', 'CA40.0', 'ICD10', 'K35.8*']) {
+    for (const code of [
+      '11A',
+      'K3',
+      'K355',
+      'K35.',
+      'K35.12345',
+      'CA40.0',
+      'ICD10',
+      'K35.8*',
+      'S72.001A',
+      'S72.001',
+      'K35.A',
+      'C34.9X',
+    ]) {
       expect(
         operationSchema.safeParse({
           ...registration,
@@ -383,6 +396,12 @@ describe('pre-procedure diagnosis', () => {
     expect(applyDiagnosis(stored, '', '').diagnosis).toBeUndefined();
     expect(applyDiagnosis(stored, '', '').icd10).toBeUndefined();
     expect(diagnosisLabel({ icd10: { code: 'K40.9' } })).toBe('K40.9');
+  });
+  it('limits the free-text diagnosis to 500 characters', () => {
+    const withDiagnosis = (diagnosis: string) =>
+      operationSchema.safeParse({ ...registration, data: { ...registration.data, diagnosis } });
+    expect(withDiagnosis('x'.repeat(500)).success).toBe(true);
+    expect(withDiagnosis('x'.repeat(501)).success).toBe(false);
   });
   it('lets the same roles that edit case notes record a diagnosis', () => {
     const parsed = operationSchema.parse({

@@ -53,14 +53,17 @@ export type Icd10Coding = {
    */
   code: string;
 };
-/** Category plus an optional decimal extension, for example K35 or K35.8. */
-export const icd10CodePattern = /^[A-Z]\d{2}(\.[A-Z0-9]{1,4})?$/;
+/**
+ * WHO ICD-10: category plus an optional one- or two-digit subdivision, for
+ * example K35 or K35.8. US ICD-10-CM codes such as S72.001A are rejected.
+ */
+export const icd10CodePattern = /^[A-Z]\d{2}(\.\d{1,2})?$/;
 export const diagnosisTextSchema = z.string().trim().max(500);
 export const icd10CodeSchema = z
   .string()
   .trim()
   .toUpperCase()
-  .max(16)
+  .max(8)
   .refine(
     (value) => value === '' || icd10CodePattern.test(value),
     'Enter a WHO ICD-10 code such as K35 or K35.8',

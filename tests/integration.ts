@@ -885,6 +885,22 @@ try {
       400,
     );
     assert.equal((await root.collection('cases').doc('diagnosis-bad').get()).exists, false);
+    await expectStatus(
+      await send(
+        'clinician',
+        op('register', { ...coded.data, caseId: 'diagnosis-us', icd10Code: 'S72.001A' }),
+      ),
+      400,
+    );
+    assert.equal((await root.collection('cases').doc('diagnosis-us').get()).exists, false);
+    await expectStatus(
+      await send(
+        'clinician',
+        op('register', { ...coded.data, caseId: 'diagnosis-long', diagnosis: 'x'.repeat(501) }),
+      ),
+      400,
+    );
+    assert.equal((await root.collection('cases').doc('diagnosis-long').get()).exists, false);
     const correction = op('diagnosis', {
       caseId: 'diagnosis-coded',
       version: 1,
