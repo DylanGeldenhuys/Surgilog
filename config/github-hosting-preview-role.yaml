@@ -1,0 +1,8 @@
+title: SurgiLog preview authorized domains
+description: >
+  Read and update Firebase Auth configuration so Hosting preview deploys can add
+  and remove preview-channel domains. Does not include user administration.
+stage: GA
+includedPermissions:
+  - firebaseauth.configs.get
+  - firebaseauth.configs.update

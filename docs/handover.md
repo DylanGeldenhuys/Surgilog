@@ -1,6 +1,6 @@
 # Project handover
 
-Updated: 21 October 2026, Africa/Johannesburg.
+Updated: 23 October 2026, Africa/Johannesburg.
 
 ## People and confirmed direction
 
@@ -16,13 +16,25 @@ Run `npm ci` then `npm run dev`. App 127.0.0.1:5173, API :8787, Auth :9099, Fire
 
 Stack actually used: React/TypeScript/Vite, plain CSS, native dialog/forms, Lucide, Recharts, Zod, Papa Parse; Firebase Auth SDK; Fastify/Admin SDK API; Firestore Standard emulator; Dexie/Web Crypto vault. A custom React workspace hook handles refresh, projection and replay. Tailwind/shadcn, TanStack Query/Router and React Hook Form were early recommendations, not installed implementations.
 
-## Logo palette approved; pull request open — 21 October 2026
+## PR #2 conflict resolution — 23 October 2026
 
-Dylan requested a preview using the supplied logo's colours. Implemented on **preview/logo-palette**, starting from main **521320c**. Navy **#08203C**, representative logo turquoise **#08B0C8**, darker action teal **#00788A**, pale aqua **#EEF8FA**, and stronger secondary text now style the actual app. Shared CSS tokens cover buttons, navigation, forms, overview and register/report accents; browser/update-page colours match. Manrope/DM Sans, layout, logo assets and clinical priority/status/readiness colours are preserved. [design.md](../design.md) and the palette SVG describe the approved palette, pending merge and deployment.
+Merged current `main` (**f514cf6**) into the CI/preview branch to resolve its conflict. Only `docs/handover.md` conflicted; both the CI setup history and the newer palette/release records are retained. PR #4 was mergeable at this check. This work updates PR #2 only; it does not merge either PR into `main` or deploy the app. Combined-branch validation: **85 unit tests**, formatting and production build/typecheck passed. The existing bundle-size warning remains. Emulator integration was not rerun for this documentation-only conflict resolution; GitHub CI will report separately after the branch push.
+
+## CI and pull-request previews — 19 October 2026
+
+GitHub Actions is in source and not yet enabled on the repository until this branch merges. Pull requests and pushes to `main` run `npm ci`, typecheck, unit tests, `format:check` and the production build. Emulator integration, admin and theatre scenarios run in a separate job against `demo-theatre-tracker` only. Same-repository pull requests can publish a Firebase Hosting preview of the review web app on `theatre-tracker-2f2e5`, expiring after 7 days and calling the existing review API. Forks are skipped. If `FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5` is unset, the preview job succeeds without deploying and comments on the pull request. It does not deploy the API or Firestore, and it does not publish the live site.
+
+Source CORS now accepts Hosting preview-channel origins for site `theatre-tracker-2f2e5` only. The running API still allowlists the two live Hosting origins until the next API release. Auth authorized domains are not wildcards; the preview service account can add the channel hostname, or Dylan adds it in the Auth console. Exact setup is in [ci.md](ci.md). This change set was not deployed.
+
+Local checks on this branch: 85 unit tests, typecheck, formatting, local and review builds, actionlint, and the emulator script (20 integration, 7 admin, 9 theatre) passed.
+
+## Logo palette merged — 21 October 2026
+
+Dylan requested a preview using the supplied logo's colours. Implemented on **preview/logo-palette**, starting from main **521320c**. Navy **#08203C**, representative logo turquoise **#08B0C8**, darker action teal **#00788A**, pale aqua **#EEF8FA**, and stronger secondary text now style the actual app. Shared CSS tokens cover buttons, navigation, forms, overview and register/report accents; browser/update-page colours match. Manrope/DM Sans, layout, logo assets and clinical priority/status/readiness colours are preserved. [design.md](../design.md) and the palette SVG describe the approved palette; PR #3 is now merged, deployment has not been reverified.
 
 Preview: **http://127.0.0.1:5173/**, with the existing Firestore emulator, restarted local API at 8787, and Auth emulator at 9099 imported from the saved pre-register snapshot. Existing Firestore data was not reset. Synthetic doctor sign-in, overview, backlog and opening/cancelling the registration dialog were checked; no patient writes. Chromium inspected desktop/390px screenshots and confirmed no document overflow, original fonts and navy headings. Format check and production build/typecheck pass; existing bundle advisory remains. Calculated action contrast is 5.18:1 on white and 4.57:1 on selected aqua. This is not a complete accessibility audit or clinical regression run. Screenshots are under ignored `output/playwright/palette-*.png`.
 
-**Dylan approved the palette on 21 October and requested a branch for merging.** Pushed `preview/logo-palette` and opened [PR #3](https://github.com/DylanGeldenhuys/Surgilog/pull/3) into `main`, with the existing preview checks recorded. Not merged or deployed. Published release remains `v0.1.0-review.1` / Hosting **339ebd25e4021603**. The previous visual design remains on `main` until the PR is merged.
+**Dylan approved the palette on 21 October and requested a branch for merging.** Pushed `preview/logo-palette` and opened [PR #3](https://github.com/DylanGeldenhuys/Surgilog/pull/3) into `main`, with the existing preview checks recorded. PR #3 merged on 21 October as **f514cf6**. Last verified published release remains `v0.1.0-review.1` / Hosting **339ebd25e4021603**; no deployment was performed during conflict resolution.
 
 ## Tagged doctor-review release — 20 October 2026
 
