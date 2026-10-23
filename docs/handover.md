@@ -1,6 +1,6 @@
 # Project handover
 
-Updated: 19 October 2026, Africa/Johannesburg.
+Updated: 23 October 2026, Africa/Johannesburg.
 
 ## People and confirmed direction
 
@@ -10,11 +10,15 @@ Confirmed: desktop/phone installable PWA; Firebase/GCP; multiple hospital tenant
 
 ## Actual status
 
-A working local v0.1 implementation now exists. It has been built and exercised with synthetic records. Email/Password Auth, API-only Firestore rules/indexes, Cloud Run API and Firebase Hosting are deployed to the fictional-data review project. The website is https://theatre-tracker-2f2e5.web.app. The Admin tab and confirmed role hierarchy are also published (6 October 2026), with live provisioning/permission checks passed. It is not connected to a hospital or clinically approved. Dylan requested a rollback checkpoint before extending theatre functionality: `main` and tag `checkpoint/pre-theatre-register` point to **147acf7**. New work is on **feature/theatre-register**; inspect its working tree. The extension is published to the fictional-data review and its feature branch is now pushed to GitHub; see the repository milestone below.
+A working local v0.1 implementation now exists. It has been built and exercised with synthetic records. Email/Password Auth, API-only Firestore rules/indexes, Cloud Run API and Firebase Hosting are deployed to the fictional-data review project. The website is https://theatre-tracker-2f2e5.web.app. The Admin tab and confirmed role hierarchy are also published (6 October 2026), with live provisioning/permission checks passed. It is not connected to a hospital or clinically approved. Dylan requested a rollback checkpoint before extending theatre functionality: tag `checkpoint/pre-theatre-register` preserves **147acf7**. The feature was merged in GitHub PR #1 (`cd3f83c`); ongoing release work is now on **main**. The extension is published to the fictional-data review and its feature branch is now pushed to GitHub; see the repository milestone below.
 
 Run `npm ci` then `npm run dev`. App 127.0.0.1:5173, API :8787, Auth :9099, Firestore :8080, emulator UI :4000. For service-worker/offline reload testing, run `npm run build` then `npm run preview` separately at :4173 while the backend/emulators run. Java 21 is installed via Homebrew on this Mac; launcher detects it. Full instructions and synthetic demo accounts are in [README](../README.md).
 
 Stack actually used: React/TypeScript/Vite, plain CSS, native dialog/forms, Lucide, Recharts, Zod, Papa Parse; Firebase Auth SDK; Fastify/Admin SDK API; Firestore Standard emulator; Dexie/Web Crypto vault. A custom React workspace hook handles refresh, projection and replay. Tailwind/shadcn, TanStack Query/Router and React Hook Form were early recommendations, not installed implementations.
+
+## PR #2 conflict resolution — 23 October 2026
+
+Merged current `main` (**f514cf6**) into the CI/preview branch to resolve its conflict. Only `docs/handover.md` conflicted; both the CI setup history and the newer palette/release records are retained. PR #4 was mergeable at this check. This work updates PR #2 only; it does not merge either PR into `main` or deploy the app. Combined-branch validation: **85 unit tests**, formatting and production build/typecheck passed. The existing bundle-size warning remains. Emulator integration was not rerun for this documentation-only conflict resolution; GitHub CI will report separately after the branch push.
 
 ## CI and pull-request previews — 19 October 2026
 
@@ -24,9 +28,29 @@ Source CORS now accepts Hosting preview-channel origins for site `theatre-tracke
 
 Local checks on this branch: 85 unit tests, typecheck, formatting, local and review builds, actionlint, and the emulator script (20 integration, 7 admin, 9 theatre) passed.
 
+## Logo palette merged — 21 October 2026
+
+Dylan requested a preview using the supplied logo's colours. Implemented on **preview/logo-palette**, starting from main **521320c**. Navy **#08203C**, representative logo turquoise **#08B0C8**, darker action teal **#00788A**, pale aqua **#EEF8FA**, and stronger secondary text now style the actual app. Shared CSS tokens cover buttons, navigation, forms, overview and register/report accents; browser/update-page colours match. Manrope/DM Sans, layout, logo assets and clinical priority/status/readiness colours are preserved. [design.md](../design.md) and the palette SVG describe the approved palette; PR #3 is now merged, deployment has not been reverified.
+
+Preview: **http://127.0.0.1:5173/**, with the existing Firestore emulator, restarted local API at 8787, and Auth emulator at 9099 imported from the saved pre-register snapshot. Existing Firestore data was not reset. Synthetic doctor sign-in, overview, backlog and opening/cancelling the registration dialog were checked; no patient writes. Chromium inspected desktop/390px screenshots and confirmed no document overflow, original fonts and navy headings. Format check and production build/typecheck pass; existing bundle advisory remains. Calculated action contrast is 5.18:1 on white and 4.57:1 on selected aqua. This is not a complete accessibility audit or clinical regression run. Screenshots are under ignored `output/playwright/palette-*.png`.
+
+**Dylan approved the palette on 21 October and requested a branch for merging.** Pushed `preview/logo-palette` and opened [PR #3](https://github.com/DylanGeldenhuys/Surgilog/pull/3) into `main`, with the existing preview checks recorded. PR #3 merged on 21 October as **f514cf6**. Last verified published release remains `v0.1.0-review.1` / Hosting **339ebd25e4021603**; no deployment was performed during conflict resolution.
+
+## Tagged doctor-review release — 20 October 2026
+
+Published GitHub prerelease [v0.1.0-review.1](https://github.com/DylanGeldenhuys/Surgilog/releases/tag/v0.1.0-review.1) at **e4f7356**, matching the currently deployed app plus verification documentation. This is the first tagged review release, with release notes and the live review link. Rechecked hosted HTML/assets/manifest/worker/update page/headers against the prepared build; all match. Hosting remains **339ebd25e4021603**, API **00006-seh**; no redundant deployment or data changes. Clinical and physical-phone acceptance remain pending.
+
+## New logo and typography — 20 October 2026
+
+Dylan supplied `public/SurgiLog Clinical Register Logo.png` and requested it replace the old symbol plus live-text name, followed by a push to `main` and Firebase release. The complete supplied symbol/name/tagline is now displayed by the shared Brand component, cropping only outer whitespace at render time. New `surgilog-icon-192.png` / `surgilog-icon-512.png` use the S/check symbol; the original file and historical artwork are preserved. See [design.md](../design.md) for source dimensions, crop geometry, responsive sizes and assets.
+
+Dylan explicitly answered **do not change the app font** after the initial Exo 2 release. The original **Manrope 600/800 headings and prominent numbers + DM Sans 400/600 body/forms/tables** are restored and published, with the supplied logo/icons retained. Exo 2 is removed. Keep this font choice; the image’s exact lettering font remains unidentified. Both original font families are locally bundled for offline use. The mobile headline now retains a space when its first line break is hidden. Rollback uses tag `checkpoint/pre-theatre-register`, not `main`, since PR #1 merged the feature and release work now continues on `main`.
+
+Font correction published as Hosting **339ebd25e4021603** on **20 October at 07:15:51 SAST**, from source **2a40964** on `main`; bundle **index-CO4y9vUW.js**. This supersedes the brief Exo 2 release **bc6c85fa1661e594**. Build/typecheck/format checks pass; Chromium checked restored fonts at 390/1440px without horizontal overflow and successfully reloaded the logo and Manrope offline. Live HTML/assets/manifest/worker/header checks match the build, and the hosted update flow loads Manrope/DM Sans. No clinical, auth, permissions or backend logic changed; API remains **00006-seh**. See [verification](verification.md).
+
 ## Repository renamed and changes pushed — 19 October 2026
 
-Dylan renamed the GitHub repository to **DylanGeldenhuys/Surgilog** and requested all changes be pushed. `origin` now uses `git@github.com:DylanGeldenhuys/Surgilog.git`. Pushed **feature/theatre-register** (including the deployed work through `8316819`) and tag **checkpoint/pre-theatre-register** (`147acf7`); the feature branch tracks its remote. GitHub's default `main` remains at `77b8519`; no merge or force push was performed. Local `main` remains the working rollback checkpoint at `147acf7`. Firebase project/URLs and local storage identifiers are unchanged.
+Dylan renamed the GitHub repository to **DylanGeldenhuys/Surgilog** and requested all changes be pushed. `origin` now uses `git@github.com:DylanGeldenhuys/Surgilog.git`. Pushed **feature/theatre-register** (including the deployed work through `8316819`) and tag **checkpoint/pre-theatre-register** (`147acf7`); the feature branch tracks its remote. At that push, GitHub's default `main` was at `77b8519` and local `main` was at `147acf7`. PR #1 subsequently merged the feature into `main` (`cd3f83c`); the tag remains the rollback reference. Firebase project/URLs and local storage identifiers are unchanged.
 
 Dylan is leaving physical-phone testing and clinical feedback to the reviewers as they try the app. Those checks remain unreported, not failed or approved; do not keep requesting a separate phone test from Dylan. The [review guide](review-acceptance.md) remains available to Leo/Tobela and the review team.
 
@@ -199,7 +223,7 @@ Leo supplied the actual targets: **P1 up to 30 days, P2 31–90 days, and P3 91�
 
 The retired P1a/P1b values and calendar-month calculations are removed from schemas, forms, badges, charts, sorting and fixtures. CSV imports now require an explicit urgency assessment timestamp for every priority. `npm run migrate:priority-policy` updated 115 current local cases, recalculated their due times, incremented their versions and added attributable `policy.migrate` history; the second run updated zero. No case was deleted. An encrypted-vault upgrade also converts an older prepared workspace and its queued case operations once before offline use, then saves the upgraded vault durably. Chromium verified the three new labels, P1 → P2 → P3 ordering, treatment due time and migration history. Unit tests cover the exact 30/90/365-day boundaries, reject P1a in new operations and verify the one-time offline upgrade; all 14 integration scenarios and the production build pass.
 
-## Latest branding: Dylan's supplied logo
+## Historical Theatre Tracker branding (superseded by SurgiLog above)
 
 Dylan supplied a square theatre-team mark and matching horizontal **Theatre Tracker** lockup. After reviewing it in the app, Dylan clarified that the original horizontal composition and lettering must remain; only its dark wordmark colour looked inconsistent with the page. The app now renders that exact lockup shape on sign-in and in workspace navigation, preserves the mark's colours, and fills the original wordmark alpha with interface Ink. The square mark remains on its own for the favicon, Apple touch icon and 192/512px PWA install icons. The old generated pulse symbol remains retired.
 

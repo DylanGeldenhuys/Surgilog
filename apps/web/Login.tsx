@@ -68,8 +68,7 @@ export function Login({
         <Brand />
         <div className="story-body">
           <h1>
-            Every patient.
-            <br />
+            Every patient. <br />
             Every theatre.
             <br />
             <em>Every day.</em>

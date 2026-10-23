@@ -56,7 +56,7 @@ Weeks start Monday. Financial years run 1 April–31 March; quarters are Apr–J
 
 ## Rollback
 
-The baseline is commit **`147acf7`**, tagged **`checkpoint/pre-theatre-register`**; `main` remains at that checkpoint. Feature work is isolated on **`feature/theatre-register`**. To preview the old code after committing any new work, stop local services, run `git switch main`, rebuild if using port 4173, then restart. Return with `git switch feature/theatre-register`. No force reset or cloud rollback is needed.
+The baseline is commit **`147acf7`**, tagged **`checkpoint/pre-theatre-register`**. The feature branch was merged into `main` in GitHub PR #1; `main` now carries ongoing releases. To preview the old code after committing any new work, stop local services, run `git switch --detach checkpoint/pre-theatre-register`, rebuild if using port 4173, then restart. Return with `git switch main`. Do not commit while detached; create a branch first if changing the old code. No force reset or cloud rollback is needed.
 
 Code rollback does not roll back data. New collections/fields are additive and ignored by the checkpoint app, but finish syncing or review pending register work before using the older client. Rebuild the PWA and use its update page to replace cached feature assets.
 

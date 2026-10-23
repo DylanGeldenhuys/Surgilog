@@ -1,6 +1,26 @@
 # Verification record
 
-Updated 16 October 2026. The theatre extension and matching hardening frontend are published and independently live-verified (see deployment.md). All verification data was synthetic.
+Updated 20 October 2026. The theatre extension and matching hardening frontend are published and independently live-verified (see deployment.md). All verification data was synthetic.
+
+## Logo-palette preview — 20 October 2026 (not deployed)
+
+Production build/typecheck and full formatting pass. Chromium used local synthetic doctor sign-in, overview, backlog and an opened/cancelled registration form; desktop 1440px and phone 390px have no document overflow. Manrope/DM Sans still load, heading colour resolves to navy, supplied image unchanged. Desktop login/overview/backlog and phone overview screenshots were inspected under `output/playwright/palette-*.png`. Priority/status/readiness CSS declarations and P1/P2/P3 chart colours remain unchanged. Main navigation/action contrast is 5.18:1 on white and 4.57:1 on selected aqua; muted text is 4.62:1 on pale aqua. No new clinical tests, live writes, release or deployment. Existing bundle warning and semantic badge contrast limitations remain.
+
+## Original fonts restored — 20 October 2026
+
+Dylan declined the proposed font change. Source **2a40964**, Hosting **339ebd25e4021603** (07:15:51 SAST), restores locally bundled Manrope 600/800 and keeps DM Sans 400/600. Supplied SurgiLog logo and icons remain intact. The Exo 2 release below is historical and superseded.
+
+Formatting and review build/typecheck/config verification pass. Chromium confirms Manrope headings, DM Sans body text, loaded font assets and no horizontal overflow at 390/1440px. An offline reload successfully loads Manrope and decodes the full supplied image. Live HTML/JS/CSS, logo/icon/font bytes, manifest, worker/update page and security/cache headers match the build. The live update flow displays the restored fonts. Bundle **index-CO4y9vUW.js**, CSS **index-CCHzJJUn.css**. No clinical/backend changes or unit/API reruns were needed; the existing bundle-size advisory remains.
+
+## New branding and typography — 20 October 2026
+
+Replaced the shared logo/name with Dylan's supplied PNG, preserving the source and rendering its complete symbol/name/tagline. New 192/512px icons directly render the S/check symbol on white. Exo 2 600/800 is bundled locally for headings/prominent numbers; DM Sans 400/600 remains for body/forms/tables. The image's exact logo font is unknown; Exo 2 is a chosen visual companion. Also preserved whitespace between the first two mobile headline sentences.
+
+Review build (including TypeScript), build verifier, full formatting and whitespace checks pass. Main bundle remains approximately 1.03 MB / 307 kB gzip; total service-worker precache is about 2.66 MB including the supplied 1 MB artwork. No new unit/API tests were warranted for this presentation-only change; the earlier 84-unit/API results remain historical, not newly rerun claims.
+
+Chromium checked the review build at 320, 390, 1440 and 2560px: document width equals viewport, one logo is present, its left edge aligns with the headline, and Exo 2 loads for headings while DM Sans remains the body font. Inspected desktop/phone screenshots and an isolated sidebar fixture using the actual Brand markup/styles; this was not an authenticated workspace workflow check. The full supplied logo decodes at 1677×938 after an offline reload; Exo 2 remains loaded and the cached new icon returns 200. Synthetic/blank-sign-in screenshots are ignored under `output/playwright/brand-final-*.png` and `brand-phone-settled.png`.
+
+Published from source **ebec09a** on `main`, Hosting **bc6c85fa1661e594** at **07:09:37 SAST**. Live HTML, bundle **index-DLmP0lIE.js**, CSS, image/icon/font bytes, manifest references, worker/update page and headers match the prepared release. API **00006-seh** was unchanged. No live patient writes or new test accounts were needed. Physical-phone/clinical review remains with the reviewers as already agreed.
 
 ## Browser/device follow-up — 16 October 2026
 
