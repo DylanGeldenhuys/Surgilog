@@ -2,6 +2,10 @@
 
 Updated: 23 October 2026, Africa/Johannesburg.
 
+## Release preparation — 23 October 2026
+
+PRs #2 and #4 are merged into `main`. The combined CI run hit HTTP 429 because all three integration suites shared one API process/rate-limit budget. The runner now starts and stops a direct Node API process per suite; the application limit remains 180 requests/minute. Local verification passes: **92 unit tests, 21 integration checks, 7 admin scenarios, 9 theatre scenarios**, formatting and review build/typecheck. Deployment is in progress; latest confirmed live backend remains **00006-seh**, Hosting **339ebd25e4021603** until the completion entry is recorded.
+
 ## Optional backlog diagnosis — 21 October 2026
 
 Leo asked for a diagnosis on backlog entries, captured before the procedure. The owner approved it. Implemented in the working tree from `main` at `f514cf6`. Not deployed. Hosted Firestore was not read or written.
