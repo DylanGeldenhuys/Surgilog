@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { ZodError } from 'zod';
 import { AlertCircle, Check, Clock, Save } from 'lucide-react';
 import {
   type Workspace,
@@ -22,6 +23,7 @@ export type FormKind =
   | 'register'
   | 'patient'
   | 'case-notes'
+  | 'diagnosis'
   | 'priority'
   | 'readiness'
   | 'hold'
@@ -74,6 +76,7 @@ export function OperationForm({
     register: 'Add patient to the backlog',
     patient: 'Edit patient details',
     'case-notes': 'Update case notes',
+    diagnosis: 'Update diagnosis',
     priority: 'Review clinical priority',
     readiness: 'Update readiness',
     hold: c?.status === 'On hold' ? 'Return to waiting list' : 'Place case on hold',
@@ -116,6 +119,8 @@ export function OperationForm({
             phone: get('phone'),
             departmentId: w.departmentId,
             procedure: get('procedure'),
+            diagnosis: get('diagnosis'),
+            icd10Code: get('icd10Code'),
             surgeon: get('surgeon'),
             priority: get('priority') as Priority,
             ...(!canClinical(role) ? { priorityAssignedBy: get('priorityAssignedBy') } : {}),
@@ -165,6 +170,18 @@ export function OperationForm({
             caseId: c.id,
             version: c.version,
             notes: get('notes'),
+            reason: get('reason'),
+          },
+        };
+      else if (kind === 'diagnosis')
+        op = {
+          ...base,
+          type: 'diagnosis',
+          data: {
+            caseId: c.id,
+            version: c.version,
+            diagnosis: get('diagnosis'),
+            icd10Code: get('icd10Code'),
             reason: get('reason'),
           },
         };
@@ -233,7 +250,11 @@ export function OperationForm({
     } catch (e) {
       const status = (e as { status?: number }).status;
       if (!shouldHoldForRetry(status)) setAttempted(null);
-      setError((e as Error).message);
+      setError(
+        e instanceof ZodError
+          ? e.issues.map((issue) => issue.message).join(' ')
+          : (e as Error).message,
+      );
     } finally {
       setBusy(false);
     }
@@ -326,6 +347,25 @@ export function OperationForm({
                       <option key={s}>{s}</option>
                     ))}
                   </select>
+                </Field>
+                <Field
+                  label="Diagnosis (optional)"
+                  hint="Record the diagnosis before the procedure. Leave this blank if it is not known yet."
+                >
+                  <input name="diagnosis" maxLength={500} placeholder="e.g. Acute appendicitis" />
+                </Field>
+                <Field
+                  label="ICD-10 code (optional)"
+                  hint="WHO ICD-10, as used in South Africa. Format only, for example K35 or K35.8."
+                >
+                  <input
+                    name="icd10Code"
+                    maxLength={8}
+                    placeholder="e.g. K35.8"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    spellCheck={false}
+                  />
                 </Field>
                 <Field
                   label={canClinical(role) ? 'Clinical priority' : 'Priority assigned by doctor'}
@@ -424,6 +464,35 @@ export function OperationForm({
               <textarea name="notes" rows={5} maxLength={2000} defaultValue={c!.notes} />
             </Field>
           )}
+          {kind === 'diagnosis' && (
+            <div className="form-grid">
+              <Field
+                label="Diagnosis (optional)"
+                hint="Free text recorded before the procedure. Clear it if the diagnosis should no longer be shown."
+              >
+                <input
+                  name="diagnosis"
+                  maxLength={500}
+                  defaultValue={c!.diagnosis ?? ''}
+                  placeholder="e.g. Acute appendicitis"
+                />
+              </Field>
+              <Field
+                label="ICD-10 code (optional)"
+                hint="WHO ICD-10, as used in South Africa. Format only, for example K35 or K35.8."
+              >
+                <input
+                  name="icd10Code"
+                  maxLength={8}
+                  defaultValue={c!.icd10?.code ?? ''}
+                  placeholder="e.g. K35.8"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </Field>
+            </div>
+          )}
           {kind === 'priority' && (
             <>
               <Field label="Clinical priority">
@@ -463,7 +532,15 @@ export function OperationForm({
               </span>
             </div>
           )}
-          {['patient', 'case-notes', 'priority', 'readiness', 'hold', 'cancel'].includes(kind) && (
+          {[
+            'patient',
+            'case-notes',
+            'diagnosis',
+            'priority',
+            'readiness',
+            'hold',
+            'cancel',
+          ].includes(kind) && (
             <Field label={kind === 'cancel' ? 'Cancellation reason' : 'Reason for this change'}>
               <textarea
                 name="reason"
@@ -478,7 +555,9 @@ export function OperationForm({
                       ? 'Describe why the case is being paused or returned to waiting'
                       : kind === 'readiness'
                         ? 'Record the assessment or readiness blocker'
-                        : 'Record the reason for your team'
+                        : kind === 'diagnosis'
+                          ? 'Record why the diagnosis was added or changed'
+                          : 'Record the reason for your team'
                 }
               />
             </Field>

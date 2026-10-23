@@ -23,6 +23,8 @@ export function caseFromCsv(
     gender: row.gender || 'Not recorded',
     phone: row.phone ?? '',
     procedure: row.procedure,
+    diagnosis: row.diagnosis ?? '',
+    icd10Code: row.icd10 ?? '',
     surgeon: row.surgeon ?? '',
     priority: row.priority,
     listedAt,

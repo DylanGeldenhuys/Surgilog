@@ -87,7 +87,7 @@ These describe the full target domain. The local subset and actual collection pa
 | Department | Specialty, hospital relationship, clinical policy references. |
 | Staff profile and membership | Auth UID, active status, hospital/department grants and role capabilities. |
 | Patient | Hospital-local identity, date of birth, recorded gender value and minimum necessary contact details. |
-| Surgical case | Patient reference, procedure, list-entry date, current priority/readiness, effective-dated priority history, lifecycle, responsible team, version. |
+| Surgical case | Patient reference, procedure, optional pre-procedure diagnosis and WHO ICD-10 coding (`icd-10-who` plus a format-validated code, ready for a later catalogue display), list-entry date, current priority/readiness, effective-dated priority history, lifecycle, responsible team, version. Entries created before the diagnosis field omit it. |
 | Priority policy and change event | Versioned targets and accountable reassessments; preserve historical values. |
 | Theatre and session | Resource identity, planned staffed window, publication/capacity baseline, team, status. |
 | Booking / operative attempt | Case/session link, ordered position, estimated slot, actual timings, cancellation/completion details. |

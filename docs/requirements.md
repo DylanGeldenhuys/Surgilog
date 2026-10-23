@@ -73,7 +73,7 @@ Application roles and Google Cloud IAM are separate. Admin changes require conne
 - Find an existing hospital patient by hospital reference or authorised name search before creating one.
 - Store patient identity separately from surgical cases. Each case has its own identifier and history.
 - Patient fields: hospital reference, name, date of birth where known, gender, and contact details where available. Unknown information must be recorded explicitly rather than fabricated. The current v1 records Female, Male, Non-binary, Another term, Prefer not to say, or Not recorded; Leo and the pilot hospital must confirm whether a separate sex-at-birth field is clinically required.
-- Case fields: department, procedure, indication/brief relevant notes, laterality where relevant, referring/listing clinician, responsible clinician/team, date added to the list, priority, readiness, and estimated theatre duration when scheduling.
+- Case fields: department, procedure, optional pre-procedure diagnosis with an optional WHO ICD-10 code (format only; no catalogue yet), indication/brief relevant notes, laterality where relevant, referring/listing clinician, responsible clinician/team, date added to the list, priority, readiness, and estimated theatre duration when scheduling. Older entries without a diagnosis stay valid.
 - Allow an unassigned surgeon while a case waits; require an appropriate team assignment before publishing its theatre booking.
 - Do not require a national ID or phone number simply to create a backlog entry. Leo must confirm the minimum safe identification fields.
 - Detect repeated hospital references and likely duplicate active cases. Resolve deliberately; never silently merge patients.
@@ -82,7 +82,7 @@ Application roles and Google Cloud IAM are separate. Admin changes require conne
 ### 3. Manage the backlog and priority
 
 - Search, filter, sort, and paginate by department, procedure, clinician, priority, readiness, status, and waiting time.
-- The full backlog table shows the artifact's operational fields: patient reference/name, DOB with derived age, gender, contact, procedure, surgeon, priority, readiness, waiting time and status. Phone layouts may scroll this table horizontally rather than removing fields.
+- The full backlog table shows the artifact's operational fields: patient reference/name, DOB with derived age, gender, contact, procedure, surgeon, priority, readiness, waiting time and status. A recorded diagnosis and WHO ICD-10 code are shown with the procedure. Phone layouts may scroll this table horizontally rather than removing fields.
 - Default to the **Current backlog** and show 10 cases per page. Completed cases leave the immediate working list but remain available through Completed/All filters, history and reporting.
 - Show clearly which cases are unbooked, scheduled, on hold, overdue for treatment, or require clinical review.
 - Provide a **Requires action** view for backlog cases overdue for treatment according to their assigned priority, and bookings whose planned end has passed without a recorded outcome.

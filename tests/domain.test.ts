@@ -12,6 +12,11 @@ import {
   nextOperatingSlot,
   backlogTrend,
   ageYears,
+  applyDiagnosis,
+  canOperate,
+  diagnosisLabel,
+  ICD10_SYSTEM,
+  type Operation,
   type SurgicalCase,
   type TheatreSession,
   type Booking,
@@ -319,5 +324,108 @@ describe('metric cohorts and missing data', () => {
     );
     expect(m.completed).toBe(1);
     expect(m.weekly.reduce((n, d) => n + d.completed, 0)).toBe(1);
+  });
+});
+describe('pre-procedure diagnosis', () => {
+  const registration = {
+    id: crypto.randomUUID(),
+    occurredAt: now,
+    recordedAt: now,
+    type: 'register' as const,
+    data: {
+      caseId: 'c',
+      patientRef: 'SYN-1',
+      patientName: 'Synthetic',
+      dob: '',
+      phone: '',
+      departmentId: 'general',
+      procedure: 'Synthetic procedure',
+      surgeon: '',
+      priority: 'P2' as const,
+      listedAt: now,
+      urgencyAt: now,
+      readiness: 'Needs assessment' as const,
+      notes: '',
+    },
+  };
+  it('keeps a registration without a diagnosis valid', () => {
+    const parsed = operationSchema.parse(registration);
+    expect(parsed.type === 'register' && parsed.data.diagnosis).toBeUndefined();
+    expect(parsed.type === 'register' && parsed.data.icd10Code).toBeUndefined();
+    const stored = applyDiagnosis({ procedure: 'Synthetic procedure' }, undefined, undefined);
+    expect(stored).toEqual({ procedure: 'Synthetic procedure' });
+    expect(diagnosisLabel(stored)).toBe('');
+  });
+  it('accepts WHO ICD-10 format only and stores the code for a later lookup', () => {
+    for (const code of ['K35', 'k35.8', ' A00.0 ', 'M17.1', 'Z99', 'S72.00']) {
+      const parsed = operationSchema.parse({
+        ...registration,
+        data: { ...registration.data, diagnosis: '  Synthetic appendicitis  ', icd10Code: code },
+      });
+      if (parsed.type !== 'register') throw new Error('expected registration');
+      expect(parsed.data.diagnosis).toBe('Synthetic appendicitis');
+      expect(parsed.data.icd10Code).toMatch(/^[A-Z]\d{2}(\.\d{1,2})?$/);
+    }
+    for (const code of [
+      '11A',
+      'K3',
+      'K355',
+      'K35.',
+      'K35.12345',
+      'CA40.0',
+      'ICD10',
+      'K35.8*',
+      'S72.001A',
+      'S72.001',
+      'K35.A',
+      'C34.9X',
+    ]) {
+      expect(
+        operationSchema.safeParse({
+          ...registration,
+          data: { ...registration.data, icd10Code: code },
+        }).success,
+      ).toBe(false);
+    }
+    const stored = applyDiagnosis({}, 'Synthetic appendicitis', 'k35.8');
+    expect(stored).toEqual({
+      diagnosis: 'Synthetic appendicitis',
+      icd10: { system: ICD10_SYSTEM, code: 'K35.8' },
+    });
+    expect(diagnosisLabel(stored)).toBe('Synthetic appendicitis · K35.8');
+    expect(applyDiagnosis(stored, '', '').diagnosis).toBeUndefined();
+    expect(applyDiagnosis(stored, '', '').icd10).toBeUndefined();
+    expect(diagnosisLabel({ icd10: { code: 'K40.9' } })).toBe('K40.9');
+  });
+  it('limits the free-text diagnosis to 500 characters', () => {
+    const withDiagnosis = (diagnosis: string) =>
+      operationSchema.safeParse({ ...registration, data: { ...registration.data, diagnosis } });
+    expect(withDiagnosis('x'.repeat(500)).success).toBe(true);
+    expect(withDiagnosis('x'.repeat(501)).success).toBe(false);
+  });
+  it('lets the same roles that edit case notes record a diagnosis', () => {
+    const parsed = operationSchema.parse({
+      id: crypto.randomUUID(),
+      occurredAt: now,
+      recordedAt: now,
+      type: 'diagnosis',
+      data: {
+        caseId: 'c',
+        version: 1,
+        diagnosis: 'Synthetic appendicitis',
+        icd10Code: 'K35.8',
+        reason: 'Synthetic correction',
+      },
+    });
+    for (const role of ['doctor', 'nurse', 'clerk', 'clinician', 'recorder', 'super_user'] as const)
+      expect(canOperate(role, parsed)).toBe(true);
+    for (const role of ['system_admin_read', 'major_read', 'viewer', 'coordinator'] as const)
+      expect(canOperate(role, parsed)).toBe(false);
+    const cleared = operationSchema.parse({
+      ...parsed,
+      data: { ...parsed.data, diagnosis: '   ', icd10Code: '' },
+    } as Operation);
+    expect(cleared.type === 'diagnosis' && cleared.data.diagnosis).toBe('');
+    expect(cleared.type === 'diagnosis' && cleared.data.icd10Code).toBe('');
   });
 });
