@@ -1,6 +1,6 @@
 # SurgiLog — design and brand guide
 
-Version 0.7 (approved palette; pending merge) · Updated 21 October 2026 · Working brand for the app
+Version 0.7 (published palette) · Updated 23 October 2026 · Working brand for the app
 
 This is the shared reference for the app, presentations, documents and future brand assets. It records the **current implementation** and gives **reuse guidance** for new work. Dylan leads development; Leo provides clinical/product direction. This is a working identity, not a completed institutional brand programme.
 
@@ -24,12 +24,12 @@ Keep the product name intact in hospital-specific materials: “SurgiLog · [Hos
 
 ## Colour palette
 
-**Status — 21 October 2026:** Dylan approved the navy/turquoise preview and requested it be pushed for merging. The palette below is implemented on `preview/logo-palette` in [PR #3](https://github.com/DylanGeldenhuys/Surgilog/pull/3); it is not yet merged or deployed. The published `v0.1.0-review.1` still uses the former blue/grey palette. Fonts, logo artwork, layout and clinical priority/status meanings are preserved.
+**Status — 23 October 2026:** Dylan approved the navy/turquoise palette; [PR #3](https://github.com/DylanGeldenhuys/Surgilog/pull/3) merged on 21 October and the palette is now published on Firebase Hosting (**bc29adb91ebd03d2**). Fonts, logo artwork, layout and clinical priority/status meanings are preserved.
 
 
-![SurgiLog preview palette: navy, turquoise, action teal, pale aqua, white, mist, silver and slate.](docs/brand-palette.svg)
+![SurgiLog palette: navy, turquoise, action teal, pale aqua, white, mist, silver and slate.](docs/brand-palette.svg)
 
-### Core colours — approved, pending merge
+### Core colours — current
 
 Use HEX for digital work (sRGB). Navy and turquoise are representative samples of the supplied raster logo, not official master/vector values. The logo itself is unchanged. Action teal is deliberately darker for readable controls.
 
@@ -50,7 +50,7 @@ Use HEX for digital work (sRGB). Navy and turquoise are representative samples o
 
 White and pale surfaces dominate; navy anchors the text and teal indicates actions. Existing gold, green, purple and red retain clinical/workflow/reporting meanings. The sign-in review label now uses teal rather than decorative gold.
 
-### Supporting colours — approved, pending merge
+### Supporting colours — current
 
 | Use | Value |
 | --- | --- |
@@ -127,7 +127,7 @@ On 19 October 2026 Dylan supplied the new SurgiLog artwork and requested the com
 | Install icon, 512px | [public/surgilog-icon-512.png](public/surgilog-icon-512.png) | New S/check symbol; larger install icon |
 | Logo component | `Brand()` in [apps/web/ui.tsx](apps/web/ui.tsx) | Shared accessible image on sign-in and navigation |
 | Historical artwork | `docs/brand/`, `public/logo-lockup.png`, `public/icon-192.png`, `public/icon-512.png` | Earlier Theatre Tracker/theatre-team assets, retained as history |
-| Colour swatches | [docs/brand-palette.svg](docs/brand-palette.svg) | Local preview palette reference, with sampled brand colours and darker action teal |
+| Colour swatches | [docs/brand-palette.svg](docs/brand-palette.svg) | Published palette reference, with sampled brand colours and darker action teal |
 
 The shared SVG displays the supplied PNG through viewBox `200 255 1280 425`, removing its outer whitespace at render time without editing the source. The entire symbol, name and tagline remain visible, with the original proportions. Navigation fills the available sidebar width. Sign-in scales from 320–620px with a 34vw preferred width; phones use up to 340px, always constrained by their container. The image aligns with the sign-in content. Multiply compositing blends the source's light background into the pale login surface. Accessible text is “SurgiLog — The trusted clinical register”; there is no duplicate live wordmark.
 

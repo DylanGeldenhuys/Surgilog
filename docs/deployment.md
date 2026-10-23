@@ -1,17 +1,23 @@
 # Leo's review deployment
 
-Updated 20 October 2026. **Published with fictional data, including the Admin tab and confirmed role hierarchy. Theatre register, reporting and turnaround settings are now published.**
+Updated 23 October 2026. **Published with fictional data, including the Admin tab and confirmed role hierarchy. Theatre register, reporting and turnaround settings are now published.**
 
 - Website: https://theatre-tracker-2f2e5.web.app
-- GitHub review release: [v0.1.0-review.1](https://github.com/DylanGeldenhuys/Surgilog/releases/tag/v0.1.0-review.1), tagged at `e4f7356`.
+- Earlier GitHub review release: [v0.1.0-review.1](https://github.com/DylanGeldenhuys/Surgilog/releases/tag/v0.1.0-review.1), tagged at `e4f7356`.
 - API: https://theatre-tracker-api-54783611706.africa-south1.run.app
 - Project: `theatre-tracker-2f2e5`; owner account: `dylangeldenhuys1@gmail.com`.
-- API revision: `theatre-tracker-api-00006-seh`, ready with 100% traffic.
-- Hosting version: `339ebd25e4021603`, released 20 October 2026 at 07:15:51 SAST.
-- Cloud Build: `9db07c3d-3144-4103-9e1d-8f8e1da1dbdb`.
+- API revision: `theatre-tracker-api-00008-dub`, ready with 100% traffic.
+- Hosting version: `bc29adb91ebd03d2`, released 23 October 2026 at 11:29:22 SAST.
+- Cloud Build: `8673a9f2-e5a5-42c4-a04f-ce67c842d298`.
 - Firestore ruleset: `c20c7b24-ee5c-44cc-a463-521eb8529e87`.
 
 Dylan completed owner sign-in and explicitly approved the API/IAM plan in [review-infrastructure.md](review-infrastructure.md). Email/Password Auth, Firestore rules/indexes, backend and Hosting are deployed. Fictional setup installed 659 documents across two hospitals and three departments. **One explicitly requested permanent Super User was created and verified on 9 October; other reviewer accounts remain deferred.** There is no shared hosted demo account; the local emulator credentials do not work on this website. No email has been sent to Leo.
+
+## Diagnosis and palette release — 23 October 2026
+
+Published source **bb4f2ff** after the merged CI run passed. The new API revision was checked through its `diagnosis-review` tag with isolated synthetic fixtures before switching 100% of live traffic to it. The Hosting release followed, using the existing capability guard. Source includes optional diagnosis/WHO ICD-10 fields, approved navy/teal palette and scoped Hosting preview CORS. Full app file/hash checks and desktop/phone-width login checks passed; see [verification](verification.md).
+
+No data migration, IAM expansion, Auth provider changes, rules or index deployment was required. Existing accounts and records were preserved; temporary synthetic release fixtures were cleaned up. Rollback targets are API **theatre-tracker-api-00006-seh** and Hosting **339ebd25e4021603**. The new frontend bundle is **index-BZhgYI5k.js** and CSS **index-DY0qOOTK.css**. GitHub workflows still do not automatically deploy the live app.
 
 ## Original typography restored — 20 October 2026
 

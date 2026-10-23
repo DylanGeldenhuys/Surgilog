@@ -2,13 +2,17 @@
 
 Updated: 23 October 2026, Africa/Johannesburg.
 
-## Release preparation — 23 October 2026
+## Latest deployment — 23 October 2026
 
-PRs #2 and #4 are merged into `main`. The combined CI run hit HTTP 429 because all three integration suites shared one API process/rate-limit budget. The runner now starts and stops a direct Node API process per suite; the application limit remains 180 requests/minute. Local verification passes: **92 unit tests, 21 integration checks, 7 admin scenarios, 9 theatre scenarios**, formatting and review build/typecheck. Deployment is in progress; latest confirmed live backend remains **00006-seh**, Hosting **339ebd25e4021603** until the completion entry is recorded.
+PRs #2/#3/#4 and the test-runner fix are published from **bb4f2ff** on `main`. API **theatre-tracker-api-00008-dub** serves **100%**; build **8673a9f2-e5a5-42c4-a04f-ce67c842d298**. Hosting **bc29adb91ebd03d2** released at **11:29:22 SAST**, bundle **index-BZhgYI5k.js** / CSS **index-DY0qOOTK.css**. The navy/teal palette, optional diagnosis/WHO ICD-10 entry and scoped preview-origin CORS support are live. Runtime identity/configuration/scaling, Auth providers, indexes and rules are unchanged; no migration was needed. Prior rollback targets: API **00006-seh**, Hosting **339ebd25e4021603**.
+
+Fixed CI's HTTP 429 by giving each integration suite a fresh direct Node API process; the real 180 requests/minute limit remains enabled. **92 unit tests, 21 integration checks, 7 admin scenarios and 9 theatre scenarios**, formatting and review build/typecheck pass. [GitHub CI for the release](https://github.com/DylanGeldenhuys/Surgilog/actions/runs/39931825336) is green. Live synthetic checks passed sign-in, optional/coded diagnosis, correction, replay, stale/invalid input rejection, audit and scope/read-only guards. Both temporary test fixtures were removed. Live HTML/assets/manifest/worker/headers match the prepared build; Chromium confirms the hosted update flow, navy/teal palette, original fonts and 1440/390px layouts. See [verification](verification.md).
+
+Live deployment remains manual; the new GitHub workflows provide checks and optional PR Hosting previews, not automatic live releases. Preview IAM/secret setup was not changed. Clinical/physical-phone acceptance remains with the reviewers. All older “not deployed” entries below describe their original milestones; this entry is current.
 
 ## Optional backlog diagnosis — 21 October 2026
 
-Leo asked for a diagnosis on backlog entries, captured before the procedure. The owner approved it. Implemented in the working tree from `main` at `f514cf6`. Not deployed. Hosted Firestore was not read or written.
+Leo asked for a diagnosis on backlog entries, captured before the procedure. The owner approved it. Originally implemented from `main` at `f514cf6`; published on 23 October as recorded above. The original implementation used emulators only.
 
 The case may store an optional free-text diagnosis (500 characters) and an optional WHO ICD-10 code, the revision used in South Africa. The code is format-only: a letter, two digits, then an optional decimal and 1–4 characters, for example `K35` or `K35.8`. It is stored in upper case as `{ system: 'icd-10-who', code }` so a catalogue lookup can be added later without treating the value as ICD-11. There is no code list or search. Blank values are omitted, so entries created before this field stay valid. No migration runs.
 
@@ -38,9 +42,9 @@ Merged current `main` (**f514cf6**) into the CI/preview branch to resolve its co
 
 ## CI and pull-request previews — 19 October 2026
 
-GitHub Actions is in source and not yet enabled on the repository until this branch merges. Pull requests and pushes to `main` run `npm ci`, typecheck, unit tests, `format:check` and the production build. Emulator integration, admin and theatre scenarios run in a separate job against `demo-theatre-tracker` only. Same-repository pull requests can publish a Firebase Hosting preview of the review web app on `theatre-tracker-2f2e5`, expiring after 7 days and calling the existing review API. Forks are skipped. If `FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5` is unset, the preview job succeeds without deploying and comments on the pull request. It does not deploy the API or Firestore, and it does not publish the live site.
+GitHub Actions merged in PR #2 on 23 October and is active. Pull requests and pushes to `main` run `npm ci`, typecheck, unit tests, `format:check` and the production build. Emulator integration, admin and theatre scenarios run in a separate job against `demo-theatre-tracker` only. Same-repository pull requests can publish a Firebase Hosting preview of the review web app on `theatre-tracker-2f2e5`, expiring after 7 days and calling the existing review API. Forks are skipped. If `FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5` is unset, the preview job succeeds without deploying and comments on the pull request. It does not deploy the API or Firestore, and it does not publish the live site.
 
-Source CORS now accepts Hosting preview-channel origins for site `theatre-tracker-2f2e5` only. The running API still allowlists the two live Hosting origins until the next API release. Auth authorized domains are not wildcards; the preview service account can add the channel hostname, or Dylan adds it in the Auth console. Exact setup is in [ci.md](ci.md). This change set was not deployed.
+Source CORS now accepts Hosting preview-channel origins for site `theatre-tracker-2f2e5` only. The 23 October API release now accepts these scoped preview origins alongside the two live Hosting origins. Auth authorized domains are not wildcards; the preview service account can add the channel hostname, or Dylan adds it in the Auth console. Exact preview credential/domain setup is in [ci.md](ci.md); that setup was not changed during this release.
 
 Local checks on this branch: 85 unit tests, typecheck, formatting, local and review builds, actionlint, and the emulator script (20 integration, 7 admin, 9 theatre) passed.
 

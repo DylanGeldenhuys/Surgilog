@@ -1,6 +1,14 @@
 # Verification record
 
-Updated 21 October 2026. The theatre extension and matching hardening frontend are published and independently live-verified (see deployment.md). All verification data was synthetic.
+Updated 23 October 2026. The theatre extension and matching hardening frontend are published and independently live-verified (see deployment.md). All verification data was synthetic.
+
+## Published diagnosis/palette release — 23 October 2026
+
+Source **bb4f2ff**: 92 unit tests, 21 integration checks, 7 admin scenarios, 9 theatre scenarios, format check and review build/typecheck pass. [GitHub CI](https://github.com/DylanGeldenhuys/Surgilog/actions/runs/39931825336) independently passed both jobs. The runner now starts a fresh direct Node API process per suite, retaining the real rate limit. The first local unit run also discovered an old ignored worktree; that worktree was removed and the clean 12-file/92-test result rerun. Existing bundle-size advisory remains.
+
+Candidate API **00008-dub** passed live synthetic sign-in, blank/coded diagnosis registration, uppercase conversion, correction/replay, malformed/stale rejection, indexed audit history and department/hospital/read-only access denial. The first smoke script incorrectly expected 403 for a nonexistent hospital (the API returns 404); the corrected check uses an existing inaccessible hospital and passed. Both isolated synthetic fixture sets were removed. Health/project/mode, live and scoped-preview CORS, unrelated-origin rejection and unauthenticated denial also passed.
+
+The checked API now serves 100% of traffic. Hosting **bc29adb91ebd03d2**, released at **11:29:22 SAST**, matches prepared HTML/JS/CSS, image/icon/font bytes, manifest, worker/update page and security/cache headers. Chromium's live update flow confirmed navy headings (`#08203C`), teal actions (`#00788A`), Manrope/DM Sans and no document overflow at 1440/390px. Clinical acceptance and physical-phone testing were not repeated. No real patient data or persistent reviewer account was modified.
 
 ## Optional backlog diagnosis — 21 October 2026 (not deployed)
 

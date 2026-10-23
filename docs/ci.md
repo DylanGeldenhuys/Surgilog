@@ -8,7 +8,7 @@ GitHub Actions runs two workflows. Neither deploys the API, changes Firestore ru
 
 The fast job installs with `npm ci` (npm cache via `actions/setup-node`), then runs `typecheck`, unit tests, `format:check` and `build`. Node.js 22 matches the local requirement.
 
-Emulator integration tests are a separate job. They need Java 21 and the Firebase Auth and Firestore emulators for `demo-theatre-tracker`, plus the local API. `scripts/ci-integration.mjs` starts that API only after `firebase emulators:exec` has set `FIRESTORE_EMULATOR_HOST`. The job runs `test:integration`, `test:admin` and `test:theatre`. It is separate so emulator download and the longer scenarios do not sit in front of the fast checks, and so a slow emulator startup cannot hide a type or unit-test failure. The emulators are the demo project only. They do not call `theatre-tracker-2f2e5`.
+Emulator integration tests are a separate job. They need Java 21 and the Firebase Auth and Firestore emulators for `demo-theatre-tracker`, plus the local API. `scripts/ci-integration.mjs` starts that API only after `firebase emulators:exec` has set `FIRESTORE_EMULATOR_HOST`. The job runs `test:integration`, `test:admin` and `test:theatre`, starting a fresh API process for each suite and awaiting shutdown between them. This isolates the in-memory request allowance without weakening the application rate limit. It is separate so emulator download and the longer scenarios do not sit in front of the fast checks, and so a slow emulator startup cannot hide a type or unit-test failure. The emulators are the demo project only. They do not call `theatre-tracker-2f2e5`.
 
 ## Previews
 
