@@ -1,6 +1,10 @@
 # Project handover
 
-Updated: 23 October 2026, Africa/Johannesburg.
+Updated: 27 October 2026, Africa/Johannesburg.
+
+## Production environment scaffolding — 27 October 2026
+
+Repo-only. No cloud project was created and nothing was deployed. `theatre-tracker-2f2e5` is the dev environment (Firebase aliases `dev` and `review`). Production uses the placeholder project id `surgilog-prod` in `config/prod.json` and the `.firebaserc` `prod` alias until the owner chooses a real id. [environments.md](environments.md) is the source for promotion, the owner checklist, cutover, rollback, and the POPIA note. `.github/workflows/deploy-prod.yml` is `workflow_dispatch` only, on the GitHub Environment `production`, and it does not run from pull requests. Deploy guards refuse a dev/review build on the prod project and the reverse. Prod startup requires `FICTIONAL_SEEDING=false` and only the two prod Hosting origins. Fictional seed and review setup refuse prod mode. The dev deployment below is unchanged.
 
 ## Latest deployment — 23 October 2026
 
@@ -135,7 +139,7 @@ Dylan explicitly supplied an email/password and requested the highest applicatio
 
 - `shared/domain.ts`: contracts, role helpers, priority/time arithmetic and metrics.
 - `apps/api/service.ts`: tenancy, state transitions, transactions, audit and idempotency.
-- `apps/api/firebase.ts`, `shared/runtime-config.ts`: explicit local/review configuration; cloud startup rejects emulator/default-local settings.
+- `apps/api/firebase.ts`, `shared/runtime-config.ts`, `shared/deploy-target.ts`: explicit local/review/prod configuration; cloud startup rejects emulator/default-local settings; prod CORS is the two Hosting origins and fictional seed scripts refuse prod mode.
 - `apps/web/state.ts`, `vault.ts`: encrypted persistence, replay, local projection and locking.
 - `apps/web/main.tsx`, `Forms.tsx`, `Login.tsx`: current UI/workflows.
 - `scripts/seed.ts`: emulator-only fictional accounts; `scripts/synthetic-fixtures.ts` shares fictional hospital records with the guarded `scripts/setup-review.ts`. Never use real patient data.

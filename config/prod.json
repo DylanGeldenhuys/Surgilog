@@ -1,0 +1,19 @@
+{
+  "notice": "PLACEHOLDER. The production Firebase project is not created yet. Change projectId here and the prod alias in .firebaserc together, then update the matching copies. Set placeholder to false only after the real web config replaces the placeholder key. Do not put secrets in this file.",
+  "placeholder": true,
+  "projectId": "surgilog-prod",
+  "region": "africa-south1",
+  "service": "surgilog-api",
+  "runtimeServiceAccountId": "surgilog-api",
+  "buildServiceAccountId": "surgilog-build",
+  "apiUrlPlaceholder": "https://surgilog-api-placeholder.africa-south1.run.app",
+  "fictionalSeeding": false,
+  "firebase": {
+    "apiKey": "placeholder-not-a-real-key",
+    "authDomain": "surgilog-prod.firebaseapp.com",
+    "projectId": "surgilog-prod",
+    "storageBucket": "surgilog-prod.firebasestorage.app",
+    "messagingSenderId": "000000000000",
+    "appId": "1:000000000000:web:placeholder"
+  }
+}

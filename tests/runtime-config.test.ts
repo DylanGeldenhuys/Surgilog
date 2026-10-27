@@ -104,4 +104,50 @@ describe('environment isolation', () => {
       expect(() => httpsOrigin(origin, 'origin')).toThrow();
     expect(() => serverConfig({ ...review, ALLOWED_ORIGINS: undefined })).toThrow();
   });
+  it('locks production to its two Hosting origins and disables fictional seeding', () => {
+    const prod = {
+      APP_ENV: 'prod',
+      NODE_ENV: 'production',
+      K_SERVICE: 'surgilog-api',
+      FIREBASE_PROJECT_ID: 'surgilog-prod',
+      ALLOWED_ORIGINS: 'https://surgilog-prod.firebaseapp.com, https://surgilog-prod.web.app',
+      FICTIONAL_SEEDING: 'false',
+    };
+    const config = serverConfig(prod);
+    expect(config.mode).toBe('prod');
+    expect(config.local).toBe(false);
+    expect(config.origins).toEqual([
+      'https://surgilog-prod.web.app',
+      'https://surgilog-prod.firebaseapp.com',
+    ]);
+    expect(config.origins.every((origin) => typeof origin === 'string')).toBe(true);
+    expect(() =>
+      serverConfig({
+        ...prod,
+        FIREBASE_PROJECT_ID: 'theatre-tracker-2f2e5',
+        ALLOWED_ORIGINS:
+          'https://theatre-tracker-2f2e5.web.app,https://theatre-tracker-2f2e5.firebaseapp.com',
+      }),
+    ).toThrow('dev/review project');
+    expect(() => serverConfig({ ...prod, FICTIONAL_SEEDING: 'true' })).toThrow('FICTIONAL_SEEDING');
+    expect(() => serverConfig({ ...prod, FICTIONAL_SEEDING: undefined })).toThrow(
+      'FICTIONAL_SEEDING',
+    );
+    expect(() =>
+      serverConfig({
+        ...prod,
+        ALLOWED_ORIGINS: 'https://surgilog-prod.web.app,https://theatre-tracker-2f2e5.web.app',
+      }),
+    ).toThrow('two production Hosting origins');
+    expect(() =>
+      serverConfig({
+        ...prod,
+        ALLOWED_ORIGINS:
+          'https://surgilog-prod.web.app,https://surgilog-prod.firebaseapp.com,https://surgilog-prod--pr1-abcd.web.app',
+      }),
+    ).toThrow('two production Hosting origins');
+    expect(() => serverConfig({ ...prod, FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080' })).toThrow(
+      'emulator',
+    );
+  });
 });

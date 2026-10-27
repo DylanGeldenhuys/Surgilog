@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { assertFictionalDataScriptAllowed } from '../shared/deploy-target.ts';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { Firestore } from 'firebase-admin/firestore';
@@ -7,6 +9,10 @@ import { OAuth2Client } from 'google-auth-library';
 
 // Local deployment tooling only. Cloud Run uses its own application-default identity.
 export function reviewAdmin(projectId: string, account: string) {
+  assertFictionalDataScriptAllowed(process.argv, process.env);
+  const prod = JSON.parse(readFileSync('config/prod.json', 'utf8')) as { projectId?: string };
+  if (process.env.APP_ENV === 'prod' || projectId === prod.projectId)
+    throw new Error('Fictional review administration is disabled for production.');
   if (projectId !== 'theatre-tracker-2f2e5') throw new Error('Unexpected review project.');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account)) throw new Error('A Google account is required.');
   if (process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST)

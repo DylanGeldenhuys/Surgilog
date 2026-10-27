@@ -1,8 +1,10 @@
 import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
+import { assertFictionalDataScriptAllowed } from '../../shared/deploy-target.ts';
 import { serverConfig } from '../../shared/runtime-config.ts';
 
+assertFictionalDataScriptAllowed(process.argv, process.env);
 export const runtime = serverConfig(process.env);
 if (runtime.local) {
   process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-review/
+dist-prod/
 .local/
 .firebase/
 .emulator-data/
