@@ -15,6 +15,10 @@ const named = [
 const targetProjectIds = [...new Set(named)];
 if (targetProjectIds.length > 1)
   throw new Error('Deployment environment names more than one project.');
+if (deploying && targetProjectIds.length === 0)
+  throw new Error('Refusing to deploy without an explicit project id. Nothing was deployed.');
+if (!marker.projectId || !target.projectId)
+  throw new Error('Refusing to verify a production build that has no project id.');
 assertDeployTarget({
   buildMode: marker.mode,
   buildProjectId: marker.projectId,

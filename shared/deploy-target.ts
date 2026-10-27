@@ -3,8 +3,10 @@ export const DEV_PROJECT_ID = 'theatre-tracker-2f2e5';
 export const DEV_API_ORIGIN = 'https://theatre-tracker-api-54783611706.africa-south1.run.app';
 
 const PROJECT_ID = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
+/** Fictional review data only. Real production migrations are a separate pattern. */
 const FICTIONAL_DATA_SCRIPT =
-  /(?:^|\/)(?:seed|setup-review|backfill-seed-history|migrate-[\w.-]+|review-admin)\.[cm]?[jt]s$/;
+  /(?:^|\/)(?:seed|setup-review|backfill-seed-history|review-admin|synthetic-fixtures)\.[cm]?[jt]s$/;
+const MIGRATION_SCRIPT = /(?:^|\/)migrate-[\w.-]+\.[cm]?[jt]s$/;
 
 export function productionHostingOrigins(projectId: string) {
   if (!PROJECT_ID.test(projectId) || projectId.startsWith('demo-'))
@@ -35,18 +37,78 @@ export function assertCloudRunOrigin(value: string) {
   return api.origin;
 }
 
+function scriptPath(arg: string) {
+  return arg.replaceAll('\\', '/');
+}
+
+export function isFictionalDataScript(argv: readonly string[]) {
+  return argv.some((arg) => FICTIONAL_DATA_SCRIPT.test(scriptPath(arg)));
+}
+
+export function isMigrationScript(argv: readonly string[]) {
+  return argv.some((arg) => MIGRATION_SCRIPT.test(scriptPath(arg)));
+}
+
+export function isGuardedDataScript(argv: readonly string[]) {
+  return isFictionalDataScript(argv) || isMigrationScript(argv);
+}
+
 /**
- * Seed, review setup, and local migrations must not run when the process is
- * marked as production. The API server does not match this script pattern.
+ * Prod mode is any one of these, not only APP_ENV=prod:
+ * the env mode, a project id signal equal to the configured production project,
+ * or an explicit --project argument for that project.
+ */
+export function isProdContext(
+  env: Record<string, string | undefined>,
+  prodProjectId: string,
+  argv: readonly string[] = [],
+) {
+  if (!prodProjectId) return false;
+  if (env.APP_ENV === 'prod') return true;
+  const signals = [
+    env.FIREBASE_PROJECT_ID,
+    env.GCLOUD_PROJECT,
+    env.GOOGLE_CLOUD_PROJECT,
+    env.PROJECT_ID,
+    env.FIREBASE_PROJECT,
+  ];
+  if (signals.some((project) => project === prodProjectId)) return true;
+  return argv.some((arg, index) => {
+    if (arg === '--project' || arg === '--projectId') return argv[index + 1] === prodProjectId;
+    return arg === `--project=${prodProjectId}`;
+  });
+}
+
+function prodConfirmed(env: Record<string, string | undefined>, argv: readonly string[]) {
+  return env.CONFIRM_PROD === 'yes' || argv.includes('--confirm-prod');
+}
+
+/**
+ * Seed and review-setup scripts are refused for a production process and whenever
+ * FICTIONAL_SEEDING=false. Production data migrations stay allowed when CONFIRM_PROD
+ * is set. The API server does not match either script pattern.
  */
 export function assertFictionalDataScriptAllowed(
   argv: readonly string[],
   env: Record<string, string | undefined>,
+  prodProjectId = '',
 ) {
-  const fictional = argv.some((arg) => FICTIONAL_DATA_SCRIPT.test(arg.replaceAll('\\', '/')));
-  if (!fictional) return;
-  if (env.APP_ENV === 'prod')
-    throw new Error('Fictional seeding and demo migrations are disabled in prod mode.');
+  const fictional = isFictionalDataScript(argv);
+  const migration = isMigrationScript(argv);
+  if (!fictional && !migration) return;
+  if (!prodProjectId)
+    throw new Error(
+      'Refusing the data script because the production project id was not available to check.',
+    );
+  const prod = isProdContext(env, prodProjectId, argv);
+  if (fictional && (prod || env.FICTIONAL_SEEDING === 'false'))
+    throw new Error(
+      'Fictional seeding and review setup are disabled for production. FICTIONAL_SEEDING=false is a hard stop.',
+    );
+  if (migration && prod && !prodConfirmed(env, argv))
+    throw new Error(
+      'Production data migrations require CONFIRM_PROD=yes or --confirm-prod. Fictional seeding stays disabled.',
+    );
 }
 
 export type DeployTargetInput = {
@@ -79,6 +141,8 @@ export function assertDeployTarget(input: DeployTargetInput) {
     throw new Error('Review build is not for the dev/review project.');
   if (buildMode !== 'prod' && buildMode !== 'review')
     throw new Error('Refusing to deploy a local or demo build.');
+  if (deploying && !targetProjectId)
+    throw new Error('Refusing to deploy without an explicit project id. Nothing was deployed.');
   if (targetProjectId && buildMode === 'prod' && targetProjectId === devProjectId)
     throw new Error('Refusing to deploy a production build to the dev/review project.');
   if (targetProjectId && buildMode === 'review' && targetProjectId === prodProjectId)

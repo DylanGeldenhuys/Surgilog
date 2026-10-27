@@ -9,8 +9,8 @@ import { OAuth2Client } from 'google-auth-library';
 
 // Local deployment tooling only. Cloud Run uses its own application-default identity.
 export function reviewAdmin(projectId: string, account: string) {
-  assertFictionalDataScriptAllowed(process.argv, process.env);
   const prod = JSON.parse(readFileSync('config/prod.json', 'utf8')) as { projectId?: string };
+  assertFictionalDataScriptAllowed(process.argv, process.env, prod.projectId ?? '');
   if (process.env.APP_ENV === 'prod' || projectId === prod.projectId)
     throw new Error('Fictional review administration is disabled for production.');
   if (projectId !== 'theatre-tracker-2f2e5') throw new Error('Unexpected review project.');

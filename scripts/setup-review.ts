@@ -17,7 +17,11 @@ const { values } = parseArgs({
 });
 const config = JSON.parse(await readFile('config/review.json', 'utf8'));
 const prod = JSON.parse(await readFile('config/prod.json', 'utf8'));
-assertFictionalDataScriptAllowed(process.argv, process.env);
+assertFictionalDataScriptAllowed(
+  process.argv,
+  process.env,
+  typeof prod.projectId === 'string' ? prod.projectId : '',
+);
 if (process.env.APP_ENV === 'prod' || values.project === prod.projectId)
   throw new Error('Fictional review seeding and reviewer setup are disabled for production.');
 if (config.projectId !== 'theatre-tracker-2f2e5' || values.project !== config.projectId)

@@ -1,6 +1,7 @@
 # PLACEHOLDER production environment. No secrets.
 # projectId is config/prod.json, also the prod alias in .firebaserc.
-# Fictional seeding is review-only and stays off. Prod startup refuses any other value.
+# FICTIONAL_SEEDING=false is enforced twice: prod API startup refuses any other value,
+# and seed/review-setup scripts refuse to run when this flag is false.
 APP_ENV: prod
 FIREBASE_PROJECT_ID: surgilog-prod
 ALLOWED_ORIGINS: https://surgilog-prod.web.app,https://surgilog-prod.firebaseapp.com

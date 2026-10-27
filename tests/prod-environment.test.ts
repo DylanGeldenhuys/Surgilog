@@ -72,26 +72,101 @@ describe('production target', () => {
     expect(() =>
       assertDeployTarget({ ...ready, deploying: false, confirmProd: false, placeholder: true }),
     ).not.toThrow();
+    expect(() => assertDeployTarget({ ...ready, targetProjectId: undefined })).toThrow(
+      'without an explicit project id',
+    );
+    expect(() =>
+      assertDeployTarget({
+        ...ready,
+        deploying: false,
+        targetProjectId: undefined,
+        confirmProd: false,
+        placeholder: true,
+      }),
+    ).not.toThrow();
   });
 
-  it('disables fictional data scripts in prod mode and rejects the dev API origin', () => {
+  it('blocks fictional scripts in any prod context and allows confirmed migrations', () => {
+    const fictional = 'Fictional seeding and review setup are disabled for production';
+    const migration = 'Production data migrations require CONFIRM_PROD';
+    const seed = ['node', '/repo/scripts/seed.ts'];
+    const migrate = ['node', 'scripts/migrate-priority-policy.ts'];
+    expect(() => assertFictionalDataScriptAllowed(seed, { APP_ENV: 'prod' }, prodProject)).toThrow(
+      fictional,
+    );
     expect(() =>
-      assertFictionalDataScriptAllowed(['node', '/repo/scripts/seed.ts'], { APP_ENV: 'prod' }),
-    ).toThrow('disabled in prod mode');
+      assertFictionalDataScriptAllowed(seed, { FIREBASE_PROJECT_ID: prodProject }, prodProject),
+    ).toThrow(fictional);
     expect(() =>
-      assertFictionalDataScriptAllowed(['node', 'scripts/setup-review.ts'], { APP_ENV: 'prod' }),
-    ).toThrow('disabled in prod mode');
+      assertFictionalDataScriptAllowed(seed, { GCLOUD_PROJECT: prodProject }, prodProject),
+    ).toThrow(fictional);
     expect(() =>
-      assertFictionalDataScriptAllowed(['node', 'scripts/migrate-priority-policy.ts'], {
-        APP_ENV: 'prod',
-      }),
-    ).toThrow('disabled in prod mode');
+      assertFictionalDataScriptAllowed(seed, { GOOGLE_CLOUD_PROJECT: prodProject }, prodProject),
+    ).toThrow(fictional);
     expect(() =>
-      assertFictionalDataScriptAllowed(['node', '/repo/scripts/seed.ts'], {}),
+      assertFictionalDataScriptAllowed([...seed, '--project', prodProject], {}, prodProject),
+    ).toThrow(fictional);
+    expect(() =>
+      assertFictionalDataScriptAllowed([...seed, `--project=${prodProject}`], {}, prodProject),
+    ).toThrow(fictional);
+    expect(() =>
+      assertFictionalDataScriptAllowed(seed, { FICTIONAL_SEEDING: 'false' }, prodProject),
+    ).toThrow('FICTIONAL_SEEDING=false is a hard stop');
+    expect(() => assertFictionalDataScriptAllowed(seed, {}, prodProject)).not.toThrow();
+    expect(() =>
+      assertFictionalDataScriptAllowed(seed, { FIREBASE_PROJECT_ID: DEV_PROJECT_ID }, prodProject),
+    ).not.toThrow();
+    expect(() => assertFictionalDataScriptAllowed(seed, {}, '')).toThrow(
+      'production project id was not available',
+    );
+    for (const script of [
+      'scripts/setup-review.ts',
+      'scripts/review-admin.ts',
+      'scripts/backfill-seed-history.ts',
+      'scripts/synthetic-fixtures.ts',
+    ]) {
+      expect(() =>
+        assertFictionalDataScriptAllowed(['node', script], { APP_ENV: 'prod' }, prodProject),
+      ).toThrow(fictional);
+    }
+    expect(() =>
+      assertFictionalDataScriptAllowed(
+        ['node', '/repo/apps/api/server.ts'],
+        { APP_ENV: 'prod' },
+        '',
+      ),
     ).not.toThrow();
     expect(() =>
-      assertFictionalDataScriptAllowed(['node', '/repo/apps/api/server.ts'], { APP_ENV: 'prod' }),
+      assertFictionalDataScriptAllowed(migrate, { APP_ENV: 'prod' }, prodProject),
+    ).toThrow(migration);
+    expect(() =>
+      assertFictionalDataScriptAllowed(
+        migrate,
+        { APP_ENV: 'prod', FICTIONAL_SEEDING: 'false' },
+        prodProject,
+      ),
+    ).toThrow(migration);
+    expect(() =>
+      assertFictionalDataScriptAllowed(migrate, { FIREBASE_PROJECT_ID: prodProject }, prodProject),
+    ).toThrow(migration);
+    expect(() =>
+      assertFictionalDataScriptAllowed(
+        migrate,
+        { APP_ENV: 'prod', CONFIRM_PROD: 'yes' },
+        prodProject,
+      ),
     ).not.toThrow();
+    expect(() =>
+      assertFictionalDataScriptAllowed(
+        [...migrate, '--confirm-prod'],
+        { APP_ENV: 'prod' },
+        prodProject,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertFictionalDataScriptAllowed(migrate, { FICTIONAL_SEEDING: 'false' }, prodProject),
+    ).not.toThrow();
+    expect(() => assertFictionalDataScriptAllowed(migrate, {}, prodProject)).not.toThrow();
     expect(() => assertCloudRunOrigin(DEV_API_ORIGIN)).toThrow('dev API');
     expect(assertCloudRunOrigin('https://surgilog-api-placeholder.africa-south1.run.app')).toBe(
       'https://surgilog-api-placeholder.africa-south1.run.app',

@@ -19,14 +19,17 @@ jobs:
   deploy:
     name: Deploy API then Hosting
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     environment: production
     steps:
       - name: Require main
-        if: github.ref != 'refs/heads/main'
+        env:
+          DEPLOY_REF: ${{ github.ref }}
         run: |
-          echo "::error::Production deploys run only from signed-off main. This ref is ${{ github.ref }}. Nothing was deployed."
-          exit 1
+          if [ "$DEPLOY_REF" != "refs/heads/main" ]; then
+            echo "::error::Production deploys run only from signed-off main. This ref is ${DEPLOY_REF}. Nothing was deployed."
+            exit 1
+          fi
 
       - name: Require the production confirmation
         env:
@@ -37,51 +40,50 @@ jobs:
             exit 1
           fi
 
-      - name: Check production deploy secrets
-        id: secret
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Verify the production web build
+        run: npm run build:prod
+
+      - name: Require production deploy secrets
         env:
           GCP_SA: ${{ secrets.PROD_GCP_SA_KEY }}
           FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
         run: |
           if [ -z "$GCP_SA" ] || [ -z "$FIREBASE_SA" ]; then
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping production deploy. The production environment secrets PROD_GCP_SA_KEY and FIREBASE_SERVICE_ACCOUNT_PROD are not both set. Nothing was deployed. See docs/environments.md."
-          else
-            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "::error::Production deploy requires the production environment secrets PROD_GCP_SA_KEY and FIREBASE_SERVICE_ACCOUNT_PROD. Nothing was deployed. See docs/environments.md."
+            exit 1
           fi
-
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        if: steps.secret.outputs.present == 'true'
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        if: steps.secret.outputs.present == 'true'
-        with:
-          node-version: 22
-          cache: npm
-
-      - if: steps.secret.outputs.present == 'true'
-        run: npm ci
 
       - name: Guard the production target
         id: target
-        if: steps.secret.outputs.present == 'true'
         run: npx tsx scripts/guard-deploy.ts --target prod --confirm-prod --github-output
 
       - name: Authenticate the deploy identity
-        if: steps.secret.outputs.present == 'true'
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:
           credentials_json: ${{ secrets.PROD_GCP_SA_KEY }}
           project_id: ${{ steps.target.outputs.project_id }}
 
       - name: Set up gcloud
-        if: steps.secret.outputs.present == 'true'
         uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
         with:
           project_id: ${{ steps.target.outputs.project_id }}
 
       - name: Deploy the API
-        if: steps.secret.outputs.present == 'true'
         env:
           SERVICE: ${{ steps.target.outputs.service }}
           REGION: ${{ steps.target.outputs.region }}
@@ -109,7 +111,6 @@ jobs:
 
       - name: Read the API URL
         id: api
-        if: steps.secret.outputs.present == 'true'
         env:
           SERVICE: ${{ steps.target.outputs.service }}
           REGION: ${{ steps.target.outputs.region }}
@@ -124,17 +125,14 @@ jobs:
           echo "url=${url}" >> "$GITHUB_OUTPUT"
 
       - name: Build the production web app
-        if: steps.secret.outputs.present == 'true'
         env:
           PROD_API_URL: ${{ steps.api.outputs.url }}
         run: npm run build:prod -- --api-url "$PROD_API_URL"
 
       - name: Write the hosting-only Firebase config
-        if: steps.secret.outputs.present == 'true'
         run: npx tsx scripts/write-prod-firebase-json.ts --overwrite-firebase-json --confirm-prod
 
       - name: Deploy Hosting
-        if: steps.secret.outputs.present == 'true'
         uses: FirebaseExtended/action-hosting-deploy@500ac625ca2dd40cbd15f7659af953801858032a # v0.11.0
         env:
           CONFIRM_PROD: "yes"
