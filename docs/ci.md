@@ -1,6 +1,6 @@
 # Continuous integration and pull request previews
 
-GitHub Actions runs two workflows. Neither deploys the API, changes Firestore rules, or writes review data. Live Hosting at https://theatre-tracker-2f2e5.web.app stays a manual release; see [deployment](deployment.md).
+GitHub Actions runs the two workflows below on pull requests and on pushes to `main`. Neither deploys the API, changes Firestore rules, or writes review data. Live Hosting at https://theatre-tracker-2f2e5.web.app stays a manual dev release; see [deployment](deployment.md). Production is a separate manual workflow, [deploy-prod.yml](../.github/workflows/deploy-prod.yml), described in [environments](environments.md). It is not part of these checks.
 
 ## Checks
 

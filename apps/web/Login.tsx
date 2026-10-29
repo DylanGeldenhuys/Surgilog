@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { ArrowRight, ShieldCheck, HeartPulse, Check } from 'lucide-react';
 import { auth, api } from './firebase.ts';
-import { isLocalDemo } from './config.ts';
+import { isLocalDemo, isProduction } from './config.ts';
 import { openOnline, unlock, acquireWorkspace, rememberWorkspace, type Vault } from './vault.ts';
 import type { Identity } from '../../shared/domain.ts';
 import { Brand, Field } from './ui.tsx';
@@ -93,7 +93,11 @@ export function Login({
       <section className="login-form">
         <div className="login-card">
           <div className="demo-label">
-            {isLocalDemo ? 'LOCAL V1' : 'REVIEW VERSION'} · SYNTHETIC DATA ONLY
+            {isLocalDemo
+              ? 'LOCAL V1 · SYNTHETIC DATA ONLY'
+              : isProduction
+                ? 'PRODUCTION'
+                : 'REVIEW VERSION · SYNTHETIC DATA ONLY'}
           </div>
           <h2>Welcome to your workspace</h2>
           <p>Sign in to bring your team’s day into focus.</p>
@@ -183,10 +187,20 @@ export function Login({
           <div className="login-note">
             <ShieldCheck size={18} />
             <span>
-              {isLocalDemo ? 'Local Firebase emulators.' : 'For invited reviewers.'} All patients
-              are fictional.
-              <br />
-              Nothing is connected to a live hospital.
+              {isProduction ? (
+                <>
+                  Production workspace.
+                  <br />
+                  Sign in with the account issued for your hospital.
+                </>
+              ) : (
+                <>
+                  {isLocalDemo ? 'Local Firebase emulators.' : 'For invited reviewers.'} All
+                  patients are fictional.
+                  <br />
+                  Nothing is connected to a live hospital.
+                </>
+              )}
             </span>
           </div>
           <p>

@@ -1,0 +1,256 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type deploy-production to release signed-off main
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy API then Hosting
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    steps:
+      # Defence in depth. workflow_dispatch runs this file from the selected ref,
+      # so another branch can remove this step. The production environment,
+      # limited to main with a required reviewer, is the real control.
+      - name: Require main
+        env:
+          DEPLOY_REF: ${{ github.ref }}
+        run: |
+          if [ "$DEPLOY_REF" != "refs/heads/main" ]; then
+            echo "::error::Production deploys run only from signed-off main. This ref is ${DEPLOY_REF}. Nothing was deployed."
+            exit 1
+          fi
+
+      - name: Require the production confirmation
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$CONFIRM" != "deploy-production" ]; then
+            echo "::error::Refusing production deploy. Re-run from main and set confirm to deploy-production. Nothing was deployed."
+            exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Verify the production web build
+        run: npm run build:prod
+
+      - name: Require production deploy secrets
+        env:
+          GCP_SA: ${{ secrets.PROD_GCP_SA_KEY }}
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
+        run: |
+          if [ -z "$GCP_SA" ] || [ -z "$FIREBASE_SA" ]; then
+            echo "::error::Production deploy requires the production environment secrets PROD_GCP_SA_KEY and FIREBASE_SERVICE_ACCOUNT_PROD. Nothing was deployed. See docs/environments.md."
+            exit 1
+          fi
+
+      - name: Guard the production target
+        id: target
+        run: npx tsx scripts/guard-deploy.ts --target prod --confirm-prod --github-output
+
+      - name: Authenticate the deploy identity
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
+        with:
+          credentials_json: ${{ secrets.PROD_GCP_SA_KEY }}
+          project_id: ${{ steps.target.outputs.project_id }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
+        with:
+          project_id: ${{ steps.target.outputs.project_id }}
+
+      - name: Check whether the API service exists
+        id: service
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          if describe_out="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format='value(metadata.name)' --quiet 2>&1)"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            case "$describe_out" in
+              *'Cannot find service'*|*'NOT_FOUND'*|*'[404]'*|*'does not exist'*)
+                echo "exists=false" >> "$GITHUB_OUTPUT"
+                ;;
+              *)
+                echo "::error::Could not tell whether the Cloud Run service exists. Nothing was deployed."
+                printf '%s\n' "$describe_out"
+                exit 1
+                ;;
+            esac
+          fi
+
+      - name: Deploy the API
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          RUNTIME_SA: ${{ steps.target.outputs.runtime_service_account }}
+          BUILD_SA: ${{ steps.target.outputs.build_service_account }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+          EXISTS: ${{ steps.service.outputs.exists }}
+        run: |
+          set -euo pipefail
+          deploy_args=(
+            --source=.
+            --region="${REGION}"
+            --service-account="${RUNTIME_SA}"
+            --build-service-account="${BUILD_SA}"
+            --env-vars-file=config/prod-api.yaml
+            --cpu=1
+            --memory=512Mi
+            --min-instances=0
+            --max-instances=2
+            --concurrency=20
+            --timeout=30s
+            --cpu-throttling
+            --no-invoker-iam-check
+            --project="${PROJECT}"
+            --quiet
+          )
+          if [ "${EXISTS}" = "true" ]; then
+            deploy_args+=(--no-traffic --tag=candidate)
+          fi
+          gcloud run deploy "${SERVICE}" "${deploy_args[@]}"
+
+      - name: Smoke-check the deployed revision
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+          EXISTS: ${{ steps.service.outputs.exists }}
+        run: |
+          set -euo pipefail
+          json="${RUNNER_TEMP:-/tmp}/candidate-service.json"
+          gcloud run services describe "${SERVICE}" \
+            --region="${REGION}" \
+            --project="${PROJECT}" \
+            --format=json > "$json"
+          export SERVICE_JSON="$json"
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const service = JSON.parse(readFileSync(process.env.SERVICE_JSON, "utf8"));
+            const firstRun = process.env.EXISTS !== "true";
+            const traffic = service.status?.traffic ?? [];
+            const tagged = traffic.find((item) => item.tag === "candidate");
+            const raw = firstRun ? service.status?.url : tagged?.url;
+            let parsed;
+            try {
+              parsed = new URL(raw ?? "");
+            } catch {
+              parsed = null;
+            }
+            const hostOk = Boolean(
+              parsed &&
+                (firstRun
+                  ? !parsed.hostname.startsWith("candidate---")
+                  : parsed.hostname.startsWith("candidate---")) &&
+                parsed.hostname.endsWith(".run.app"),
+            );
+            const unchanged = firstRun
+              ? "The first revision is already serving."
+              : "Traffic was not changed.";
+            if (
+              !parsed ||
+              !hostOk ||
+              parsed.protocol !== "https:" ||
+              parsed.pathname !== "/" ||
+              parsed.search ||
+              parsed.username
+            ) {
+              console.error(`::error::The deployed revision has no Cloud Run URL to check. ${unchanged}`);
+              process.exit(1);
+            }
+            const response = await fetch(`${parsed.origin}/health`, { signal: AbortSignal.timeout(12000) });
+            if (!response.ok) {
+              console.error(`::error::Deployed /health returned ${response.status}. ${unchanged}`);
+              process.exit(1);
+            }
+            const health = await response.json();
+            const caps = Array.isArray(health.capabilities) ? health.capabilities : [];
+            if (
+              health.mode !== "prod" ||
+              health.projectId !== process.env.PROJECT ||
+              !caps.includes("admin-v1") ||
+              !caps.includes("theatre-register-v1")
+            ) {
+              console.error(`::error::Deployed /health is not the production API. ${unchanged}`);
+              process.exit(1);
+            }
+          '
+
+      - name: Shift traffic to the checked revision
+        if: steps.service.outputs.exists == 'true'
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          gcloud run services update-traffic "${SERVICE}" \
+            --to-tags=candidate=100 \
+            --region="${REGION}" \
+            --project="${PROJECT}" \
+            --quiet
+
+      - name: Read the API URL
+        id: api
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          url="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format='value(status.url)')"
+          case "$url" in
+            https://*.run.app) ;;
+            *) echo "::error::Cloud Run did not return an HTTPS run.app origin. Hosting was not deployed."; exit 1 ;;
+          esac
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+
+      - name: Build the production web app
+        env:
+          PROD_API_URL: ${{ steps.api.outputs.url }}
+        run: npm run build:prod -- --api-url "$PROD_API_URL"
+
+      - name: Write the hosting-only Firebase config
+        run: npx tsx scripts/write-prod-firebase-json.ts --overwrite-firebase-json --confirm-prod
+
+      - name: Deploy Hosting
+        uses: FirebaseExtended/action-hosting-deploy@500ac625ca2dd40cbd15f7659af953801858032a # v0.11.0
+        env:
+          CONFIRM_PROD: "yes"
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
+          projectId: ${{ steps.target.outputs.project_id }}
+          channelId: live
+          firebaseToolsVersion: 15.32.1
+          disableComment: "true"
