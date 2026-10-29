@@ -1,6 +1,16 @@
 # Project handover
 
-Updated: 23 October 2026, Africa/Johannesburg.
+Updated: 29 October 2026, Africa/Johannesburg.
+
+## Review follow-ups — 29 October 2026
+
+Implemented locally from `main` at **2156614**. Not merged and not deployed. The 23 October release below remains the published app.
+
+A malformed queued offline edit no longer blanks the offline workspace. Applying the outbox skips that entry, restores the workspace to the point before the failed edit, and continues with the other entries. The invalid entry stays in the outbox. The browser logs the queue item id and operation type only. The unit test uses synthetic data: a `11A` diagnosis, a registration that fails after it would have added a patient, a queue item with no operation, and a later case-note edit that still applies.
+
+GitHub Actions tokens are set on each job. The check and emulator jobs have `contents: read` only. The preview job also has `pull-requests: write` and `checks: write`: pull-request comments need `pull-requests: write`, and the pinned Hosting action creates its Deploy Preview check. `deployments: write` and `issues: write` are not granted. [ci.md](ci.md) states that the preview service account, its JSON key, and the `githubHostingPreviewDomains` custom role must never be granted on any production project.
+
+Local checks: **93 unit tests**, typecheck, formatting and the production build pass. Emulator integration was not rerun. The offline screen was not opened in a browser; the projection test covers this queue failure. The existing bundle-size warning remains.
 
 ## Latest deployment — 23 October 2026
 
