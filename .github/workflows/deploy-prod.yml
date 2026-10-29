@@ -109,6 +109,74 @@ jobs:
             --timeout=30s \
             --cpu-throttling \
             --no-invoker-iam-check \
+            --no-traffic \
+            --tag=candidate \
+            --project="${PROJECT}" \
+            --quiet
+
+      - name: Smoke-check the candidate revision
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          json="${RUNNER_TEMP:-/tmp}/candidate-service.json"
+          gcloud run services describe "${SERVICE}" \
+            --region="${REGION}" \
+            --project="${PROJECT}" \
+            --format=json > "$json"
+          export SERVICE_JSON="$json"
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const traffic = JSON.parse(readFileSync(process.env.SERVICE_JSON, "utf8")).status?.traffic ?? [];
+            const tagged = traffic.find((item) => item.tag === "candidate");
+            let parsed;
+            try {
+              parsed = new URL(tagged?.url ?? "");
+            } catch {
+              parsed = null;
+            }
+            if (
+              !parsed ||
+              parsed.protocol !== "https:" ||
+              !parsed.hostname.startsWith("candidate---") ||
+              !parsed.hostname.endsWith(".run.app") ||
+              parsed.pathname !== "/" ||
+              parsed.search ||
+              parsed.username
+            ) {
+              console.error("::error::The candidate revision has no Cloud Run tag URL. Traffic was not changed.");
+              process.exit(1);
+            }
+            const response = await fetch(`${parsed.origin}/health`, { signal: AbortSignal.timeout(12000) });
+            if (!response.ok) {
+              console.error(`::error::Candidate /health returned ${response.status}. Traffic was not changed.`);
+              process.exit(1);
+            }
+            const health = await response.json();
+            const caps = Array.isArray(health.capabilities) ? health.capabilities : [];
+            if (
+              health.mode !== "prod" ||
+              health.projectId !== process.env.PROJECT ||
+              !caps.includes("admin-v1") ||
+              !caps.includes("theatre-register-v1")
+            ) {
+              console.error("::error::Candidate /health is not the production API. Traffic was not changed.");
+              process.exit(1);
+            }
+          '
+
+      - name: Shift traffic to the candidate revision
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          gcloud run services update-traffic "${SERVICE}" \
+            --to-latest \
+            --region="${REGION}" \
             --project="${PROJECT}" \
             --quiet
 
