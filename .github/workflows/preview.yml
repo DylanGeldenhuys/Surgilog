@@ -4,11 +4,7 @@ on:
   pull_request:
 
 permissions:
-  checks: write
   contents: read
-  deployments: write
-  issues: write
-  pull-requests: write
 
 concurrency:
   group: preview-${{ github.event.pull_request.number }}
@@ -17,6 +13,13 @@ concurrency:
 jobs:
   preview:
     name: Review hosting preview
+    # checks: the pinned Hosting action creates a Deploy Preview check.
+    # issues: skip comments and the action's preview URL comment.
+    # contents: checkout. Deployments and pull-request writes are unused.
+    permissions:
+      checks: write
+      contents: read
+      issues: write
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
