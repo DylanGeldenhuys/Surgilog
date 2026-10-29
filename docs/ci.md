@@ -24,7 +24,7 @@ Channels expire after 7 days (`expires: 7d`). The action posts and updates the p
 
 If the repository secret `FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5` is missing or empty, the job does not fail and does not deploy. It warns in the log and posts or updates one pull-request comment that points here. After the secret is added, the next run removes that comment and deploys the channel.
 
-The check job and the emulator job each receive only `contents: read`. The preview job adds `issues: write` for the skip comment and the Hosting action's preview URL comment, and `checks: write` because the pinned Hosting action creates a Deploy Preview check before it deploys. The token does not have `deployments: write` or `pull-requests: write`.
+The check job and the emulator job each receive only `contents: read`. The preview job adds `pull-requests: write` for the skip comment and the Hosting action's preview URL comment, and `checks: write` because the pinned Hosting action creates a Deploy Preview check before it deploys. Those comments use the issues comment API on the pull request, which requires `pull-requests: write`. The token does not have `deployments: write` or `issues: write`.
 
 ## One-time setup
 

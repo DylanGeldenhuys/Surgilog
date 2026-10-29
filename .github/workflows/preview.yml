@@ -14,12 +14,12 @@ jobs:
   preview:
     name: Review hosting preview
     # checks: the pinned Hosting action creates a Deploy Preview check.
-    # issues: skip comments and the action's preview URL comment.
-    # contents: checkout. Deployments and pull-request writes are unused.
+    # pull-requests: skip comment and the action's preview URL comment.
+    # contents: checkout. Issue comments outside pull requests are unused.
     permissions:
       checks: write
       contents: read
-      issues: write
+      pull-requests: write
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20

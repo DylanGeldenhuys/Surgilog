@@ -315,7 +315,15 @@ it('skips an invalid queued edit and still applies the other saved edits', () =>
     badDiagnosis,
     notes,
   ];
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   const view = projected(workspace, queue);
+  const warnings = warn.mock.calls.map((call) => call.map(String).join(' '));
+  expect(warnings).toEqual([
+    'Skipped queued edit bad-registration (register).',
+    'Skipped queued edit unknown (unknown).',
+    'Skipped queued edit bad-diagnosis (diagnosis).',
+  ]);
+  expect(warnings.join(' ')).not.toMatch(/Synthetic|11A|SYN-BAD|appendicitis/);
   expect(view.patients.map((patient) => patient.ref)).toEqual(['SYN-1']);
   expect(view.cases).toHaveLength(1);
   expect(view.cases[0]).toMatchObject({ notes: 'still applied', version: 2 });

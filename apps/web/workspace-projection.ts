@@ -21,6 +21,10 @@ export function projected(base: Workspace, pending: Pending[]) {
       projectQueued(w, p);
     } catch {
       if (checkpoint) w = checkpoint;
+      const operation = p?.operation;
+      const id = typeof operation?.id === 'string' ? operation.id : 'unknown';
+      const type = typeof operation?.type === 'string' ? operation.type : 'unknown';
+      console.warn(`Skipped queued edit ${id} (${type}).`);
     }
   }
   return w;
