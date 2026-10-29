@@ -86,6 +86,29 @@ jobs:
         with:
           project_id: ${{ steps.target.outputs.project_id }}
 
+      - name: Check whether the API service exists
+        id: service
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          if describe_out="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format='value(metadata.name)' --quiet 2>&1)"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            case "$describe_out" in
+              *'Cannot find service'*|*'NOT_FOUND'*|*'[404]'*|*'does not exist'*)
+                echo "exists=false" >> "$GITHUB_OUTPUT"
+                ;;
+              *)
+                echo "::error::Could not tell whether the Cloud Run service exists. Nothing was deployed."
+                printf '%s\n' "$describe_out"
+                exit 1
+                ;;
+            esac
+          fi
+
       - name: Deploy the API
         env:
           SERVICE: ${{ steps.target.outputs.service }}
@@ -93,32 +116,37 @@ jobs:
           RUNTIME_SA: ${{ steps.target.outputs.runtime_service_account }}
           BUILD_SA: ${{ steps.target.outputs.build_service_account }}
           PROJECT: ${{ steps.target.outputs.project_id }}
+          EXISTS: ${{ steps.service.outputs.exists }}
         run: |
           set -euo pipefail
-          gcloud run deploy "${SERVICE}" \
-            --source=. \
-            --region="${REGION}" \
-            --service-account="${RUNTIME_SA}" \
-            --build-service-account="${BUILD_SA}" \
-            --env-vars-file=config/prod-api.yaml \
-            --cpu=1 \
-            --memory=512Mi \
-            --min-instances=0 \
-            --max-instances=2 \
-            --concurrency=20 \
-            --timeout=30s \
-            --cpu-throttling \
-            --no-invoker-iam-check \
-            --no-traffic \
-            --tag=candidate \
-            --project="${PROJECT}" \
+          deploy_args=(
+            --source=.
+            --region="${REGION}"
+            --service-account="${RUNTIME_SA}"
+            --build-service-account="${BUILD_SA}"
+            --env-vars-file=config/prod-api.yaml
+            --cpu=1
+            --memory=512Mi
+            --min-instances=0
+            --max-instances=2
+            --concurrency=20
+            --timeout=30s
+            --cpu-throttling
+            --no-invoker-iam-check
+            --project="${PROJECT}"
             --quiet
+          )
+          if [ "${EXISTS}" = "true" ]; then
+            deploy_args+=(--no-traffic --tag=candidate)
+          fi
+          gcloud run deploy "${SERVICE}" "${deploy_args[@]}"
 
-      - name: Smoke-check the candidate revision
+      - name: Smoke-check the deployed revision
         env:
           SERVICE: ${{ steps.target.outputs.service }}
           REGION: ${{ steps.target.outputs.region }}
           PROJECT: ${{ steps.target.outputs.project_id }}
+          EXISTS: ${{ steps.service.outputs.exists }}
         run: |
           set -euo pipefail
           json="${RUNNER_TEMP:-/tmp}/candidate-service.json"
@@ -129,29 +157,41 @@ jobs:
           export SERVICE_JSON="$json"
           node --input-type=module -e '
             import { readFileSync } from "node:fs";
-            const traffic = JSON.parse(readFileSync(process.env.SERVICE_JSON, "utf8")).status?.traffic ?? [];
+            const service = JSON.parse(readFileSync(process.env.SERVICE_JSON, "utf8"));
+            const firstRun = process.env.EXISTS !== "true";
+            const traffic = service.status?.traffic ?? [];
             const tagged = traffic.find((item) => item.tag === "candidate");
+            const raw = firstRun ? service.status?.url : tagged?.url;
             let parsed;
             try {
-              parsed = new URL(tagged?.url ?? "");
+              parsed = new URL(raw ?? "");
             } catch {
               parsed = null;
             }
+            const hostOk = Boolean(
+              parsed &&
+                (firstRun
+                  ? !parsed.hostname.startsWith("candidate---")
+                  : parsed.hostname.startsWith("candidate---")) &&
+                parsed.hostname.endsWith(".run.app"),
+            );
+            const unchanged = firstRun
+              ? "The first revision is already serving."
+              : "Traffic was not changed.";
             if (
               !parsed ||
+              !hostOk ||
               parsed.protocol !== "https:" ||
-              !parsed.hostname.startsWith("candidate---") ||
-              !parsed.hostname.endsWith(".run.app") ||
               parsed.pathname !== "/" ||
               parsed.search ||
               parsed.username
             ) {
-              console.error("::error::The candidate revision has no Cloud Run tag URL. Traffic was not changed.");
+              console.error(`::error::The deployed revision has no Cloud Run URL to check. ${unchanged}`);
               process.exit(1);
             }
             const response = await fetch(`${parsed.origin}/health`, { signal: AbortSignal.timeout(12000) });
             if (!response.ok) {
-              console.error(`::error::Candidate /health returned ${response.status}. Traffic was not changed.`);
+              console.error(`::error::Deployed /health returned ${response.status}. ${unchanged}`);
               process.exit(1);
             }
             const health = await response.json();
@@ -162,12 +202,13 @@ jobs:
               !caps.includes("admin-v1") ||
               !caps.includes("theatre-register-v1")
             ) {
-              console.error("::error::Candidate /health is not the production API. Traffic was not changed.");
+              console.error(`::error::Deployed /health is not the production API. ${unchanged}`);
               process.exit(1);
             }
           '
 
-      - name: Shift traffic to the candidate revision
+      - name: Shift traffic to the checked revision
+        if: steps.service.outputs.exists == 'true'
         env:
           SERVICE: ${{ steps.target.outputs.service }}
           REGION: ${{ steps.target.outputs.region }}
@@ -175,7 +216,7 @@ jobs:
         run: |
           set -euo pipefail
           gcloud run services update-traffic "${SERVICE}" \
-            --to-latest \
+            --to-tags=candidate=100 \
             --region="${REGION}" \
             --project="${PROJECT}" \
             --quiet
