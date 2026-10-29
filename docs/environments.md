@@ -1,6 +1,6 @@
 # Dev and production environments
 
-Updated 27 October 2026. This is repository scaffolding. No production project has been created, and nothing in this document has been deployed.
+Updated 29 October 2026. This is repository scaffolding. No production project has been created, and nothing in this document has been deployed.
 
 `theatre-tracker-2f2e5` is **dev**. It is the fictional-data review site already described in [deployment](deployment.md) and [review infrastructure](review-infrastructure.md). Firebase aliases `dev` and `review` both select it. The default alias stays `demo-theatre-tracker` so a bare Firebase command remains on the local emulators.
 
@@ -38,14 +38,12 @@ Work reaches production only from `main`, and only after Dylan has signed that c
 1. Changes land on `main` through the existing pull-request checks. Those checks do not deploy production. Dev Hosting at https://theatre-tracker-2f2e5.web.app stays the manual dev release in [deployment](deployment.md).
 2. Merging to `main` does not deploy production.
 3. Dylan signs off the `main` commit that should ship.
-4. A maintainer runs the **Deploy production** workflow (`.github/workflows/deploy-prod.yml`) from `main` and types `deploy-production`. The job fails unless `github.ref` is `refs/heads/main`. It runs typecheck, unit tests, and `npm run build:prod` before it authenticates or deploys.
-5. GitHub Environment `production` must approve the run. Create that environment before the first workflow run. GitHub otherwise creates it on the first dispatch with no protection. In the repository settings, restrict it as follows:
-   - Deployment branches: selected branch `main` only.
-   - Required reviewer: Dylan (GitHub user `DylanGeldenhuys`).
+4. A maintainer runs the **Deploy production** workflow (`.github/workflows/deploy-prod.yml`) from `main` and types `deploy-production`. The workflow fails the job when `github.ref` is not `refs/heads/main`. It runs typecheck, unit tests, and `npm run build:prod` before it authenticates or deploys. Choosing another branch at dispatch can bypass that step: GitHub runs the workflow file from the selected ref, and that copy can omit the check.
+5. The real protection is the GitHub Environment `production`, limited to deployment branch `main`, with Dylan (GitHub user `DylanGeldenhuys`) as a required reviewer. Set that environment up before any production secrets are added. GitHub otherwise creates the environment on the first dispatch with no protection.
 6. Turn on branch protection for `main`. Require a pull request before merging. Require the CI status checks **Typecheck, unit tests, format, build** and **Emulator integration tests**. Block force-pushes and block deletion. Apply the rules to administrators.
-7. The workflow deploys the API to Cloud Run, builds the web app against that API URL, then deploys Hosting. It does not deploy Firestore rules, indexes, or Auth providers. Cutover deploys those before staff use the site.
+7. The workflow deploys the API to Cloud Run, builds the web app against that API URL, then deploys Hosting. It does not deploy Firestore rules, indexes, or Auth providers. Cutover deploys those before staff use the site. Roll a new API revision out gradually: deploy with Cloud Run `--no-traffic`, check that revision, then shift traffic onto it.
 
-If `PROD_GCP_SA_KEY` or `FIREBASE_SERVICE_ACCOUNT_PROD` is missing from the `production` environment, the workflow fails and deploys nothing. Store those secrets on the `production` environment, not as ordinary repository secrets, so pull-request jobs cannot read them. While `config/prod.json` still has `"placeholder": true`, a run that does have the secrets fails before it deploys.
+If `PROD_GCP_SA_KEY` or `FIREBASE_SERVICE_ACCOUNT_PROD` is missing from the `production` environment, the workflow fails and deploys nothing. Add those secrets only after the environment is limited to `main` and Dylan is a required reviewer. Store them on the `production` environment, not as ordinary repository secrets, so pull-request jobs cannot read them. While `config/prod.json` still has `"placeholder": true`, a run that does have the secrets fails before it deploys.
 
 ## One-time production setup
 
@@ -70,13 +68,15 @@ The owner does this once, in a project they create. This repository does not cre
    - `roles/firebasehosting.admin` for the Hosting deploy.
    - `roles/serviceusage.apiKeysViewer`, because the Hosting CLI reads the web API key.
    - `roles/serviceusage.serviceUsageConsumer` on the project. Source deploy calls the enabled APIs as this identity, and that role is the extra it needs for those calls.
-   Keep the JSON key as the `production` environment secrets `PROD_GCP_SA_KEY` (Cloud Run deploy) and `FIREBASE_SERVICE_ACCOUNT_PROD` (Hosting). The same key file can fill both until the Hosting identity is split. Delete the local key files. A later improvement is Workload Identity Federation so GitHub does not store a long-lived key.
+   Keep the JSON key as the `production` environment secrets `PROD_GCP_SA_KEY` (Cloud Run deploy) and `FIREBASE_SERVICE_ACCOUNT_PROD` (Hosting). The same key file can fill both until the Hosting identity is split. Delete the local key files. Move GitHub off this long-lived key and onto Workload Identity Federation before any real patient data is stored. Until that move, rotate the key and keep the roles listed here.
 9. Enable Firestore point-in-time recovery and a daily backup schedule on `(default)`. Confirm a restore into an empty project before any real record exists. Record the backup location and retention with the hospital.
 10. Turn on Data Access audit logs for `datastore.googleapis.com` (Firestore) and `identitytoolkit.googleapis.com`. Admin Activity logs stay on; Google retains those for 400 days by default. Agree a retention period with the hospital. 365 days is a practical starting point, not a legal ruling. Lock the Cloud Logging bucket so that retention cannot be shortened. Do not sink Firestore document bodies into logs. The API already avoids logging clinical text.
 11. Create the first application Super User without the fictional seed. `npm run setup:review` and `npm run seed` refuse production. In the Auth console, create one Email/Password user. Then create `profiles/{uid}` with `superUser: true`, `active: true`, `version: 1`, empty `memberships`, and the person's name and email. Do not copy the dev account, the demo password, or the fictional hospitals. Do not commit the password.
 12. Register a Firebase web app for this project. Put its real web SDK config into `config/prod.json`, set `placeholder` to `false`, and align the copies listed above. `npm test` must pass. Restrict the browser API key: HTTP referrers `https://PROJECT.web.app/*` and `https://PROJECT.firebaseapp.com/*` only. API restrictions: Identity Toolkit API and Token Service API only. The browser key is for Auth. Client Firestore stays denied, so Cloud Firestore does not belong on this key, and the key stays restricted. The first production deploy is still the signed-off workflow, not a laptop deploy.
 
 Cloud Run settings match dev: region `africa-south1`, service `surgilog-api`, 1 vCPU, 512 MiB, minimum 0, maximum 2, concurrency 20, 30-second timeout, request-based CPU. The browser calls the API directly, so the service uses public HTTPS ingress (`--no-invoker-iam-check`). Every application route still requires a Firebase ID token. Health is public and reports `mode: prod`.
+
+Roll a new API revision out gradually. Deploy it with Cloud Run `--no-traffic` so the revision that is already serving keeps the traffic, check the new revision, then shift traffic onto it. Record the serving revision name before that shift.
 
 Organisation policy can block that public invoke. `constraints/iam.allowedPolicyMemberDomains` and a Cloud Run ingress policy both refuse `allUsers`. Confirm a project-only exception for this API. Leave the rest of the organisation unchanged, and leave every data route behind a Firebase token.
 
@@ -129,6 +129,7 @@ Before any real record:
 - Staff use invited accounts. Multi-factor authentication for live clinical access is still an open requirement in [requirements](requirements.md) and is not implemented.
 - Logs, screenshots, git, and demo data stay free of patient information.
 - Dylan and the hospital have signed the go-live off in writing. A green workflow is not that sign-off.
+- GitHub deploys through Workload Identity Federation. A long-lived deploy key is no longer the production credential.
 
 ## Checks
 

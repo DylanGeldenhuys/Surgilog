@@ -179,18 +179,38 @@ describe('production target', () => {
   });
 
   it('refuses a production deploy while the project id is still the placeholder', () => {
-    const result = spawnSync(
-      'npx',
-      ['tsx', 'scripts/guard-deploy.ts', '--target', 'prod', '--confirm-prod'],
-      { encoding: 'utf8' },
-    );
+    const result = runGuard(['--target', 'prod', '--confirm-prod']);
     expect(result.status).not.toBe(0);
     expect(`${result.stdout}\n${result.stderr}`).toContain('placeholder');
-    const review = spawnSync(
-      'npx',
-      ['tsx', 'scripts/guard-deploy.ts', '--target', 'review', '--project', DEV_PROJECT_ID],
-      { encoding: 'utf8' },
-    );
+    const review = runGuard(['--target', 'review', '--project', DEV_PROJECT_ID]);
     expect(review.status).toBe(0);
   });
+
+  it('reads a missing --project from the environment instead of the next flag', () => {
+    const fromEnv = runGuard(['--target', 'review'], { GCLOUD_PROJECT: DEV_PROJECT_ID });
+    expect(fromEnv.status).toBe(0);
+    expect(fromEnv.stdout).toContain(`Review target ${DEV_PROJECT_ID}`);
+    const fromProjectId = runGuard(['--target', 'review'], { PROJECT_ID: DEV_PROJECT_ID });
+    expect(fromProjectId.status).toBe(0);
+    expect(fromProjectId.stdout).toContain(`Review target ${DEV_PROJECT_ID}`);
+    const missing = runGuard(['--target', 'review']);
+    const output = `${missing.stdout}\n${missing.stderr}`;
+    expect(missing.status).not.toBe(0);
+    expect(output).toContain('requires the target project');
+    expect(output).not.toContain('does not match the build');
+  });
 });
+
+function runGuard(args: string[], env: Record<string, string | undefined> = {}) {
+  const childEnv = { ...process.env };
+  for (const key of ['GCLOUD_PROJECT', 'PROJECT_ID', 'GOOGLE_CLOUD_PROJECT', 'CONFIRM_PROD'])
+    delete childEnv[key];
+  for (const [key, value] of Object.entries(env)) {
+    if (value === undefined) delete childEnv[key];
+    else childEnv[key] = value;
+  }
+  return spawnSync('npx', ['tsx', 'scripts/guard-deploy.ts', ...args], {
+    encoding: 'utf8',
+    env: childEnv,
+  });
+}

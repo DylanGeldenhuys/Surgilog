@@ -22,6 +22,9 @@ jobs:
     timeout-minutes: 60
     environment: production
     steps:
+      # Defence in depth. workflow_dispatch runs this file from the selected ref,
+      # so another branch can remove this step. The production environment,
+      # limited to main with a required reviewer, is the real control.
       - name: Require main
         env:
           DEPLOY_REF: ${{ github.ref }}

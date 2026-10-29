@@ -1,12 +1,20 @@
 import { appendFileSync } from 'node:fs';
+import { parseArgs } from 'node:util';
 import { DEV_PROJECT_ID, assertDeployTarget } from '../shared/deploy-target.ts';
 import { loadProdTarget } from './prod-target.ts';
 
-const args = process.argv.slice(2);
-const targetFlag = args[args.indexOf('--target') + 1];
-const confirmProd = args.includes('--confirm-prod') || process.env.CONFIRM_PROD === 'yes';
-const githubOutput = args.includes('--github-output');
-const projectArg = args[args.indexOf('--project') + 1];
+const { values } = parseArgs({
+  options: {
+    target: { type: 'string' },
+    project: { type: 'string' },
+    'confirm-prod': { type: 'boolean' },
+    'github-output': { type: 'boolean' },
+  },
+});
+const targetFlag = values.target;
+const confirmProd = values['confirm-prod'] === true || process.env.CONFIRM_PROD === 'yes';
+const githubOutput = values['github-output'] === true;
+const projectArg = values.project;
 
 if (targetFlag !== 'prod' && targetFlag !== 'review')
   throw new Error(
