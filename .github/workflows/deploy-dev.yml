@@ -12,12 +12,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  check:
+    name: Typecheck and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Verify the dev web build
+        run: npm run build:review -- --api-url https://theatre-tracker-api-54783611706.africa-south1.run.app
+
   deploy:
+    needs: check
     name: Deploy API then Hosting
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: development
-    # id-token: the Workload Identity Federation exchange. contents: checkout.
+    # id-token stays on this job. The check job has no token to mint.
     permissions:
       contents: read
       id-token: write
@@ -44,12 +70,6 @@ jobs:
           cache: npm
 
       - run: npm ci
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Unit tests
-        run: npm test
 
       - name: Require Workload Identity Federation settings
         env:
@@ -78,11 +98,6 @@ jobs:
             exit 1
           fi
 
-      - name: Verify the dev web build
-        env:
-          DEV_API_URL: ${{ steps.target.outputs.api_origin }}
-        run: npm run build:review -- --api-url "$DEV_API_URL"
-
       - name: Authenticate the deploy identity
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:
@@ -109,6 +124,10 @@ jobs:
           fi
           if describe_out="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format='value(metadata.name)' --quiet 2>&1)"; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
+            json="${RUNNER_TEMP:-/tmp}/serving-service.json"
+            gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format=json > "$json"
+            revision="$(SERVICE_JSON="$json" npx tsx scripts/smoke-check-revision.ts --serving-revision)"
+            echo "revision=${revision}" >> "$GITHUB_OUTPUT"
           else
             case "$describe_out" in
               *'Cannot find service'*|*'NOT_FOUND'*|*'[404]'*|*'does not exist'*)
@@ -228,6 +247,35 @@ jobs:
             --project="${PROJECT}" \
             --quiet
 
+      - name: Record the API rollback
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+          PREVIOUS: ${{ steps.service.outputs.revision }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" != "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a dev deploy aimed at another project."
+            exit 1
+          fi
+          {
+            echo "## API rollback"
+            echo
+            echo "If the Hosting deploy fails after this point, the new API revision is already serving and the previous web app is still on the live site."
+            if [ -n "${PREVIOUS}" ]; then
+              echo
+              echo "Send all traffic back to \`${PREVIOUS}\`:"
+              echo
+              echo '```sh'
+              echo "gcloud run services update-traffic ${SERVICE} --to-revisions=${PREVIOUS}=100 --region=${REGION} --project=${PROJECT}"
+              echo '```'
+            else
+              echo
+              echo "This is the first revision, so there is no previous revision to restore. Hosting has not been deployed yet."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Read the API URL
         id: api
         env:
@@ -266,4 +314,4 @@ jobs:
             echo "::error::Refusing a dev deploy aimed at another project. Hosting was not deployed."
             exit 1
           fi
-          npx -y firebase-tools@15.32.1 deploy --only hosting --project "$PROJECT" --non-interactive
+          npx firebase-tools deploy --only hosting --project "$PROJECT" --non-interactive

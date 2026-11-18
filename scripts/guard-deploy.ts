@@ -40,7 +40,11 @@ export function assertTargetHints(
 }
 
 export function assertWorkflowRef(kind: 'prod' | 'dev', ref = process.env.GITHUB_REF) {
-  if (!ref) return;
+  if (!ref) {
+    if (process.env.GITHUB_ACTIONS === 'true')
+      throw new Error('Refusing a deploy in GitHub Actions with no ref. Nothing was deployed.');
+    return;
+  }
   const expected = kind === 'prod' ? 'refs/heads/main' : 'refs/heads/dev';
   if (ref !== expected)
     throw new Error(

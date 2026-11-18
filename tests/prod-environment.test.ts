@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   DEV_API_ORIGIN,
   DEV_PROJECT_ID,
@@ -17,7 +17,13 @@ import {
   devDeployValues,
   prodDeployValues,
 } from '../scripts/guard-deploy.ts';
-import { assertHealthy, revisionUrl } from '../scripts/smoke-check-revision.ts';
+import {
+  assertHealthy,
+  fetchHealthyResponse,
+  healthBackoffMs,
+  revisionUrl,
+  servingRevisionName,
+} from '../scripts/smoke-check-revision.ts';
 
 const prodProject = 'surgilog-prod';
 const ready = {
@@ -245,6 +251,14 @@ describe('production target', () => {
     );
     const devOnDev = runGuard(['--target', 'dev'], { GITHUB_REF: 'refs/heads/dev' });
     expect(devOnDev.status).toBe(0);
+    const actionsWithoutRef = runGuard(['--target', 'prod', '--confirm-prod'], {
+      GITHUB_ACTIONS: 'true',
+      GITHUB_REF: '',
+    });
+    expect(actionsWithoutRef.status).not.toBe(0);
+    expect(`${actionsWithoutRef.stdout}\n${actionsWithoutRef.stderr}`).toContain('no ref');
+    const localWithoutRef = runGuard(['--target', 'dev'], { GITHUB_ACTIONS: '', GITHUB_REF: '' });
+    expect(localWithoutRef.status).toBe(0);
   });
 
   it('keeps the dev API address and the production health mode apart', () => {
@@ -273,7 +287,22 @@ describe('production target', () => {
     );
     expect(() => assertWorkflowRef('prod', 'refs/heads/dev')).toThrow('refs/heads/main');
     expect(() => assertWorkflowRef('dev', 'refs/heads/main')).toThrow('refs/heads/dev');
-    expect(() => assertWorkflowRef('prod', '')).not.toThrow();
+    vi.stubEnv('GITHUB_ACTIONS', '');
+    vi.stubEnv('GITHUB_REF', 'refs/pull/7/merge');
+    try {
+      expect(() => assertWorkflowRef('prod', '')).not.toThrow();
+      expect(() => assertWorkflowRef('prod')).toThrow('refs/pull/7/merge');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    vi.stubEnv('GITHUB_ACTIONS', 'true');
+    vi.stubEnv('GITHUB_REF', '');
+    try {
+      expect(() => assertWorkflowRef('prod')).toThrow('no ref');
+      expect(() => assertWorkflowRef('dev')).toThrow('no ref');
+    } finally {
+      vi.unstubAllEnvs();
+    }
 
     const caps = ['admin-v1', 'theatre-register-v1'];
     const candidate = {
@@ -330,6 +359,45 @@ describe('production target', () => {
         { mode: 'prod', projectId: DEV_PROJECT_ID },
       ),
     ).toThrow('aimed at the dev project');
+    expect(healthBackoffMs(1)).toBe(1000);
+    expect(healthBackoffMs(3)).toBe(4000);
+    expect(
+      servingRevisionName({
+        status: {
+          traffic: [
+            { tag: 'candidate', percent: 0, revisionName: 'surgilog-api-00002-new' },
+            { percent: 100, revisionName: 'surgilog-api-00001-old' },
+          ],
+        },
+      }),
+    ).toBe('surgilog-api-00001-old');
+    expect(() => servingRevisionName({ status: { traffic: [] } })).toThrow('missing');
+  });
+
+  it('retries a cold health check before failing the release', async () => {
+    let calls = 0;
+    const sleeps: number[] = [];
+    const response = await fetchHealthyResponse('https://example.run.app/health', {
+      attempts: 3,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      fetchImpl: async () => {
+        calls += 1;
+        if (calls < 3) return new Response('starting', { status: 503 });
+        return new Response('{}', { status: 200 });
+      },
+    });
+    expect(response.ok).toBe(true);
+    expect(calls).toBe(3);
+    expect(sleeps).toEqual([1000, 2000]);
+    await expect(
+      fetchHealthyResponse('https://example.run.app/health', {
+        attempts: 2,
+        sleep: async () => undefined,
+        fetchImpl: async () => new Response('no', { status: 503 }),
+      }),
+    ).rejects.toThrow('returned 503');
   });
 
   it('keeps production and dev deploys on separate workflows and identities', () => {
@@ -347,6 +415,12 @@ describe('production target', () => {
       expect(workflow).toContain('--no-traffic --tag=candidate');
       expect(workflow).toContain('update-traffic');
       expect(workflow).toContain('id-token: write');
+      expect(workflow).toContain('needs: check');
+      expect(workflow).toContain('## API rollback');
+      expect(workflow).toContain('npx firebase-tools deploy');
+      expect(workflow).not.toContain('firebase-tools@');
+      const checkJob = workflow.slice(0, workflow.indexOf('\n  deploy:\n'));
+      expect(checkJob).not.toContain('id-token:');
     }
     expect(prod).toContain('branches: [main]');
     expect(prod).toContain('environment: production');
@@ -363,6 +437,19 @@ describe('production target', () => {
     expect(dev).toContain(DEV_PROJECT_ID);
     expect(dev).not.toContain(prodProject);
     expect(dev).not.toContain('config/prod-api.yaml');
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      devDependencies: Record<string, string>;
+    };
+    expect(pkg.devDependencies['firebase-tools']).toBe('15.32.1');
+    expect(readFileSync('package-lock.json', 'utf8')).toContain('"node_modules/firebase-tools"');
+    const guide = readFileSync('docs/ci.md', 'utf8');
+    expect(guide).toContain('environment:${ENV_NAME}');
+    expect(guide).not.toContain('ref:refs/heads/${BRANCH}');
+    expect(guide).toContain('1403413866');
+    expect(guide).toContain('46447404');
+    expect(guide).toContain('run-sources-${PROJECT_ID}-africa-south1');
+    expect(guide).toContain('The github provider condition does not match this script.');
+    expect(guide).toContain('Remove the temporary Cloud Run admin grant');
   });
 
   it('reads a missing --project from the environment instead of the next flag', () => {
@@ -389,6 +476,7 @@ function runGuard(args: string[], env: Record<string, string | undefined> = {}) 
     'CONFIRM_PROD',
     'GITHUB_REF',
     'GITHUB_OUTPUT',
+    'GITHUB_ACTIONS',
     'FIREBASE_PROJECT_ID',
   ])
     delete childEnv[key];
