@@ -24,9 +24,13 @@ Channels expire after 7 days (`expires: 7d`). The action posts and updates the p
 
 If the repository secret `FIREBASE_SERVICE_ACCOUNT_THEATRE_TRACKER_2F2E5` is missing or empty, the job does not fail and does not deploy. It warns in the log and posts or updates one pull-request comment that points here. After the secret is added, the next run removes that comment and deploys the channel.
 
+The check job and the emulator job each receive only `contents: read`. The preview job adds `pull-requests: write` for the skip comment and the Hosting action's preview URL comment, and `checks: write` because the pinned Hosting action creates a Deploy Preview check before it deploys. Those comments use the issues comment API on the pull request, which requires `pull-requests: write`. The token does not have `deployments: write` or `issues: write`.
+
 ## One-time setup
 
 Do this once in project `theatre-tracker-2f2e5`, as the project owner. Do not grant this identity Editor, Firebase Admin, Cloud Run Admin, Datastore, or Firestore roles. Do not commit the JSON key.
+
+Never grant this preview service account, its JSON key, or the `githubHostingPreviewDomains` custom role on any production project. They belong only to the fictional-data project `theatre-tracker-2f2e5`. The custom role includes `firebaseauth.configs.update`, which can change Auth configuration beyond authorized domains, including sign-in providers. That permission stays off every production project and every production identity.
 
 1. Create a service account used only for preview Hosting deploys:
 
