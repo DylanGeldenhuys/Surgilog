@@ -63,7 +63,7 @@ import {
 } from './ui.tsx';
 import { useWorkspace, projected, reportingCacheKey } from './state.ts';
 import { auth, api } from './firebase.ts';
-import { isLocalDemo } from './config.ts';
+import { isLocalDemo, isProduction } from './config.ts';
 import { type Vault } from './vault.ts';
 import {
   canClinical,
@@ -417,8 +417,14 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
           <div className="pilot-note">
             <ShieldCheck size={18} />
             <div>
-              <strong>{isLocalDemo ? 'Local pilot workspace' : 'Review workspace'}</strong>
-              <p>Synthetic data · v0.1</p>
+              <strong>
+                {isLocalDemo
+                  ? 'Local pilot workspace'
+                  : isProduction
+                    ? 'Production workspace'
+                    : 'Review workspace'}
+              </strong>
+              <p>{isProduction ? 'Hospital workspace · v0.1' : 'Synthetic data · v0.1'}</p>
             </div>
           </div>
           <div className="profile">
@@ -996,8 +1002,9 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
               <Activity size={14} /> SurgiLog
             </span>
             <span>
-              {isLocalDemo ? 'Local pilot' : 'Review version'} · Fictional patients · South African
-              Standard Time
+              {isProduction
+                ? 'Production · South African Standard Time'
+                : `${isLocalDemo ? 'Local pilot' : 'Review version'} · Fictional patients · South African Standard Time`}
             </span>
           </footer>
         </main>

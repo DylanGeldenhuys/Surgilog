@@ -33,7 +33,7 @@ async function uid(req: { headers: Record<string, any> }) {
 }
 app.get('/health', async () => ({
   ok: true,
-  mode: runtime.local ? 'local-emulators' : 'review',
+  mode: runtime.local ? 'local-emulators' : runtime.mode,
   projectId: runtime.projectId,
   capabilities: ['admin-v1', 'theatre-register-v1'],
 }));

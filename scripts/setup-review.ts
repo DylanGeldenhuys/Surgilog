@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import { reviewAdmin } from './review-admin.ts';
 import type { Profile } from '../shared/domain.ts';
+import { assertFictionalDataScriptAllowed } from '../shared/deploy-target.ts';
 import { syntheticDocuments, syntheticHospitals } from './synthetic-fixtures.ts';
 
 const { values } = parseArgs({
@@ -15,6 +16,14 @@ const { values } = parseArgs({
   },
 });
 const config = JSON.parse(await readFile('config/review.json', 'utf8'));
+const prod = JSON.parse(await readFile('config/prod.json', 'utf8'));
+assertFictionalDataScriptAllowed(
+  process.argv,
+  process.env,
+  typeof prod.projectId === 'string' ? prod.projectId : '',
+);
+if (process.env.APP_ENV === 'prod' || values.project === prod.projectId)
+  throw new Error('Fictional review seeding and reviewer setup are disabled for production.');
 if (config.projectId !== 'theatre-tracker-2f2e5' || values.project !== config.projectId)
   throw new Error('Review setup requires --project theatre-tracker-2f2e5.');
 if (!values.account || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.account))

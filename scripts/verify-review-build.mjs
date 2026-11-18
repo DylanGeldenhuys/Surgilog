@@ -6,7 +6,14 @@ if (marker.mode !== 'review' || marker.projectId !== config.projectId)
   throw new Error(
     'Hosting requires a review build for the selected project. Run npm run build:review.',
   );
-if (process.env.GCLOUD_PROJECT && process.env.GCLOUD_PROJECT !== config.projectId)
+const prod = JSON.parse(await readFile('config/prod.json', 'utf8'));
+const namedTargets = [process.env.GCLOUD_PROJECT, process.env.PROJECT_ID].filter(Boolean);
+if (namedTargets.length > 1 && namedTargets[0] !== namedTargets[1])
+  throw new Error('Deployment environment names more than one project.');
+const targetProject = namedTargets[0];
+if (targetProject && targetProject === prod.projectId)
+  throw new Error('Refusing to deploy a dev/review build to the production project.');
+if (targetProject && targetProject !== config.projectId)
   throw new Error('Deployment target does not match the review build.');
 const files = (await readdir('dist-review/assets')).filter((name) => name.endsWith('.js'));
 const code = (

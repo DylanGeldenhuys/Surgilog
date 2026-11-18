@@ -1,1 +1,8 @@
-{"projects":{"default":"demo-theatre-tracker","review":"theatre-tracker-2f2e5"}}
+{
+  "projects": {
+    "default": "demo-theatre-tracker",
+    "dev": "theatre-tracker-2f2e5",
+    "review": "theatre-tracker-2f2e5",
+    "prod": "surgilog-prod"
+  }
+}
