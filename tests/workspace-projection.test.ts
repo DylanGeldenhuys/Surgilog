@@ -258,6 +258,80 @@ it('projects an optional diagnosis onto a new or existing backlog case', () => {
   expect(corrected.version).toBe(2);
 });
 
+it('skips an invalid queued edit and still applies the other saved edits', () => {
+  const badDiagnosis: Pending = {
+    ...entry,
+    operation: {
+      ...entry.operation,
+      id: 'bad-diagnosis',
+      type: 'diagnosis',
+      data: {
+        caseId: 'case',
+        version: 1,
+        diagnosis: 'Synthetic appendicitis',
+        icd10Code: '11A',
+        reason: 'Synthetic malformed code',
+      },
+    },
+  };
+  const badRegistration: Pending = {
+    ...entry,
+    operation: {
+      ...entry.operation,
+      id: 'bad-registration',
+      type: 'register',
+      data: {
+        caseId: 'rejected-case',
+        patientRef: 'SYN-BAD',
+        patientName: 'Synthetic rejected',
+        dob: '',
+        gender: 'Not recorded',
+        phone: '',
+        departmentId: 'general',
+        procedure: 'Synthetic procedure',
+        diagnosis: 'Synthetic appendicitis',
+        icd10Code: '11A',
+        surgeon: 'Test',
+        priority: 'P2',
+        listedAt: now,
+        urgencyAt: now,
+        readiness: 'Needs assessment',
+        notes: '',
+      },
+    },
+  };
+  const notes: Pending = {
+    ...entry,
+    operation: {
+      ...entry.operation,
+      id: 'kept-notes',
+      type: 'case-notes',
+      data: { caseId: 'case', version: 1, notes: 'still applied', reason: 'Synthetic correction' },
+    },
+  };
+  const queue = [
+    badRegistration,
+    { status: 'pending', hospitalId: 'h' } as Pending,
+    badDiagnosis,
+    notes,
+  ];
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  const view = projected(workspace, queue);
+  const warnings = warn.mock.calls.map((call) => call.map(String).join(' '));
+  expect(warnings).toEqual([
+    'Skipped queued edit bad-registration (register).',
+    'Skipped queued edit unknown (unknown).',
+    'Skipped queued edit bad-diagnosis (diagnosis).',
+  ]);
+  expect(warnings.join(' ')).not.toMatch(/Synthetic|11A|SYN-BAD|appendicitis/);
+  expect(view.patients.map((patient) => patient.ref)).toEqual(['SYN-1']);
+  expect(view.cases).toHaveLength(1);
+  expect(view.cases[0]).toMatchObject({ notes: 'still applied', version: 2 });
+  expect(view.cases[0].diagnosis).toBeUndefined();
+  expect(view.cases[0].icd10).toBeUndefined();
+  expect(queue.every((item) => item.status === 'pending')).toBe(true);
+});
+
 it('links a further case to a prepared patient by normalised hospital reference', () => {
   const registration: Pending = {
     ...entry,
