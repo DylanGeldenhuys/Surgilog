@@ -2,11 +2,11 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 // The Hosting action reads firebase.json and would otherwise see the emulator
 // config. This replaces that file in the CI workspace only. It copies the review
-// Hosting site and leaves Auth and Firestore out, so a preview deploy cannot
-// publish rules or Auth settings.
+// Hosting site and leaves Auth and Firestore out, so a preview or dev deploy
+// cannot publish rules or Auth settings.
 if (process.argv[2] !== '--overwrite-firebase-json') {
   console.error(
-    'Refusing to replace firebase.json. Pass --overwrite-firebase-json. The preview workflow is the only caller.',
+    'Refusing to replace firebase.json. Pass --overwrite-firebase-json. The preview and dev deploy workflows are the only callers.',
   );
   process.exit(1);
 }

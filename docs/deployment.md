@@ -15,13 +15,13 @@ Dylan completed owner sign-in and explicitly approved the API/IAM plan in [revie
 
 ## Dev and production
 
-`theatre-tracker-2f2e5` is the **dev** environment. Firebase aliases `dev` and `review` both point at it. Production is a separate project that has not been created. The placeholder id `surgilog-prod` is set in [config/prod.json](../config/prod.json) and the `.firebaserc` `prod` alias. [Environments](environments.md) covers the split, the promotion rule (only Dylan-signed-off `main` goes to production), the one-time owner checklist, cutover, rollback, and the POPIA note. This file remains the record of what is actually deployed to dev. Nothing in the production scaffolding has been deployed.
+`theatre-tracker-2f2e5` is the **dev** environment. Firebase aliases `dev` and `review` both point at it. Production is a separate project that has not been created. The placeholder id `surgilog-prod` is set in [config/prod.json](../config/prod.json) and the `.firebaserc` `prod` alias. [Environments](environments.md) covers the split, the promotion rule (a push to `main` deploys production only after the `production` environment approves it, and a push to `dev` deploys this dev project), the one-time owner checklist, cutover, rollback, and the POPIA note. The Cloud Shell steps for those GitHub deploys are in [ci.md](ci.md). This file remains the record of what is actually deployed to dev. Nothing in the production scaffolding has been deployed.
 
 ## Diagnosis and palette release — 23 October 2026
 
 Published source **bb4f2ff** after the merged CI run passed. The new API revision was checked through its `diagnosis-review` tag with isolated synthetic fixtures before switching 100% of live traffic to it. The Hosting release followed, using the existing capability guard. Source includes optional diagnosis/WHO ICD-10 fields, approved navy/teal palette and scoped Hosting preview CORS. Full app file/hash checks and desktop/phone-width login checks passed; see [verification](verification.md).
 
-No data migration, IAM expansion, Auth provider changes, rules or index deployment was required. Existing accounts and records were preserved; temporary synthetic release fixtures were cleaned up. Rollback targets are API **theatre-tracker-api-00006-seh** and Hosting **339ebd25e4021603**. The new frontend bundle is **index-BZhgYI5k.js** and CSS **index-DY0qOOTK.css**. GitHub workflows still do not automatically deploy the live app.
+No data migration, IAM expansion, Auth provider changes, rules or index deployment was required. Existing accounts and records were preserved; temporary synthetic release fixtures were cleaned up. Rollback targets are API **theatre-tracker-api-00006-seh** and Hosting **339ebd25e4021603**. The new frontend bundle is **index-BZhgYI5k.js** and CSS **index-DY0qOOTK.css**. That release was published by hand. Automatic branch deploys are described in [ci.md](ci.md) and were not used for it.
 
 ## Original typography restored — 20 October 2026
 

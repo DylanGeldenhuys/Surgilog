@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   DEV_API_ORIGIN,
@@ -9,6 +11,13 @@ import {
   assertFictionalDataScriptAllowed,
 } from '../shared/deploy-target.ts';
 import { loadProdTarget, parseFlatYaml } from '../scripts/prod-target.ts';
+import {
+  assertTargetHints,
+  assertWorkflowRef,
+  devDeployValues,
+  prodDeployValues,
+} from '../scripts/guard-deploy.ts';
+import { assertHealthy, revisionUrl } from '../scripts/smoke-check-revision.ts';
 
 const prodProject = 'surgilog-prod';
 const ready = {
@@ -186,6 +195,176 @@ describe('production target', () => {
     expect(review.status).toBe(0);
   });
 
+  it('stops a dev run from targeting prod and a prod run from targeting dev', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'guard-'));
+    const output = join(dir, 'github-output');
+    const dev = runGuard(['--target', 'dev', '--github-output'], {
+      GITHUB_OUTPUT: output,
+      CONFIRM_PROD: 'yes',
+    });
+    expect(dev.status).toBe(0);
+    const body = readFileSync(output, 'utf8');
+    expect(body).toContain(`project_id=${DEV_PROJECT_ID}`);
+    expect(body).toContain('service=theatre-tracker-api');
+    expect(body).toContain('region=africa-south1');
+    expect(body).toContain(`api_origin=${DEV_API_ORIGIN}`);
+    expect(body).toContain('health_mode=review');
+    expect(body).toContain('env_file=config/review-api.yaml');
+    expect(body).not.toContain(prodProject);
+    expect(body).not.toContain('health_mode=prod');
+    expect(dev.stdout).toContain('Nothing has been deployed');
+
+    const devAtProd = runGuard(['--target', 'dev', '--project', prodProject]);
+    expect(devAtProd.status).not.toBe(0);
+    expect(`${devAtProd.stdout}\n${devAtProd.stderr}`).toContain(
+      'Refusing a dev deploy aimed at the production project.',
+    );
+    const reviewAtProd = runGuard(['--target', 'review', '--project', prodProject]);
+    expect(reviewAtProd.status).not.toBe(0);
+    expect(`${reviewAtProd.stdout}\n${reviewAtProd.stderr}`).toContain(
+      'Refusing a dev deploy aimed at the production project.',
+    );
+    const prodAtDev = runGuard(['--target', 'prod', '--confirm-prod', '--project', DEV_PROJECT_ID]);
+    expect(prodAtDev.status).not.toBe(0);
+    expect(`${prodAtDev.stdout}\n${prodAtDev.stderr}`).toContain(
+      'Refusing a production deploy aimed at the dev/review project.',
+    );
+    expect(`${prodAtDev.stdout}\n${prodAtDev.stderr}`).not.toContain('ready to deploy');
+
+    const devOnMain = runGuard(['--target', 'dev'], { GITHUB_REF: 'refs/heads/main' });
+    expect(devOnMain.status).not.toBe(0);
+    expect(`${devOnMain.stdout}\n${devOnMain.stderr}`).toContain(
+      'Refusing a dev deploy from refs/heads/main.',
+    );
+    const prodOnDev = runGuard(['--target', 'prod', '--confirm-prod'], {
+      GITHUB_REF: 'refs/heads/dev',
+    });
+    expect(prodOnDev.status).not.toBe(0);
+    expect(`${prodOnDev.stdout}\n${prodOnDev.stderr}`).toContain(
+      'Refusing a production deploy from refs/heads/dev.',
+    );
+    const devOnDev = runGuard(['--target', 'dev'], { GITHUB_REF: 'refs/heads/dev' });
+    expect(devOnDev.status).toBe(0);
+  });
+
+  it('keeps the dev API address and the production health mode apart', () => {
+    const target = loadProdTarget();
+    const prod = prodDeployValues(target);
+    const dev = devDeployValues();
+    expect(prod.health_mode).toBe('prod');
+    expect(prod.env_file).toBe('config/prod-api.yaml');
+    expect(prod.project_id).toBe(prodProject);
+    expect(prod.service).toBe('surgilog-api');
+    expect(JSON.stringify(prod)).not.toContain(DEV_PROJECT_ID);
+    expect(dev).toMatchObject({
+      project_id: DEV_PROJECT_ID,
+      region: 'africa-south1',
+      service: 'theatre-tracker-api',
+      env_file: 'config/review-api.yaml',
+      health_mode: 'review',
+      api_origin: DEV_API_ORIGIN,
+      runtime_service_account: `theatre-tracker-api@${DEV_PROJECT_ID}.iam.gserviceaccount.com`,
+    });
+    expect(() => assertTargetHints('dev', [prodProject], DEV_PROJECT_ID, prodProject)).toThrow(
+      'aimed at the production project',
+    );
+    expect(() => assertTargetHints('prod', [DEV_PROJECT_ID], prodProject, DEV_PROJECT_ID)).toThrow(
+      'aimed at the dev/review project',
+    );
+    expect(() => assertWorkflowRef('prod', 'refs/heads/dev')).toThrow('refs/heads/main');
+    expect(() => assertWorkflowRef('dev', 'refs/heads/main')).toThrow('refs/heads/dev');
+    expect(() => assertWorkflowRef('prod', undefined)).not.toThrow();
+
+    const caps = ['admin-v1', 'theatre-register-v1'];
+    const candidate = {
+      status: {
+        url: DEV_API_ORIGIN,
+        traffic: [{ tag: 'candidate', url: 'https://candidate---theatre-tracker-api.run.app' }],
+      },
+    };
+    expect(revisionUrl(candidate, false).origin).toBe(
+      'https://candidate---theatre-tracker-api.run.app',
+    );
+    expect(
+      revisionUrl({ status: { url: 'https://surgilog-api-1.africa-south1.run.app' } }, true).origin,
+    ).toBe('https://surgilog-api-1.africa-south1.run.app');
+    expect(() =>
+      revisionUrl({ status: { url: 'https://candidate---theatre-tracker-api.run.app' } }, true),
+    ).toThrow('no Cloud Run URL');
+    expect(() => revisionUrl({ status: { url: DEV_API_ORIGIN } }, false)).toThrow(
+      'no Cloud Run URL',
+    );
+    expect(() =>
+      assertHealthy(
+        { mode: 'review', projectId: DEV_PROJECT_ID, capabilities: caps },
+        { mode: 'review', projectId: DEV_PROJECT_ID },
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertHealthy(
+        { mode: 'prod', projectId: prodProject, capabilities: caps },
+        { mode: 'prod', projectId: prodProject },
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertHealthy(
+        { mode: 'prod', projectId: prodProject, capabilities: caps },
+        { mode: 'review', projectId: DEV_PROJECT_ID },
+      ),
+    ).toThrow('not the dev API');
+    expect(() =>
+      assertHealthy(
+        { mode: 'review', projectId: DEV_PROJECT_ID, capabilities: caps },
+        { mode: 'prod', projectId: prodProject },
+      ),
+    ).toThrow('not the production API');
+    expect(() =>
+      assertHealthy(
+        { mode: 'review', projectId: DEV_PROJECT_ID, capabilities: caps },
+        { mode: 'review', projectId: prodProject },
+      ),
+    ).toThrow('aimed at another project');
+    expect(() =>
+      assertHealthy(
+        { mode: 'prod', projectId: DEV_PROJECT_ID, capabilities: caps },
+        { mode: 'prod', projectId: DEV_PROJECT_ID },
+      ),
+    ).toThrow('aimed at the dev project');
+  });
+
+  it('keeps production and dev deploys on separate workflows and identities', () => {
+    const prod = readFileSync('.github/workflows/deploy-prod.yml', 'utf8');
+    const dev = readFileSync('.github/workflows/deploy-dev.yml', 'utf8');
+    for (const workflow of [prod, dev]) {
+      expect(workflow).not.toContain('credentials_json');
+      expect(workflow).not.toContain('PROD_GCP_SA_KEY');
+      expect(workflow).not.toContain('FIREBASE_SERVICE_ACCOUNT');
+      expect(workflow).not.toContain('github-hosting-preview');
+      expect(workflow).not.toContain('githubHostingPreviewDomains');
+      expect(workflow).not.toContain('firebaseauth.configs.update');
+      expect(workflow).toContain('google-github-actions/auth@');
+      expect(workflow).toContain('workload_identity_provider:');
+      expect(workflow).toContain('--no-traffic --tag=candidate');
+      expect(workflow).toContain('update-traffic');
+      expect(workflow).toContain('id-token: write');
+    }
+    expect(prod).toContain('branches: [main]');
+    expect(prod).toContain('environment: production');
+    expect(prod).toContain('--target prod');
+    expect(prod).toContain('refs/heads/main');
+    expect(prod).toContain('Refusing to point production Hosting at the dev API');
+    expect(prod).not.toContain('npm run build:review');
+    expect(prod).not.toContain('--target dev');
+    expect(dev).toContain('branches: [dev]');
+    expect(dev).toContain('environment: development');
+    expect(dev).toContain('--target dev');
+    expect(dev).toContain('refs/heads/dev');
+    expect(dev).toContain(DEV_API_ORIGIN);
+    expect(dev).toContain(DEV_PROJECT_ID);
+    expect(dev).not.toContain(prodProject);
+    expect(dev).not.toContain('config/prod-api.yaml');
+  });
+
   it('reads a missing --project from the environment instead of the next flag', () => {
     const fromEnv = runGuard(['--target', 'review'], { GCLOUD_PROJECT: DEV_PROJECT_ID });
     expect(fromEnv.status).toBe(0);
@@ -203,7 +382,15 @@ describe('production target', () => {
 
 function runGuard(args: string[], env: Record<string, string | undefined> = {}) {
   const childEnv = { ...process.env };
-  for (const key of ['GCLOUD_PROJECT', 'PROJECT_ID', 'GOOGLE_CLOUD_PROJECT', 'CONFIRM_PROD'])
+  for (const key of [
+    'GCLOUD_PROJECT',
+    'PROJECT_ID',
+    'GOOGLE_CLOUD_PROJECT',
+    'CONFIRM_PROD',
+    'GITHUB_REF',
+    'GITHUB_OUTPUT',
+    'FIREBASE_PROJECT_ID',
+  ])
     delete childEnv[key];
   for (const [key, value] of Object.entries(env)) {
     if (value === undefined) delete childEnv[key];

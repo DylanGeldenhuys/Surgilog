@@ -1,12 +1,8 @@
 name: Deploy production
 
 on:
-  workflow_dispatch:
-    inputs:
-      confirm:
-        description: Type deploy-production to release signed-off main
-        required: true
-        type: string
+  push:
+    branches: [main]
 
 permissions:
   contents: read
@@ -21,25 +17,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: production
+    # id-token: the Workload Identity Federation exchange. contents: checkout.
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      # Defence in depth. workflow_dispatch runs this file from the selected ref,
-      # so another branch can remove this step. The production environment,
-      # limited to main with a required reviewer, is the real control.
+      # Defence in depth. A push runs this file from the pushed commit, so a
+      # bad commit can remove this step. The production environment, limited
+      # to main with a required reviewer, is the real control.
       - name: Require main
         env:
           DEPLOY_REF: ${{ github.ref }}
         run: |
           if [ "$DEPLOY_REF" != "refs/heads/main" ]; then
             echo "::error::Production deploys run only from signed-off main. This ref is ${DEPLOY_REF}. Nothing was deployed."
-            exit 1
-          fi
-
-      - name: Require the production confirmation
-        env:
-          CONFIRM: ${{ inputs.confirm }}
-        run: |
-          if [ "$CONFIRM" != "deploy-production" ]; then
-            echo "::error::Refusing production deploy. Re-run from main and set confirm to deploy-production. Nothing was deployed."
             exit 1
           fi
 
@@ -61,13 +52,13 @@ jobs:
       - name: Verify the production web build
         run: npm run build:prod
 
-      - name: Require production deploy secrets
+      - name: Require Workload Identity Federation settings
         env:
-          GCP_SA: ${{ secrets.PROD_GCP_SA_KEY }}
-          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
+          WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER || secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          WIF_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT || secrets.GCP_SERVICE_ACCOUNT }}
         run: |
-          if [ -z "$GCP_SA" ] || [ -z "$FIREBASE_SA" ]; then
-            echo "::error::Production deploy requires the production environment secrets PROD_GCP_SA_KEY and FIREBASE_SERVICE_ACCOUNT_PROD. Nothing was deployed. See docs/environments.md."
+          if [ -z "$WIF_PROVIDER" ] || [ -z "$WIF_SERVICE_ACCOUNT" ]; then
+            echo "::error::Production deploy needs GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT on the production environment, as variables or secrets. Nothing was deployed. See docs/ci.md."
             exit 1
           fi
 
@@ -75,10 +66,23 @@ jobs:
         id: target
         run: npx tsx scripts/guard-deploy.ts --target prod --confirm-prod --github-output
 
+      - name: Refuse the dev project
+        env:
+          PROJECT: ${{ steps.target.outputs.project_id }}
+          MODE: ${{ steps.target.outputs.health_mode }}
+          ENV_FILE: ${{ steps.target.outputs.env_file }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" = "theatre-tracker-2f2e5" ] || [ "$MODE" != "prod" ] || [ "$ENV_FILE" != "config/prod-api.yaml" ]; then
+            echo "::error::Refusing a production deploy aimed at the dev project or a dev config. Nothing was deployed."
+            exit 1
+          fi
+
       - name: Authenticate the deploy identity
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:
-          credentials_json: ${{ secrets.PROD_GCP_SA_KEY }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER || secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT || secrets.GCP_SERVICE_ACCOUNT }}
           project_id: ${{ steps.target.outputs.project_id }}
 
       - name: Set up gcloud
@@ -94,6 +98,10 @@ jobs:
           PROJECT: ${{ steps.target.outputs.project_id }}
         run: |
           set -euo pipefail
+          if [ "$PROJECT" = "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a production deploy aimed at the dev project. Nothing was deployed."
+            exit 1
+          fi
           if describe_out="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format='value(metadata.name)' --quiet 2>&1)"; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
@@ -116,15 +124,24 @@ jobs:
           RUNTIME_SA: ${{ steps.target.outputs.runtime_service_account }}
           BUILD_SA: ${{ steps.target.outputs.build_service_account }}
           PROJECT: ${{ steps.target.outputs.project_id }}
+          ENV_FILE: ${{ steps.target.outputs.env_file }}
           EXISTS: ${{ steps.service.outputs.exists }}
         run: |
           set -euo pipefail
+          if [ "$PROJECT" = "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a production deploy aimed at the dev project. Nothing was deployed."
+            exit 1
+          fi
+          case "$ENV_FILE" in
+            config/prod-api.yaml) ;;
+            *) echo "::error::Production deploys only config/prod-api.yaml. Nothing was deployed."; exit 1 ;;
+          esac
           deploy_args=(
             --source=.
             --region="${REGION}"
             --service-account="${RUNTIME_SA}"
             --build-service-account="${BUILD_SA}"
-            --env-vars-file=config/prod-api.yaml
+            --env-vars-file="${ENV_FILE}"
             --cpu=1
             --memory=512Mi
             --min-instances=0
@@ -147,65 +164,25 @@ jobs:
           REGION: ${{ steps.target.outputs.region }}
           PROJECT: ${{ steps.target.outputs.project_id }}
           EXISTS: ${{ steps.service.outputs.exists }}
+          EXPECTED_MODE: ${{ steps.target.outputs.health_mode }}
         run: |
           set -euo pipefail
+          if [ "$EXISTS" = "true" ]; then
+            unchanged="Traffic was not changed."
+          else
+            unchanged="The first revision is already serving."
+          fi
+          if [ "$EXPECTED_MODE" != "prod" ] || [ "$PROJECT" = "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a production health check for this target. ${unchanged}"
+            exit 1
+          fi
           json="${RUNNER_TEMP:-/tmp}/candidate-service.json"
           gcloud run services describe "${SERVICE}" \
             --region="${REGION}" \
             --project="${PROJECT}" \
             --format=json > "$json"
           export SERVICE_JSON="$json"
-          node --input-type=module -e '
-            import { readFileSync } from "node:fs";
-            const service = JSON.parse(readFileSync(process.env.SERVICE_JSON, "utf8"));
-            const firstRun = process.env.EXISTS !== "true";
-            const traffic = service.status?.traffic ?? [];
-            const tagged = traffic.find((item) => item.tag === "candidate");
-            const raw = firstRun ? service.status?.url : tagged?.url;
-            let parsed;
-            try {
-              parsed = new URL(raw ?? "");
-            } catch {
-              parsed = null;
-            }
-            const hostOk = Boolean(
-              parsed &&
-                (firstRun
-                  ? !parsed.hostname.startsWith("candidate---")
-                  : parsed.hostname.startsWith("candidate---")) &&
-                parsed.hostname.endsWith(".run.app"),
-            );
-            const unchanged = firstRun
-              ? "The first revision is already serving."
-              : "Traffic was not changed.";
-            if (
-              !parsed ||
-              !hostOk ||
-              parsed.protocol !== "https:" ||
-              parsed.pathname !== "/" ||
-              parsed.search ||
-              parsed.username
-            ) {
-              console.error(`::error::The deployed revision has no Cloud Run URL to check. ${unchanged}`);
-              process.exit(1);
-            }
-            const response = await fetch(`${parsed.origin}/health`, { signal: AbortSignal.timeout(12000) });
-            if (!response.ok) {
-              console.error(`::error::Deployed /health returned ${response.status}. ${unchanged}`);
-              process.exit(1);
-            }
-            const health = await response.json();
-            const caps = Array.isArray(health.capabilities) ? health.capabilities : [];
-            if (
-              health.mode !== "prod" ||
-              health.projectId !== process.env.PROJECT ||
-              !caps.includes("admin-v1") ||
-              !caps.includes("theatre-register-v1")
-            ) {
-              console.error(`::error::Deployed /health is not the production API. ${unchanged}`);
-              process.exit(1);
-            }
-          '
+          npx tsx scripts/smoke-check-revision.ts
 
       - name: Shift traffic to the checked revision
         if: steps.service.outputs.exists == 'true'
@@ -215,6 +192,10 @@ jobs:
           PROJECT: ${{ steps.target.outputs.project_id }}
         run: |
           set -euo pipefail
+          if [ "$PROJECT" = "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a production deploy aimed at the dev project. Traffic was not changed."
+            exit 1
+          fi
           gcloud run services update-traffic "${SERVICE}" \
             --to-tags=candidate=100 \
             --region="${REGION}" \
@@ -229,10 +210,20 @@ jobs:
           PROJECT: ${{ steps.target.outputs.project_id }}
         run: |
           set -euo pipefail
+          if [ "$PROJECT" = "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a production deploy aimed at the dev project. Hosting was not deployed."
+            exit 1
+          fi
           url="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format='value(status.url)')"
           case "$url" in
             https://*.run.app) ;;
             *) echo "::error::Cloud Run did not return an HTTPS run.app origin. Hosting was not deployed."; exit 1 ;;
+          esac
+          case "$url" in
+            https://theatre-tracker-api-54783611706.africa-south1.run.app)
+              echo "::error::Refusing to point production Hosting at the dev API. Hosting was not deployed."
+              exit 1
+              ;;
           esac
           echo "url=${url}" >> "$GITHUB_OUTPUT"
 
@@ -245,12 +236,13 @@ jobs:
         run: npx tsx scripts/write-prod-firebase-json.ts --overwrite-firebase-json --confirm-prod
 
       - name: Deploy Hosting
-        uses: FirebaseExtended/action-hosting-deploy@500ac625ca2dd40cbd15f7659af953801858032a # v0.11.0
         env:
           CONFIRM_PROD: "yes"
-        with:
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
-          projectId: ${{ steps.target.outputs.project_id }}
-          channelId: live
-          firebaseToolsVersion: 15.32.1
-          disableComment: "true"
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" = "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a production deploy aimed at the dev project. Hosting was not deployed."
+            exit 1
+          fi
+          npx -y firebase-tools@15.32.1 deploy --only hosting --project "$PROJECT" --non-interactive
