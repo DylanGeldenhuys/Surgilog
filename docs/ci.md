@@ -117,7 +117,7 @@ Two workflows publish the web app and the API. Neither runs on a pull request. N
 
 Dev publishes the live site https://theatre-tracker-2f2e5.web.app and the existing API https://theatre-tracker-api-54783611706.africa-south1.run.app. The Cloud Run service stays `theatre-tracker-api` in `africa-south1`. The workflow stops if that API address would change. Production uses the project id in `config/prod.json`. While that file still says `"placeholder": true`, the production workflow stops before it deploys.
 
-Typecheck and unit tests run in a job that cannot mint a cloud token. The deploy job starts only after that job passes. It deploys the API, then Hosting. When the Cloud Run service already exists, the new revision is deployed with `--no-traffic --tag=candidate`, `/health` is checked up to five times so a cold start can answer, and traffic moves only after that check. The first deploy of a missing service has no previous revision to keep, so it serves immediately and the health check still has to pass before Hosting. A failed later check leaves the current traffic in place. After traffic moves, the job summary names the previous revision and the command that sends traffic back to it. Use that if Hosting then fails: the new API is already serving and the previous web app is still on the live site. Dev `/health` must report mode `review` and project `theatre-tracker-2f2e5`. Production `/health` must report mode `prod` and the production project. `scripts/guard-deploy.ts` refuses a dev run aimed at production and a production run aimed at dev. In GitHub Actions it also refuses a deploy when the ref is missing.
+Typecheck and unit tests run in a job that cannot mint a cloud token. The deploy job starts only after that job passes. It deploys the API, then Hosting. When the Cloud Run service already exists, the new revision is deployed with `--no-traffic --tag=candidate`, `/health` is checked up to five times so a cold start can answer, and traffic moves only after that check. The first deploy of a missing service has no previous revision to keep, so it serves immediately and the health check still has to pass before Hosting. A failed later check leaves the current traffic in place. Before it deploys, the job records the revision that has 100% of traffic. Split traffic stops the deploy before it starts, because the rollback step needs one revision at 100%. After traffic moves, the job summary names that previous revision and the command that sends traffic back to it. Use that if Hosting then fails: the new API is already serving and the previous web app is still on the live site. Dev `/health` must report mode `review` and project `theatre-tracker-2f2e5`. Production `/health` must report mode `prod` and the production project. `scripts/guard-deploy.ts` refuses a dev run aimed at production and a production run aimed at dev. In GitHub Actions it also refuses a deploy when the ref is missing.
 
 Authentication is keyless Workload Identity Federation through `google-github-actions/auth`. The workflow reads `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT` from the GitHub environment's variables, or from secrets of the same names. It does not contain those values. Do not create a JSON key for the deploy account. The preview account `github-hosting-preview` and the role `githubHostingPreviewDomains` stay on pull-request previews only. They include `firebaseauth.configs.update`. The deploy account must not have that permission, and neither the preview account nor that role may be granted on production.
 
@@ -127,7 +127,7 @@ Protect `dev` as well as `main`. The `development` environment has no required r
 
 ### Cloud Shell, once per project
 
-Run this in Cloud Shell as the project owner. It does not deploy the app and it does not write Firestore. If the pool or the deploy service account already exists, the script leaves it and continues. If the provider already exists, the script prints its condition and stops when that condition is not the one below. Do not delete the pool to recreate it. The deploy account is allowed to impersonate only from `repo:DylanGeldenhuys/Surgilog:environment:development` or `repo:DylanGeldenhuys/Surgilog:environment:production`, because these jobs set a GitHub environment and that is the token subject. The provider still requires the matching branch ref, the repository id `1403413866`, and the owner id `46447404`.
+Run this in Cloud Shell as the project owner. It does not deploy the app and it does not write Firestore. If the pool or the deploy service account already exists, the script leaves it and continues. If the provider already exists, the script prints its condition and its attribute mapping and stops when either one is not the value below. Do not delete the pool to recreate it. The deploy account is allowed to impersonate only from `repo:DylanGeldenhuys/Surgilog:environment:development` or `repo:DylanGeldenhuys/Surgilog:environment:production`, because these jobs set a GitHub environment and that is the token subject. The provider still requires the matching branch ref, the repository id `1403413866`, and the owner id `46447404`.
 
 Dev already has billing. For production, link a billing account and move `surgilog-prod` to the Blaze plan before these commands. Cloud Run will not build without it. Create the production project first; this script does not create a project. Production also needs the runtime account `surgilog-api` and the build account `surgilog-build` from [environments](environments.md) before the `actAs` commands below.
 
@@ -162,24 +162,33 @@ gcloud iam workload-identity-pools create github-surgilog \
 REPO_ID=1403413866
 OWNER_ID=46447404
 EXPECTED_CONDITION="assertion.repository=='DylanGeldenhuys/Surgilog' && assertion.repository_id=='${REPO_ID}' && assertion.repository_owner_id=='${OWNER_ID}' && assertion.ref=='refs/heads/${BRANCH}' && assertion.environment=='${ENV_NAME}'"
+EXPECTED_MAPPING="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.repository_owner_id=assertion.repository_owner_id,attribute.ref=assertion.ref,attribute.environment=assertion.environment"
 gcloud iam workload-identity-pools providers create-oidc github \
   --project="${PROJECT_ID}" \
   --location=global \
   --workload-identity-pool=github-surgilog \
   --display-name="SurgiLog GitHub ${BRANCH}" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.repository_owner_id=assertion.repository_owner_id,attribute.ref=assertion.ref,attribute.environment=assertion.environment" \
+  --attribute-mapping="${EXPECTED_MAPPING}" \
   --attribute-condition="${EXPECTED_CONDITION}" \
-  --issuer-uri="https://token.actions.githubusercontent.com" || echo "Provider github already exists; checking its condition."
+  --issuer-uri="https://token.actions.githubusercontent.com" || echo "Provider github already exists; checking its condition and attribute mapping."
 ACTUAL_CONDITION="$(gcloud iam workload-identity-pools providers describe github \
   --project="${PROJECT_ID}" \
   --location=global \
   --workload-identity-pool=github-surgilog \
   --format='value(attributeCondition)')"
-if [ "${ACTUAL_CONDITION}" != "${EXPECTED_CONDITION}" ]; then
-  echo "The github provider condition does not match this script."
-  echo "Expected: ${EXPECTED_CONDITION}"
-  echo "Actual:   ${ACTUAL_CONDITION}"
-  echo "A different condition can be weaker. This script will not leave it in place. Update or delete the provider, then run this script again."
+ACTUAL_MAPPING="$(gcloud iam workload-identity-pools providers describe github \
+  --project="${PROJECT_ID}" \
+  --location=global \
+  --workload-identity-pool=github-surgilog \
+  --format='json(attributeMapping)' | python3 -c 'import json,sys; data=json.load(sys.stdin).get("attributeMapping", {}); print(",".join(f"{k}={v}" for k,v in sorted(data.items())))')"
+EXPECTED_MAPPING_SORTED="$(printf '%s' "${EXPECTED_MAPPING}" | python3 -c 'import sys; print(",".join(sorted(p for p in sys.stdin.read().strip().split(",") if p)))')"
+if [ "${ACTUAL_CONDITION}" != "${EXPECTED_CONDITION}" ] || [ "${ACTUAL_MAPPING}" != "${EXPECTED_MAPPING_SORTED}" ]; then
+  echo "The github provider does not match this script."
+  echo "Expected condition: ${EXPECTED_CONDITION}"
+  echo "Actual condition:   ${ACTUAL_CONDITION}"
+  echo "Expected mapping: ${EXPECTED_MAPPING_SORTED}"
+  echo "Actual mapping:   ${ACTUAL_MAPPING}"
+  echo "A different condition or mapping can be weaker. This script will not leave it in place. Update or delete the provider, then run this script again."
   exit 1
 fi
 
@@ -259,17 +268,13 @@ if ! gcloud storage buckets describe "gs://${SOURCE_BUCKET}" --project="${PROJEC
     --uniform-bucket-level-access \
     --project="${PROJECT_ID}"
 fi
-echo "Granting object admin only on Cloud Run and Cloud Build buckets, not on the whole project."
-gcloud storage buckets list --project="${PROJECT_ID}" --format='value(name)' | while read -r bucket; do
-  name="${bucket#gs://}"
-  case "$name" in
-    run-sources-*"africa-south1"|*"_cloudbuild")
-      gcloud storage buckets add-iam-policy-binding "gs://${name}" \
-        --member="serviceAccount:${DEPLOY_SA}" \
-        --role="roles/storage.objectAdmin"
-      ;;
-  esac
-done
+# The deploy account uploads source to this bucket. The Cloud Build bucket is
+# used by the build service account, which already has roles/run.builder, so
+# this account does not get access to it.
+echo "Granting object admin on ${SOURCE_BUCKET} only."
+gcloud storage buckets add-iam-policy-binding "gs://${SOURCE_BUCKET}" \
+  --member="serviceAccount:${DEPLOY_SA}" \
+  --role="roles/storage.objectAdmin"
 
 PROVIDER="$(gcloud iam workload-identity-pools providers describe github \
   --project="${PROJECT_ID}" \
@@ -314,24 +319,33 @@ gcloud iam workload-identity-pools create github-surgilog \
 REPO_ID=1403413866
 OWNER_ID=46447404
 EXPECTED_CONDITION="assertion.repository=='DylanGeldenhuys/Surgilog' && assertion.repository_id=='${REPO_ID}' && assertion.repository_owner_id=='${OWNER_ID}' && assertion.ref=='refs/heads/${BRANCH}' && assertion.environment=='${ENV_NAME}'"
+EXPECTED_MAPPING="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.repository_owner_id=assertion.repository_owner_id,attribute.ref=assertion.ref,attribute.environment=assertion.environment"
 gcloud iam workload-identity-pools providers create-oidc github \
   --project="${PROJECT_ID}" \
   --location=global \
   --workload-identity-pool=github-surgilog \
   --display-name="SurgiLog GitHub ${BRANCH}" \
-  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id,attribute.repository_owner_id=assertion.repository_owner_id,attribute.ref=assertion.ref,attribute.environment=assertion.environment" \
+  --attribute-mapping="${EXPECTED_MAPPING}" \
   --attribute-condition="${EXPECTED_CONDITION}" \
-  --issuer-uri="https://token.actions.githubusercontent.com" || echo "Provider github already exists; checking its condition."
+  --issuer-uri="https://token.actions.githubusercontent.com" || echo "Provider github already exists; checking its condition and attribute mapping."
 ACTUAL_CONDITION="$(gcloud iam workload-identity-pools providers describe github \
   --project="${PROJECT_ID}" \
   --location=global \
   --workload-identity-pool=github-surgilog \
   --format='value(attributeCondition)')"
-if [ "${ACTUAL_CONDITION}" != "${EXPECTED_CONDITION}" ]; then
-  echo "The github provider condition does not match this script."
-  echo "Expected: ${EXPECTED_CONDITION}"
-  echo "Actual:   ${ACTUAL_CONDITION}"
-  echo "A different condition can be weaker. This script will not leave it in place. Update or delete the provider, then run this script again."
+ACTUAL_MAPPING="$(gcloud iam workload-identity-pools providers describe github \
+  --project="${PROJECT_ID}" \
+  --location=global \
+  --workload-identity-pool=github-surgilog \
+  --format='json(attributeMapping)' | python3 -c 'import json,sys; data=json.load(sys.stdin).get("attributeMapping", {}); print(",".join(f"{k}={v}" for k,v in sorted(data.items())))')"
+EXPECTED_MAPPING_SORTED="$(printf '%s' "${EXPECTED_MAPPING}" | python3 -c 'import sys; print(",".join(sorted(p for p in sys.stdin.read().strip().split(",") if p)))')"
+if [ "${ACTUAL_CONDITION}" != "${EXPECTED_CONDITION}" ] || [ "${ACTUAL_MAPPING}" != "${EXPECTED_MAPPING_SORTED}" ]; then
+  echo "The github provider does not match this script."
+  echo "Expected condition: ${EXPECTED_CONDITION}"
+  echo "Actual condition:   ${ACTUAL_CONDITION}"
+  echo "Expected mapping: ${EXPECTED_MAPPING_SORTED}"
+  echo "Actual mapping:   ${ACTUAL_MAPPING}"
+  echo "A different condition or mapping can be weaker. This script will not leave it in place. Update or delete the provider, then run this script again."
   exit 1
 fi
 
@@ -411,17 +425,13 @@ if ! gcloud storage buckets describe "gs://${SOURCE_BUCKET}" --project="${PROJEC
     --uniform-bucket-level-access \
     --project="${PROJECT_ID}"
 fi
-echo "Granting object admin only on Cloud Run and Cloud Build buckets, not on the whole project."
-gcloud storage buckets list --project="${PROJECT_ID}" --format='value(name)' | while read -r bucket; do
-  name="${bucket#gs://}"
-  case "$name" in
-    run-sources-*"africa-south1"|*"_cloudbuild")
-      gcloud storage buckets add-iam-policy-binding "gs://${name}" \
-        --member="serviceAccount:${DEPLOY_SA}" \
-        --role="roles/storage.objectAdmin"
-      ;;
-  esac
-done
+# The deploy account uploads source to this bucket. The Cloud Build bucket is
+# used by the build service account, which already has roles/run.builder, so
+# this account does not get access to it.
+echo "Granting object admin on ${SOURCE_BUCKET} only."
+gcloud storage buckets add-iam-policy-binding "gs://${SOURCE_BUCKET}" \
+  --member="serviceAccount:${DEPLOY_SA}" \
+  --role="roles/storage.objectAdmin"
 
 PROVIDER="$(gcloud iam workload-identity-pools providers describe github \
   --project="${PROJECT_ID}" \
@@ -436,7 +446,7 @@ echo "GCP_WORKLOAD_IDENTITY_PROVIDER=${PROVIDER}"
 echo "GCP_SERVICE_ACCOUNT=${DEPLOY_SA}"
 ```
 
-Do not grant `roles/editor`, `roles/firebase.admin`, `roles/firebaseauth.admin`, `roles/datastore.user`, or `firebaseauth.configs.update`. Do not grant `github-hosting-preview` or `githubHostingPreviewDomains`. Do not run `gcloud iam service-accounts keys create`. The script creates `run-sources-PROJECT_ID-africa-south1` as the project owner and then grants the deploy account object admin on that bucket only. Do not grant project Storage Admin. If a later deploy names a different source bucket, grant object admin on that bucket only.
+Do not grant `roles/editor`, `roles/firebase.admin`, `roles/firebaseauth.admin`, `roles/datastore.user`, or `firebaseauth.configs.update`. Do not grant `github-hosting-preview` or `githubHostingPreviewDomains`. Do not run `gcloud iam service-accounts keys create`. The script creates `run-sources-PROJECT_ID-africa-south1` as the project owner and then grants the deploy account object admin on that one bucket. `gcloud run deploy --source` uploads the source archive there. The Cloud Build bucket is used by the build service account, which already has `roles/run.builder`, so the deploy account is not granted access to it. Do not grant project Storage Admin. If a later deploy names a different source bucket, grant object admin on that bucket only.
 
 ### Remove the temporary Cloud Run admin grant
 

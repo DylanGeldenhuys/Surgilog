@@ -371,7 +371,19 @@ describe('production target', () => {
         },
       }),
     ).toBe('surgilog-api-00001-old');
-    expect(() => servingRevisionName({ status: { traffic: [] } })).toThrow('missing');
+    expect(() => servingRevisionName({ status: { traffic: [] } })).toThrow(
+      'Split traffic stops the deploy',
+    );
+    expect(() =>
+      servingRevisionName({
+        status: {
+          traffic: [
+            { percent: 50, revisionName: 'surgilog-api-00001-old' },
+            { percent: 50, revisionName: 'surgilog-api-00002-new' },
+          ],
+        },
+      }),
+    ).toThrow('Split traffic stops the deploy');
   });
 
   it('retries a cold health check before failing the release', async () => {
@@ -421,6 +433,9 @@ describe('production target', () => {
       expect(workflow).not.toContain('firebase-tools@');
       const checkJob = workflow.slice(0, workflow.indexOf('\n  deploy:\n'));
       expect(checkJob).not.toContain('id-token:');
+      expect(checkJob).toContain('npm ci');
+      expect(checkJob).not.toContain('--ignore-scripts');
+      expect(workflow).toContain('npm ci --ignore-scripts');
     }
     expect(prod).toContain('branches: [main]');
     expect(prod).toContain('environment: production');
@@ -448,7 +463,10 @@ describe('production target', () => {
     expect(guide).toContain('1403413866');
     expect(guide).toContain('46447404');
     expect(guide).toContain('run-sources-${PROJECT_ID}-africa-south1');
-    expect(guide).toContain('The github provider condition does not match this script.');
+    expect(guide).toContain('The github provider does not match this script.');
+    expect(guide).toContain('attributeMapping');
+    expect(guide).toContain('Split traffic stops');
+    expect(guide).not.toContain('*_cloudbuild');
     expect(guide).toContain('Remove the temporary Cloud Run admin grant');
   });
 

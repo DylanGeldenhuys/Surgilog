@@ -55,7 +55,9 @@ export function servingRevisionName(service: DeployedService) {
   const traffic = service.status?.traffic ?? [];
   const serving = traffic.find((item) => item.percent === 100);
   if (!serving?.revisionName || !REVISION_NAME.test(serving.revisionName))
-    throw new Error('The serving revision name is missing.');
+    throw new Error(
+      'The serving revision must be one revision at 100% traffic. Split traffic stops the deploy before it starts.',
+    );
   return serving.revisionName;
 }
 
