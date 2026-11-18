@@ -273,7 +273,7 @@ describe('production target', () => {
     );
     expect(() => assertWorkflowRef('prod', 'refs/heads/dev')).toThrow('refs/heads/main');
     expect(() => assertWorkflowRef('dev', 'refs/heads/main')).toThrow('refs/heads/dev');
-    expect(() => assertWorkflowRef('prod', undefined)).not.toThrow();
+    expect(() => assertWorkflowRef('prod', '')).not.toThrow();
 
     const caps = ['admin-v1', 'theatre-register-v1'];
     const candidate = {
