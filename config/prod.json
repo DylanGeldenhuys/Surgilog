@@ -1,6 +1,6 @@
 {
-  "notice": "PLACEHOLDER. The production Firebase project id is surgilog-production (display name Surgilog Production). The web SDK key in this file is still a placeholder. Set placeholder to false only after the real web config replaces the placeholder key. Do not put secrets in this file.",
-  "placeholder": true,
+  "notice": "Public Firebase web client config for surgilog-production (display name Surgilog Production). The API URL stays the placeholder until the first Cloud Run deploy supplies the real origin. Do not put secrets in this file.",
+  "placeholder": false,
   "projectId": "surgilog-production",
   "region": "africa-south1",
   "service": "surgilog-api",
@@ -9,11 +9,11 @@
   "apiUrlPlaceholder": "https://surgilog-api-placeholder.africa-south1.run.app",
   "fictionalSeeding": false,
   "firebase": {
-    "apiKey": "placeholder-not-a-real-key",
+    "apiKey": "AIzaSyCwy0VyUbQ_dJ-hXC0mSaCoY1VaQ8Po_rw",
     "authDomain": "surgilog-production.firebaseapp.com",
     "projectId": "surgilog-production",
     "storageBucket": "surgilog-production.firebasestorage.app",
-    "messagingSenderId": "000000000000",
-    "appId": "1:000000000000:web:placeholder"
+    "messagingSenderId": "396531693188",
+    "appId": "1:396531693188:web:833d913acd71e93aeaf4d1"
   }
 }

@@ -38,10 +38,10 @@ const ready = {
 };
 
 describe('production target', () => {
-  it('keeps the placeholder project id in the alias and config, with copies locked', () => {
+  it('keeps the production web config and the placeholder API URL, with copies locked', () => {
     const target = loadProdTarget();
     const review = JSON.parse(readFileSync('config/review.json', 'utf8'));
-    expect(target.placeholder).toBe(true);
+    expect(target.placeholder).toBe(false);
     expect(target.projectId).toBe(prodProject);
     expect(target.projectId).not.toBe(DEV_PROJECT_ID);
     expect(target.region).toBe('africa-south1');
@@ -50,7 +50,14 @@ describe('production target', () => {
     expect(target.env.FICTIONAL_SEEDING).toBe('false');
     expect(target.env.APP_ENV).toBe('prod');
     expect(target.apiUrlPlaceholder).toBe('https://surgilog-api-placeholder.africa-south1.run.app');
-    expect(target.firebase.apiKey.startsWith('placeholder')).toBe(true);
+    expect(target.firebase).toMatchObject({
+      apiKey: 'AIzaSyCwy0VyUbQ_dJ-hXC0mSaCoY1VaQ8Po_rw',
+      authDomain: 'surgilog-production.firebaseapp.com',
+      projectId: prodProject,
+      storageBucket: 'surgilog-production.firebasestorage.app',
+      messagingSenderId: '396531693188',
+      appId: '1:396531693188:web:833d913acd71e93aeaf4d1',
+    });
     expect(JSON.stringify(target)).not.toContain(review.firebase.apiKey);
     expect(JSON.stringify(target.env)).not.toMatch(/SECRET|PASSWORD|TOKEN|PRIVATE_KEY/);
     expect(readFileSync('config/prod-api.yaml', 'utf8')).not.toContain('AIza');
@@ -193,10 +200,11 @@ describe('production target', () => {
     expect(() => parseFlatYaml('API_TOKEN: secret\n')).toThrow('secrets');
   });
 
-  it('refuses a production deploy while the project id is still the placeholder', () => {
+  it('accepts a confirmed production target once the web config is real', () => {
     const result = runGuard(['--target', 'prod', '--confirm-prod']);
-    expect(result.status).not.toBe(0);
-    expect(`${result.stdout}\n${result.stderr}`).toContain('placeholder');
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(`Production target ${prodProject}`);
+    expect(result.stdout).toContain('Nothing has been deployed');
     const review = runGuard(['--target', 'review', '--project', DEV_PROJECT_ID]);
     expect(review.status).toBe(0);
   });
