@@ -108,7 +108,7 @@ CORS is enforced by the Cloud Run API. `config/review-api.yaml` still lists only
 
 ## Branch deploys
 
-Two workflows publish the web app and the API. Neither runs on a pull request. Neither deploys Firestore rules, indexes, or Auth providers, and neither writes patient or review records.
+Two workflows publish the web app, the API, and the Firestore security rules. Neither runs on a pull request. Neither deploys Firestore indexes or Auth providers, and neither writes patient or review records.
 
 | Push | Workflow | GitHub environment | GCP project |
 | --- | --- | --- | --- |
@@ -117,7 +117,7 @@ Two workflows publish the web app and the API. Neither runs on a pull request. N
 
 Dev publishes the live site https://theatre-tracker-2f2e5.web.app and the existing API https://theatre-tracker-api-54783611706.africa-south1.run.app. The Cloud Run service stays `theatre-tracker-api` in `africa-south1`. The workflow stops if that API address would change. Production uses the project id in `config/prod.json`. While that file still says `"placeholder": true`, the production workflow stops before it deploys.
 
-Typecheck and unit tests run in a job that cannot mint a cloud token. The deploy job starts only after that job passes. It deploys the API, then Hosting. When the Cloud Run service already exists, the new revision is deployed with `--no-traffic --tag=candidate`, `/health` is checked up to five times so a cold start can answer, and traffic moves only after that check. The first deploy of a missing service has no previous revision to keep, so it serves immediately and the health check still has to pass before Hosting. A failed later check leaves the current traffic in place. Before it deploys, the job records the revision that has 100% of traffic. Split traffic stops the deploy before it starts, because the rollback step needs one revision at 100%. After traffic moves, the job summary names that previous revision and the command that sends traffic back to it. Use that if Hosting then fails: the new API is already serving and the previous web app is still on the live site. Dev `/health` must report mode `review` and project `theatre-tracker-2f2e5`. Production `/health` must report mode `prod` and the production project. `scripts/guard-deploy.ts` refuses a dev run aimed at production and a production run aimed at dev. In GitHub Actions it also refuses a deploy when the ref is missing.
+Typecheck and unit tests run in a job that cannot mint a cloud token. The deploy job starts only after that job passes. It deploys the API, then Hosting, then Firestore security rules only. Indexes stay out of this job. When the Cloud Run service already exists, the new revision is deployed with `--no-traffic --tag=candidate`, `/health` is checked up to five times so a cold start can answer, and traffic moves only after that check. The first deploy of a missing service has no previous revision to keep, so it serves immediately and the health check still has to pass before Hosting. A failed later check leaves the current traffic in place. Before it deploys, the job records the revision that has 100% of traffic. Split traffic stops the deploy before it starts, because the rollback step needs one revision at 100%. After traffic moves, the job summary names that previous revision and the command that sends traffic back to it. Use that if Hosting then fails: the new API is already serving and the previous web app is still on the live site. Dev `/health` must report mode `review` and project `theatre-tracker-2f2e5`. Production `/health` must report mode `prod` and the production project. `scripts/guard-deploy.ts` refuses a dev run aimed at production and a production run aimed at dev. In GitHub Actions it also refuses a deploy when the ref is missing.
 
 Authentication is keyless Workload Identity Federation through `google-github-actions/auth`. The workflow reads `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT` from the GitHub environment's variables, or from secrets of the same names. It does not contain those values. Do not create a JSON key for the deploy account. The preview account `github-hosting-preview` and the role `githubHostingPreviewDomains` stay on pull-request previews only. They include `firebaseauth.configs.update`. The deploy account must not have that permission, and neither the preview account nor that role may be granted on production.
 
@@ -245,6 +245,10 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
 gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${DEPLOY_SA}" \
   --role="roles/serviceusage.apiKeysViewer" \
+  --condition=None
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${DEPLOY_SA}" \
+  --role="roles/firebaserules.admin" \
   --condition=None
 
 if ! gcloud artifacts repositories describe cloud-run-source-deploy --location=africa-south1 --project="${PROJECT_ID}" >/dev/null 2>&1; then
@@ -403,6 +407,10 @@ gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
   --member="serviceAccount:${DEPLOY_SA}" \
   --role="roles/serviceusage.apiKeysViewer" \
   --condition=None
+gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
+  --member="serviceAccount:${DEPLOY_SA}" \
+  --role="roles/firebaserules.admin" \
+  --condition=None
 
 if ! gcloud artifacts repositories describe cloud-run-source-deploy --location=africa-south1 --project="${PROJECT_ID}" >/dev/null 2>&1; then
   gcloud artifacts repositories create cloud-run-source-deploy \
@@ -447,6 +455,17 @@ echo "GCP_SERVICE_ACCOUNT=${DEPLOY_SA}"
 ```
 
 Do not grant `roles/editor`, `roles/firebase.admin`, `roles/firebaseauth.admin`, `roles/datastore.user`, or `firebaseauth.configs.update`. Do not grant `github-hosting-preview` or `githubHostingPreviewDomains`. Do not run `gcloud iam service-accounts keys create`. The script creates `run-sources-PROJECT_ID-africa-south1` as the project owner and then grants the deploy account object admin on that one bucket. For production that bucket is `run-sources-surgilog-production-africa-south1`. `gcloud run deploy --source` uploads the source archive there. The Cloud Build bucket is used by the build service account, which already has `roles/run.builder`, so the deploy account is not granted access to it. Do not grant project Storage Admin. If a later deploy names a different source bucket, grant object admin on that bucket only.
+
+### Rules role if the deploy account already exists
+
+Run this once per project that was set up before rules deploys were added. It adds `roles/firebaserules.admin` and does not change the other roles. Use `theatre-tracker-2f2e5` for dev and `surgilog-production` for production.
+
+```sh
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member="serviceAccount:github-deploy@PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/firebaserules.admin" \
+  --condition=None
+```
 
 ### Remove the temporary Cloud Run admin grant
 

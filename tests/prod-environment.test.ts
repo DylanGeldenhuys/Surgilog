@@ -430,6 +430,10 @@ describe('production target', () => {
       expect(workflow).toContain('needs: check');
       expect(workflow).toContain('## API rollback');
       expect(workflow).toContain('npx firebase-tools deploy');
+      expect(workflow).toContain('--only firestore:rules');
+      expect(workflow).toContain('firebase/firestore.rules');
+      expect(workflow).toContain('PROJECT: ${{ steps.target.outputs.project_id }}');
+      expect(workflow).not.toContain('firestore:indexes');
       expect(workflow).not.toContain('firebase-tools@');
       const checkJob = workflow.slice(0, workflow.indexOf('\n  deploy:\n'));
       expect(checkJob).not.toContain('id-token:');
@@ -439,6 +443,7 @@ describe('production target', () => {
     }
     expect(prod).toContain('branches: [main]');
     expect(prod).toContain('environment: production');
+    expect(prod).toContain('"$PROJECT" != "surgilog-production"');
     expect(prod).toContain('--target prod');
     expect(prod).toContain('refs/heads/main');
     expect(prod).toContain('Refusing to point production Hosting at the dev API');
@@ -446,6 +451,7 @@ describe('production target', () => {
     expect(prod).not.toContain('--target dev');
     expect(dev).toContain('branches: [dev]');
     expect(dev).toContain('environment: development');
+    expect(dev).toContain('"$PROJECT" != "theatre-tracker-2f2e5"');
     expect(dev).toContain('--target dev');
     expect(dev).toContain('refs/heads/dev');
     expect(dev).toContain(DEV_API_ORIGIN);
@@ -468,6 +474,7 @@ describe('production target', () => {
     expect(guide).toContain('Split traffic stops');
     expect(guide).not.toContain('*_cloudbuild');
     expect(guide).toContain('Remove the temporary Cloud Run admin grant');
+    expect(guide).toContain('roles/firebaserules.admin');
   });
 
   it('reads a missing --project from the environment instead of the next flag', () => {

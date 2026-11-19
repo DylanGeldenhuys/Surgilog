@@ -297,3 +297,15 @@ jobs:
             exit 1
           fi
           npx firebase-tools deploy --only hosting --project "$PROJECT" --non-interactive
+
+      - name: Deploy Firestore rules
+        env:
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" != "surgilog-production" ]; then
+            echo "::error::Refusing a production rules deploy aimed at ${PROJECT}. Rules were not deployed."
+            exit 1
+          fi
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync("firebase.rules.json", JSON.stringify({ firestore: { rules: "firebase/firestore.rules" } }, null, 2) + "\n");'
+          npx firebase-tools deploy --only firestore:rules --config firebase.rules.json --project "$PROJECT" --non-interactive

@@ -4,7 +4,7 @@ Updated: 19 November 2026, Africa/Johannesburg.
 
 ## Production project id — 19 November 2026
 
-Dylan replaced the production project. The id is **surgilog-production**, display name **Surgilog Production**. The dev project id stays `theatre-tracker-2f2e5`; its display name is **Surgilog Development**. The web SDK key in `config/prod.json` is still a placeholder, so a production deploy still stops. Nothing was deployed.
+Dylan replaced the production project. The id is **surgilog-production**, display name **Surgilog Production**. The dev project id stays `theatre-tracker-2f2e5`; its display name is **Surgilog Development**. The web SDK key in `config/prod.json` is still a placeholder, so a production deploy still stops. After Hosting, both deploy workflows publish Firestore security rules only. Indexes are not part of that step. Nothing was deployed.
 
 
 
