@@ -4,7 +4,7 @@ Updated 19 November 2026. The production project id is decided. Nothing in this 
 
 `theatre-tracker-2f2e5` is **dev**. Its Firebase display name is **Surgilog Development**. The project id is unchanged. It is the fictional-data review site already described in [deployment](deployment.md) and [review infrastructure](review-infrastructure.md). Firebase aliases `dev` and `review` both select it. The default alias stays `demo-theatre-tracker` so a bare Firebase command remains on the local emulators.
 
-**Production** is Firebase/GCP project `surgilog-production`. Its display name is **Surgilog Production**, on Dylan's personal Google account. The web SDK key in `config/prod.json` is still a placeholder, so a production deploy still stops until that key is replaced and `placeholder` is set to `false`.
+**Production** is Firebase/GCP project `surgilog-production`. Its display name is **Surgilog Production**. The web SDK key in `config/prod.json` is still a placeholder, so a production deploy still stops until that key is replaced and `placeholder` is set to `false`.
 
 ## Where the project id is set
 
@@ -48,7 +48,7 @@ If `GCP_WORKLOAD_IDENTITY_PROVIDER` or `GCP_SERVICE_ACCOUNT` is missing from the
 
 The owner does this once, in a project they create. This repository does not create the project and these commands are not part of the scaffolding change.
 
-1. The Firebase/GCP project is `surgilog-production`, display name Surgilog Production, on Dylan's personal Google account. Do not create a second project. Link billing and the Blaze plan if that is not done yet.
+1. The Firebase/GCP project is `surgilog-production`, display name Surgilog Production. Do not create a second project. Link billing and the Blaze plan if that is not done yet.
 2. Link billing and move the project to the **Blaze** plan. Cloud Run and Firestore need it. Set a budget alert in Billing → Budgets & alerts for an amount the owner chooses. An alert is not a spending cap.
 3. Enable the same APIs the dev project uses for the API build: `run.googleapis.com`, `cloudbuild.googleapis.com`, `artifactregistry.googleapis.com`, and `iam.googleapis.com`. Create the Firebase resources below in the Firebase console, which enables Firestore, Auth, and Hosting on the project.
 4. Create the Firestore database in **Standard** edition, location **`africa-south1` (Johannesburg)**. The location cannot be changed later. Use the `(default)` database. Leave rules and indexes for the cutover deploy below. The rules deny all direct client access. The API uses the Admin SDK.

@@ -1,5 +1,5 @@
 {
-  "notice": "PLACEHOLDER. The production Firebase project id is surgilog-production (display name Surgilog Production, Dylan's personal Google account). The web SDK key in this file is still a placeholder. Set placeholder to false only after the real web config replaces the placeholder key. Do not put secrets in this file.",
+  "notice": "PLACEHOLDER. The production Firebase project id is surgilog-production (display name Surgilog Production). The web SDK key in this file is still a placeholder. Set placeholder to false only after the real web config replaces the placeholder key. Do not put secrets in this file.",
   "placeholder": true,
   "projectId": "surgilog-production",
   "region": "africa-south1",

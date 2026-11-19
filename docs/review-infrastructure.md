@@ -26,37 +26,37 @@ The leaf help for `services enable`, `iam service-accounts create`, `projects ad
 The selected owner signed in before execution. For a future deployment, renew this local Google Cloud login if needed:
 
 ```sh
-gcloud auth login dylangeldenhuys1@gmail.com --quiet
+gcloud auth login --quiet
 ```
 
 The following approved commands were run separately:
 
 ```sh
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com iam.googleapis.com --project=theatre-tracker-2f2e5 --account=dylangeldenhuys1@gmail.com --quiet
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com iam.googleapis.com --project=theatre-tracker-2f2e5 --quiet
 ```
 
 ```sh
-gcloud iam service-accounts create theatre-tracker-api --display-name="Theatre Tracker review API" --project=theatre-tracker-2f2e5 --account=dylangeldenhuys1@gmail.com --quiet
+gcloud iam service-accounts create theatre-tracker-api --display-name="Theatre Tracker review API" --project=theatre-tracker-2f2e5 --quiet
 ```
 
 ```sh
-gcloud iam service-accounts create theatre-tracker-build --display-name="Theatre Tracker review builds" --project=theatre-tracker-2f2e5 --account=dylangeldenhuys1@gmail.com --quiet
+gcloud iam service-accounts create theatre-tracker-build --display-name="Theatre Tracker review builds" --project=theatre-tracker-2f2e5 --quiet
 ```
 
 ```sh
-gcloud projects add-iam-policy-binding theatre-tracker-2f2e5 --member=serviceAccount:theatre-tracker-api@theatre-tracker-2f2e5.iam.gserviceaccount.com --role=roles/datastore.user --project=theatre-tracker-2f2e5 --account=dylangeldenhuys1@gmail.com --quiet
+gcloud projects add-iam-policy-binding theatre-tracker-2f2e5 --member=serviceAccount:theatre-tracker-api@theatre-tracker-2f2e5.iam.gserviceaccount.com --role=roles/datastore.user --project=theatre-tracker-2f2e5 --quiet
 ```
 
 ```sh
-gcloud projects add-iam-policy-binding theatre-tracker-2f2e5 --member=serviceAccount:theatre-tracker-api@theatre-tracker-2f2e5.iam.gserviceaccount.com --role=roles/firebaseauth.viewer --project=theatre-tracker-2f2e5 --account=dylangeldenhuys1@gmail.com --quiet
+gcloud projects add-iam-policy-binding theatre-tracker-2f2e5 --member=serviceAccount:theatre-tracker-api@theatre-tracker-2f2e5.iam.gserviceaccount.com --role=roles/firebaseauth.viewer --project=theatre-tracker-2f2e5 --quiet
 ```
 
 ```sh
-gcloud projects add-iam-policy-binding theatre-tracker-2f2e5 --member=serviceAccount:theatre-tracker-build@theatre-tracker-2f2e5.iam.gserviceaccount.com --role=roles/run.builder --project=theatre-tracker-2f2e5 --account=dylangeldenhuys1@gmail.com --quiet
+gcloud projects add-iam-policy-binding theatre-tracker-2f2e5 --member=serviceAccount:theatre-tracker-build@theatre-tracker-2f2e5.iam.gserviceaccount.com --role=roles/run.builder --project=theatre-tracker-2f2e5 --quiet
 ```
 
 ```sh
-gcloud run deploy theatre-tracker-api --source=. --region=africa-south1 --service-account=theatre-tracker-api@theatre-tracker-2f2e5.iam.gserviceaccount.com --build-service-account=projects/theatre-tracker-2f2e5/serviceAccounts/theatre-tracker-build@theatre-tracker-2f2e5.iam.gserviceaccount.com --env-vars-file=config/review-api.yaml --cpu=1 --memory=512Mi --min=0 --max=2 --concurrency=20 --timeout=30s --cpu-throttling --no-invoker-iam-check --project=theatre-tracker-2f2e5 --account=dylangeldenhuys1@gmail.com --quiet
+gcloud run deploy theatre-tracker-api --source=. --region=africa-south1 --service-account=theatre-tracker-api@theatre-tracker-2f2e5.iam.gserviceaccount.com --build-service-account=projects/theatre-tracker-2f2e5/serviceAccounts/theatre-tracker-build@theatre-tracker-2f2e5.iam.gserviceaccount.com --env-vars-file=config/review-api.yaml --cpu=1 --memory=512Mi --min=0 --max=2 --concurrency=20 --timeout=30s --cpu-throttling --no-invoker-iam-check --project=theatre-tracker-2f2e5 --quiet
 ```
 
 The source build succeeded with the approved roles; no additional role grants were required. The regional source bucket and artifact repository were created by the deployment workflow.
@@ -73,11 +73,11 @@ These permissions let the runtime create identities and generate account action 
 Use the same four-step syntax/parameter/dry-run/authorisation protocol above. `gcloud iam roles create --help` was checked; it has no dry-run/validate-only option. The binding command's leaf help was validated for the initial deployment. Owner access was verified. The role did not exist; the following approved commands were executed and the exact two permissions and API service-account binding were read back successfully:
 
 ```sh
-gcloud iam roles create theatreTrackerUserProvisioner --project=theatre-tracker-2f2e5 --file=config/review-user-provisioner-role.yaml --account=dylangeldenhuys1@gmail.com --quiet
+gcloud iam roles create theatreTrackerUserProvisioner --project=theatre-tracker-2f2e5 --file=config/review-user-provisioner-role.yaml --quiet
 ```
 
 ```sh
-gcloud projects add-iam-policy-binding theatre-tracker-2f2e5 --member=serviceAccount:theatre-tracker-api@theatre-tracker-2f2e5.iam.gserviceaccount.com --role=projects/theatre-tracker-2f2e5/roles/theatreTrackerUserProvisioner --project=theatre-tracker-2f2e5 --account=dylangeldenhuys1@gmail.com --quiet
+gcloud projects add-iam-policy-binding theatre-tracker-2f2e5 --member=serviceAccount:theatre-tracker-api@theatre-tracker-2f2e5.iam.gserviceaccount.com --role=projects/theatre-tracker-2f2e5/roles/theatreTrackerUserProvisioner --project=theatre-tracker-2f2e5 --quiet
 ```
 
 The custom role and binding were verified after application. Cloud Run revision `theatre-tracker-api-00002-tzd` and Hosting version `2d4d0d6b447ba94c` are published. All seven cloud Admin scenario groups passed, including actual runtime Auth creation, password setup and new-user sign-in. The existing runtime/build grants remain in place. See [deployment](deployment.md) for release details.
