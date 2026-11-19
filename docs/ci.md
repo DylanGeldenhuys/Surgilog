@@ -112,8 +112,8 @@ Two workflows publish the web app and the API. Neither runs on a pull request. N
 
 | Push | Workflow | GitHub environment | GCP project |
 | --- | --- | --- | --- |
-| `dev` | [deploy-dev.yml](../.github/workflows/deploy-dev.yml) | `development`, limited to `dev` | `theatre-tracker-2f2e5` |
-| `main` | [deploy-prod.yml](../.github/workflows/deploy-prod.yml) | `production`, limited to `main`, with Dylan as a required reviewer | `surgilog-prod` |
+| `dev` | [deploy-dev.yml](../.github/workflows/deploy-dev.yml) | `development`, limited to `dev` | `theatre-tracker-2f2e5` (display name Surgilog Development) |
+| `main` | [deploy-prod.yml](../.github/workflows/deploy-prod.yml) | `production`, limited to `main`, with Dylan as a required reviewer | `surgilog-production` (display name Surgilog Production) |
 
 Dev publishes the live site https://theatre-tracker-2f2e5.web.app and the existing API https://theatre-tracker-api-54783611706.africa-south1.run.app. The Cloud Run service stays `theatre-tracker-api` in `africa-south1`. The workflow stops if that API address would change. Production uses the project id in `config/prod.json`. While that file still says `"placeholder": true`, the production workflow stops before it deploys.
 
@@ -129,7 +129,7 @@ Protect `dev` as well as `main`. The `development` environment has no required r
 
 Run this in Cloud Shell as the project owner. It does not deploy the app and it does not write Firestore. If the pool or the deploy service account already exists, the script leaves it and continues. If the provider already exists, the script prints its condition and its attribute mapping and stops when either one is not the value below. Do not delete the pool to recreate it. The deploy account is allowed to impersonate only from `repo:DylanGeldenhuys/Surgilog:environment:development` or `repo:DylanGeldenhuys/Surgilog:environment:production`, because these jobs set a GitHub environment and that is the token subject. The provider still requires the matching branch ref, the repository id `1403413866`, and the owner id `46447404`.
 
-Dev already has billing. For production, link a billing account and move `surgilog-prod` to the Blaze plan before these commands. Cloud Run will not build without it. Create the production project first; this script does not create a project. Production also needs the runtime account `surgilog-api` and the build account `surgilog-build` from [environments](environments.md) before the `actAs` commands below.
+Dev already has billing. Its Firebase display name is Surgilog Development; the project id stays `theatre-tracker-2f2e5`. Production is the existing project `surgilog-production`, display name Surgilog Production, on Dylan's personal Google account. Link a billing account and move it to the Blaze plan before the production commands if that is not done yet. Cloud Run will not build without it. This script does not create a project. Production also needs the runtime account `surgilog-api` and the build account `surgilog-build` from [environments](environments.md) before the `actAs` commands below.
 
 Dev:
 
@@ -292,7 +292,7 @@ Production. Link a billing account and move the project to the Blaze plan before
 
 ```sh
 set -euo pipefail
-PROJECT_ID=surgilog-prod
+PROJECT_ID=surgilog-production
 BRANCH=main
 SERVICE=surgilog-api
 RUNTIME_SA=surgilog-api
@@ -446,7 +446,7 @@ echo "GCP_WORKLOAD_IDENTITY_PROVIDER=${PROVIDER}"
 echo "GCP_SERVICE_ACCOUNT=${DEPLOY_SA}"
 ```
 
-Do not grant `roles/editor`, `roles/firebase.admin`, `roles/firebaseauth.admin`, `roles/datastore.user`, or `firebaseauth.configs.update`. Do not grant `github-hosting-preview` or `githubHostingPreviewDomains`. Do not run `gcloud iam service-accounts keys create`. The script creates `run-sources-PROJECT_ID-africa-south1` as the project owner and then grants the deploy account object admin on that one bucket. `gcloud run deploy --source` uploads the source archive there. The Cloud Build bucket is used by the build service account, which already has `roles/run.builder`, so the deploy account is not granted access to it. Do not grant project Storage Admin. If a later deploy names a different source bucket, grant object admin on that bucket only.
+Do not grant `roles/editor`, `roles/firebase.admin`, `roles/firebaseauth.admin`, `roles/datastore.user`, or `firebaseauth.configs.update`. Do not grant `github-hosting-preview` or `githubHostingPreviewDomains`. Do not run `gcloud iam service-accounts keys create`. The script creates `run-sources-PROJECT_ID-africa-south1` as the project owner and then grants the deploy account object admin on that one bucket. For production that bucket is `run-sources-surgilog-production-africa-south1`. `gcloud run deploy --source` uploads the source archive there. The Cloud Build bucket is used by the build service account, which already has `roles/run.builder`, so the deploy account is not granted access to it. Do not grant project Storage Admin. If a later deploy names a different source bucket, grant object admin on that bucket only.
 
 ### Remove the temporary Cloud Run admin grant
 
@@ -454,7 +454,7 @@ Run this once after the first deploy has created the Cloud Run service, and only
 
 ```sh
 set -euo pipefail
-PROJECT_ID=surgilog-prod
+PROJECT_ID=surgilog-production
 SERVICE=surgilog-api
 DEPLOY_SA="github-deploy@${PROJECT_ID}.iam.gserviceaccount.com"
 
@@ -480,6 +480,6 @@ GitHub → Settings → Environments → the environment → Environment variabl
 | Environment | Deployment branches | Required reviewer | Variables |
 | --- | --- | --- | --- |
 | `development` | Selected branches: `dev` only | none | `GCP_WORKLOAD_IDENTITY_PROVIDER` = the `projects/NUMBER/.../providers/github` line. `GCP_SERVICE_ACCOUNT` = `github-deploy@theatre-tracker-2f2e5.iam.gserviceaccount.com` |
-| `production` | Selected branches: `main` only | `DylanGeldenhuys` | The same two names, with the production provider name and `github-deploy@surgilog-prod.iam.gserviceaccount.com` |
+| `production` | Selected branches: `main` only | `DylanGeldenhuys` | The same two names, with the production provider name and `github-deploy@surgilog-production.iam.gserviceaccount.com` |
 
 Do not create the `dev` branch until the development environment and its two variables exist. The first push to `dev` deploys the live dev site and API. Production also waits until `config/prod.json` has the real web config and `"placeholder": false`. The workflow does not do that edit.

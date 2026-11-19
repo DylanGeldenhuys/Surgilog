@@ -3,6 +3,6 @@
     "default": "demo-theatre-tracker",
     "dev": "theatre-tracker-2f2e5",
     "review": "theatre-tracker-2f2e5",
-    "prod": "surgilog-prod"
+    "prod": "surgilog-production"
   }
 }

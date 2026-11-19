@@ -25,7 +25,7 @@ import {
   servingRevisionName,
 } from '../scripts/smoke-check-revision.ts';
 
-const prodProject = 'surgilog-prod';
+const prodProject = 'surgilog-production';
 const ready = {
   buildMode: 'prod',
   buildProjectId: prodProject,
