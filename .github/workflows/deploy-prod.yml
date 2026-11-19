@@ -240,6 +240,8 @@ jobs:
             echo "## API rollback"
             echo
             echo "If the Hosting deploy fails after this point, the new API revision is already serving and the previous web app is still on the live site."
+            echo "Rules publish last, after Hosting. If that step fails, the new API and the new web app are already live and the previous rules are still published."
+            echo "A rule change the web app depends on must already be published, or the new rules must keep working with the previous web app."
             if [ -n "${PREVIOUS}" ]; then
               echo
               echo "Send all traffic back to \`${PREVIOUS}\`:"
@@ -303,6 +305,7 @@ jobs:
           PROJECT: ${{ steps.target.outputs.project_id }}
         run: |
           set -euo pipefail
+          # Defense in depth: the guard reads config/prod.json; this asserts that value is surgilog-production.
           if [ "$PROJECT" != "surgilog-production" ]; then
             echo "::error::Refusing a production rules deploy aimed at ${PROJECT}. Rules were not deployed."
             exit 1

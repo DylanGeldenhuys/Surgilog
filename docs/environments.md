@@ -112,7 +112,7 @@ gcloud run services update-traffic surgilog-api \
   --project=PROD_ID
 ```
 
-Leave the bad revision in place until the previous one is serving. The production workflow does not deploy rules or indexes, so a bad rules change is not undone by these two steps. Restore rules from the last known `firebase/firestore.rules` deploy, or restore data from the backup taken before the change.
+Leave the bad revision in place until the previous one is serving. The workflow publishes Firestore rules and does not publish indexes, so rolling back Hosting or the API does not restore the previous rules. Restore the previous ruleset in the Firebase console under Firestore → Rules → history, or check out the previous commit and run the rules deploy again. Restore data from the backup taken before the change.
 
 Dev rollback stays the procedure already recorded in [deployment](deployment.md). Rolling back dev does not affect production, and the reverse is also true.
 
