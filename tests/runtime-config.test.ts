@@ -110,7 +110,8 @@ describe('environment isolation', () => {
       NODE_ENV: 'production',
       K_SERVICE: 'surgilog-api',
       FIREBASE_PROJECT_ID: 'surgilog-production',
-      ALLOWED_ORIGINS: 'https://surgilog-production.firebaseapp.com, https://surgilog-production.web.app',
+      ALLOWED_ORIGINS:
+        'https://surgilog-production.firebaseapp.com, https://surgilog-production.web.app',
       FICTIONAL_SEEDING: 'false',
     };
     const config = serverConfig(prod);
@@ -136,7 +137,8 @@ describe('environment isolation', () => {
     expect(() =>
       serverConfig({
         ...prod,
-        ALLOWED_ORIGINS: 'https://surgilog-production.web.app,https://theatre-tracker-2f2e5.web.app',
+        ALLOWED_ORIGINS:
+          'https://surgilog-production.web.app,https://theatre-tracker-2f2e5.web.app',
       }),
     ).toThrow('two production Hosting origins');
     expect(() =>
