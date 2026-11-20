@@ -6,9 +6,56 @@ import { DEV_PROJECT_ID } from '../shared/deploy-target.ts';
 export type DeployedService = {
   status?: {
     url?: string;
+    /** Stable project-number URL plus the legacy hash URL. */
+    urls?: string[] | string;
     traffic?: { tag?: string; url?: string; percent?: number; revisionName?: string }[];
   };
+  metadata?: {
+    annotations?: Record<string, unknown>;
+  };
 };
+
+const URLS_ANNOTATION = 'run.googleapis.com/urls';
+
+function pushOrigin(urls: string[], value: unknown) {
+  if (typeof value !== 'string') return;
+  const trimmed = value.trim();
+  if (!trimmed || urls.includes(trimmed)) return;
+  urls.push(trimmed);
+}
+
+function pushListedOrigins(urls: string[], value: unknown) {
+  if (typeof value === 'string') {
+    for (const part of value.split(',')) pushOrigin(urls, part);
+    return;
+  }
+  if (!Array.isArray(value)) return;
+  for (const item of value) pushOrigin(urls, item);
+}
+
+/** Every origin Cloud Run lists. `status.url` is the primary URL and may be the legacy hash. */
+export function cloudRunServiceOrigins(service: DeployedService | null | undefined) {
+  const urls: string[] = [];
+  pushListedOrigins(urls, service?.status?.urls);
+  pushListedOrigins(urls, service?.metadata?.annotations?.[URLS_ANNOTATION]);
+  pushOrigin(urls, service?.status?.url);
+  return urls;
+}
+
+/** Returns the pinned origin only when the service lists that exact origin. */
+export function requirePinnedServiceOrigin(
+  service: DeployedService | null | undefined,
+  expected: string,
+) {
+  const expectedOrigin = expected.trim();
+  if (!expectedOrigin) throw new Error('The pinned API address is missing.');
+  const urls = cloudRunServiceOrigins(service);
+  if (!urls.includes(expectedOrigin)) {
+    const seen = urls.length > 0 ? urls.join(', ') : 'missing';
+    throw new Error(`The dev API is ${seen}. It must stay ${expectedOrigin}.`);
+  }
+  return expectedOrigin;
+}
 
 export type HealthBody = {
   mode?: string;
@@ -120,6 +167,18 @@ async function main() {
   const jsonPath = process.env.SERVICE_JSON;
   if (!jsonPath) throw new Error('SERVICE_JSON is required.');
   const service = JSON.parse(readFileSync(jsonPath, 'utf8')) as DeployedService;
+  if (process.argv.includes('--require-origin')) {
+    const expected = process.env.EXPECTED_ORIGIN ?? '';
+    const tail = process.env.REFUSAL_TAIL?.trim() || 'Nothing was deployed.';
+    try {
+      process.stdout.write(`${requirePinnedServiceOrigin(service, expected)}\n`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The API address check failed.';
+      console.error(`::error::${message} ${tail}`);
+      process.exit(1);
+    }
+    return;
+  }
   if (process.argv.includes('--serving-revision')) {
     process.stdout.write(servingRevisionName(service));
     return;
