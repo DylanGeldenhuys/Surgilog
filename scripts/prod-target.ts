@@ -29,7 +29,7 @@ export type ProdTarget = {
   apiUrlPlaceholder: string;
   fictionalSeeding: false;
   firebase: ProdFirebaseWeb;
-  hostingOrigins: readonly [string, string];
+  hostingOrigins: readonly [string, string, string];
   env: Record<string, string>;
 };
 
@@ -117,7 +117,7 @@ export function loadProdTarget(root = process.cwd()): ProdTarget {
   if (env.FICTIONAL_SEEDING !== 'false')
     throw new Error('Production API env must set FICTIONAL_SEEDING=false.');
   if (!sameOrigins(env.ALLOWED_ORIGINS.split(','), hostingOrigins))
-    throw new Error('Production API CORS must list only the two production Hosting origins.');
+    throw new Error('Production API CORS must list only the three production Hosting origins.');
   if (JSON.stringify(reviewFirebase.firestore) !== JSON.stringify(firebaseProd.firestore))
     throw new Error('Production Firestore rules and indexes must match the dev configuration.');
   if (JSON.stringify(reviewFirebase.auth) !== JSON.stringify(firebaseProd.auth))
