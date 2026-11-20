@@ -1,6 +1,10 @@
 # Project handover
 
-Updated: 19 November 2026, Africa/Johannesburg.
+Updated: 20 November 2026, Africa/Johannesburg.
+
+## Production login badge — 20 November 2026
+
+Dylan asked for the small production environment badge to be removed. Implemented on a branch from `main`, not merged and not deployed. The login card hides its environment label when `VITE_APP_ENV` is `prod`. Local still shows `LOCAL V1 · SYNTHETIC DATA ONLY` and review still shows `REVIEW VERSION · SYNTHETIC DATA ONLY`. The signed-in “Production workspace” note and the footer line are unchanged.
 
 ## Production project id — 19 November 2026
 

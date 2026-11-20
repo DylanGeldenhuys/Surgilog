@@ -92,13 +92,13 @@ export function Login({
       </section>
       <section className="login-form">
         <div className="login-card">
-          <div className="demo-label">
-            {isLocalDemo
-              ? 'LOCAL V1 · SYNTHETIC DATA ONLY'
-              : isProduction
-                ? 'PRODUCTION'
+          {!isProduction && (
+            <div className="demo-label">
+              {isLocalDemo
+                ? 'LOCAL V1 · SYNTHETIC DATA ONLY'
                 : 'REVIEW VERSION · SYNTHETIC DATA ONLY'}
-          </div>
+            </div>
+          )}
           <h2>Welcome to your workspace</h2>
           <p>Sign in to bring your team’s day into focus.</p>
           <form onSubmit={submit}>
