@@ -2,6 +2,10 @@
 
 Updated: 20 November 2026, Africa/Johannesburg.
 
+## Empty reporting scope — 20 November 2026
+
+Implemented on a branch from `dev`, targeting `dev`. Not merged and not deployed. A super user with no hospital or department could open Performance, and that page called `/api/reporting/theatre` with empty ids. Overview could do the same for `/api/reporting/overview`. The server still rejects those ids. Both screens now skip the scoped request until the hospital and department match the existing id pattern, and a super user sees “No hospital set up yet. Add one in Admin.” Local checks: **119 unit tests**, typecheck and formatting pass. Chromium signed in as a super user with no hospitals: Admin opened without a report error, and Overview and Performance showed that empty state without calling `/api/reporting/overview` or `/api/reporting/theatre`. With synthetic hospitals present, Performance for a selected department still requested the theatre report with valid ids and showed the efficiency report.
+
 ## Sign-in and password reset — 20 November 2026
 
 Implemented on a feature branch from `dev`, targeting `dev`. Not merged and not deployed. The sign-in screen has email, password and **Sign in**. **Forgot password?** opens a reset view that reuses the entered email and calls the existing `sendPasswordResetEmail`. A sent request, an unknown address and a disabled account show the same confirmation, so reset does not reveal which accounts exist. Wrong password, too many attempts, a network failure, an invalid email and a disabled account each show a visible message on sign-in. The buttons stay disabled while a request is in flight. The password field has a show/hide control. Offline unlock with the same account password is unchanged. The production environment badge stays hidden.

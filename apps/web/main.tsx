@@ -44,6 +44,11 @@ import {
 } from 'recharts';
 import Papa from 'papaparse';
 import { caseFromCsv } from '../../shared/csv-import.ts';
+import {
+  canRequestScopedReport,
+  isScopedReportSelection,
+  reportScopeEmptyCopy,
+} from './reporting-scope.ts';
 import { UpdateNotice } from './UpdateNotice.tsx';
 import { WorkspaceSession } from './WorkspaceSession.tsx';
 import type { SessionEnd } from './session-policy.ts';
@@ -185,6 +190,7 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
       { hospitalId: reportHospitalId, departmentId: reportDepartmentId },
     ],
     reportKey = reportingCacheKey(reportHospitals, reportDepartments),
+    reportSelectionReady = isScopedReportSelection(reportHospitalId, reportDepartmentId),
     report = data.reporting?.[reportKey] ?? null,
     networkHospitals = reportingAccess
       .filter((item) => item.departments.length)
@@ -305,14 +311,20 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
     void state.refresh(hospitalId, dep).catch((e) => setLoadError((e as Error).message));
   }, [hospitalId, dep, membership, state.refresh]);
   useEffect(() => {
-    if (!reportingPage || !reportHospitalId || !reportDepartmentId) return;
+    if (!reportingPage || !reportSelectionReady) return;
     setReportError('');
     void state.refreshReporting(reportHospitals, reportDepartments).catch((error) => {
       if (!data.reporting?.[reportKey]) setReportError((error as Error).message);
     });
-  }, [reportingPage, reportKey, state.refreshReporting]);
+  }, [reportingPage, reportSelectionReady, reportKey, state.refreshReporting]);
   useEffect(() => {
-    if (page !== 'overview' || networkKey === reportKey || !networkDepartments.length) return;
+    if (
+      page !== 'overview' ||
+      networkKey === reportKey ||
+      !networkDepartments.length ||
+      !canRequestScopedReport(networkHospitals, networkDepartments)
+    )
+      return;
     void state.refreshReporting(networkHospitals, networkDepartments).catch(() => {});
   }, [page, networkKey, reportKey, state.refreshReporting]);
   const act = async (op: Operation) => {
@@ -521,7 +533,7 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
               </button>
             )}
           </div>
-          {page === 'overview' && (
+          {page === 'overview' && reportSelectionReady && (
             <HospitalOverview
               report={networkReport}
               hospitals={data.hospitals}
@@ -570,12 +582,16 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
               </label>
               <div className="context-status">
                 <span className="dot" />{' '}
-                {report ? `Updated ${time(report.asOf)}` : 'Loading reporting scope'}
+                {report
+                  ? `Updated ${time(report.asOf)}`
+                  : reportSelectionReady
+                    ? 'Loading reporting scope'
+                    : 'Choose a department'}
                 <button
                   className="icon-button"
                   aria-label="Refresh reporting scope"
                   onClick={() => void state.refreshReporting(reportHospitals, reportDepartments)}
-                  disabled={state.busy}
+                  disabled={state.busy || !reportSelectionReady}
                 >
                   <RefreshCw size={16} className={state.busy ? 'spin' : ''} />
                 </button>
@@ -667,7 +683,7 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
               </button>
             </div>
           )}
-          {reportError && reportingPage && !report && (
+          {reportError && reportingPage && reportSelectionReady && !report && (
             <div className="error" role="alert">
               {reportError}
               <button
@@ -713,6 +729,8 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
               departmentName={hospital.departments.find((item) => item.id === dep)?.name ?? dep}
               onContinue={() => setScopeGate(false)}
             />
+          ) : page === 'overview' && !reportSelectionReady ? (
+            <Empty {...reportScopeEmptyCopy(!!data.profile.superUser)} />
           ) : page === 'overview' && (!report || !dashboardMetrics) ? (
             <Empty
               title="Preparing this reporting scope"
@@ -730,6 +748,7 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
                   key={`${reportHospitalId}/${reportDepartmentId}`}
                   hospitalId={reportHospitalId}
                   departmentId={reportDepartmentId}
+                  superUser={!!data.profile.superUser}
                 />
               )}
               {page === 'register' && w && (
