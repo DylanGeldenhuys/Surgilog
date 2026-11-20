@@ -58,12 +58,13 @@ describe('sign-in messages', () => {
 });
 
 describe('password reset messages', () => {
-  it('uses the same confirmation for a sent link and an unknown account', () => {
+  it('uses the same confirmation for a sent link, an unknown account and a disabled account', () => {
     expect(passwordResetSentMessage(address)).toBe(sent);
-    expect(passwordResetOutcome({ code: 'auth/user-not-found' }, address)).toEqual({
-      status: 'sent',
-      message: sent,
-    });
+    for (const code of ['auth/user-not-found', 'auth/user-disabled'])
+      expect(passwordResetOutcome({ code }, address)).toEqual({
+        status: 'sent',
+        message: sent,
+      });
   });
 
   it('shows a visible error instead of the confirmation when the request fails', () => {
@@ -78,10 +79,6 @@ describe('password reset messages', () => {
     expect(passwordResetOutcome({ code: 'auth/network-request-failed' }, address)).toEqual({
       status: 'error',
       message: loginCopy.network,
-    });
-    expect(passwordResetOutcome({ code: 'auth/user-disabled' }, address)).toEqual({
-      status: 'error',
-      message: loginCopy.disabled,
     });
     const unknown = passwordResetOutcome(
       new Error('Firebase: Error (auth/internal-error).'),

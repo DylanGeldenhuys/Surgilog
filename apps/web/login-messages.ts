@@ -66,15 +66,14 @@ export type PasswordResetOutcome =
 
 export function passwordResetOutcome(error: unknown, email: string): PasswordResetOutcome {
   const code = codeOf(error);
-  // Email enumeration protection is not guaranteed. An unknown address must
-  // look the same as a message that was sent.
-  if (code === 'auth/user-not-found')
+  // Email enumeration protection is not guaranteed. An unknown or disabled
+  // address must look the same as a message that was sent.
+  if (code === 'auth/user-not-found' || code === 'auth/user-disabled')
     return { status: 'sent', message: passwordResetSentMessage(email) };
   if (code === 'auth/invalid-email' || code === 'auth/missing-email')
     return { status: 'error', message: loginCopy.invalidEmail };
   if (code === 'auth/too-many-requests') return { status: 'error', message: loginCopy.tooMany };
   if (code === 'auth/network-request-failed' || code === 'auth/timeout')
     return { status: 'error', message: loginCopy.network };
-  if (code === 'auth/user-disabled') return { status: 'error', message: loginCopy.disabled };
   return { status: 'error', message: loginCopy.resetFailed };
 }
