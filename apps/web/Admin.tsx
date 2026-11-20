@@ -118,7 +118,7 @@ export function Admin({ onChanged }: { onChanged: () => Promise<void> }) {
             </>
           ) : (
             <p>
-              The workspace is updated. New users can use “Set or reset password” on sign-in if they
+              The workspace is updated. New users can use “Forgot password?” on sign-in if they
               still need to choose a password.
             </p>
           )}

@@ -1,5 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react';
-import { X, ArrowUpRight, Inbox } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { X, ArrowUpRight, Inbox, Eye, EyeOff } from 'lucide-react';
 import type { Priority } from '../../shared/domain.ts';
 export const time = (v: string) =>
   new Date(v).toLocaleTimeString('en-ZA', {
@@ -92,6 +92,55 @@ export function Modal({
       </div>
       {children}
     </dialog>
+  );
+}
+export function passwordFieldState(visible: boolean) {
+  return visible
+    ? { type: 'text' as const, label: 'Hide password' }
+    : { type: 'password' as const, label: 'Show password' };
+}
+export function PasswordInput({
+  label,
+  value,
+  onChange,
+  autoComplete = 'current-password',
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete?: string;
+  disabled?: boolean;
+}) {
+  const [visible, setVisible] = useState(false);
+  const field = passwordFieldState(visible);
+  const inputId = useId();
+  return (
+    <div className="field">
+      <label htmlFor={inputId}>{label}</label>
+      <div className="password-field">
+        <input
+          id={inputId}
+          type={field.type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          autoComplete={autoComplete}
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          disabled={disabled}
+        />
+        <button
+          type="button"
+          className="password-toggle"
+          aria-label={field.label}
+          aria-pressed={visible}
+          onClick={() => setVisible((shown) => !shown)}
+        >
+          {visible ? <EyeOff size={16} aria-hidden="true" /> : <Eye size={16} aria-hidden="true" />}
+        </button>
+      </div>
+    </div>
   );
 }
 export function Field({
