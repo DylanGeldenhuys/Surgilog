@@ -2,6 +2,10 @@
 
 Updated: 20 November 2026, Africa/Johannesburg.
 
+## Dev API address check — 20 November 2026
+
+Deploy development run [44759130852](https://github.com/DylanGeldenhuys/Surgilog/actions/runs/44759130852) stopped at "Keep the existing dev API address" before anything was deployed. The check compared only Cloud Run `status.url` (`https://theatre-tracker-api-m2cpjwqipa-bq.a.run.app`) with the pinned origin `https://theatre-tracker-api-54783611706.africa-south1.run.app`. The guard now accepts that pinned origin when it is `status.url`, an entry in `status.urls`, or the `run.googleapis.com/urls` annotation, and still stops the deploy when the pinned origin is absent. A v1 describe puts the stable origin in that annotation as a JSON array string; a comma-separated list is still accepted, and a trailing slash does not change the match. The dev web build keeps the pinned origin. Production's "Read the API URL" step still uses `status.url` for the address baked into the production web app. That step has no pinned-origin check; the first production deploy succeeded with it, so this change leaves it alone. Not deployed.
+
 ## Production login badge — 20 November 2026
 
 Dylan asked for the small production environment badge to be removed. Implemented on a branch from `main`, not merged and not deployed. The login card hides its environment label when `VITE_APP_ENV` is `prod`. Local still shows `LOCAL V1 · SYNTHETIC DATA ONLY` and review still shows `REVIEW VERSION · SYNTHETIC DATA ONLY`. The signed-in “Production workspace” note and the footer line are unchanged.
