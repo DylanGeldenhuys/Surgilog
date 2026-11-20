@@ -1,12 +1,20 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { ArrowRight, ShieldCheck, HeartPulse, Check } from 'lucide-react';
 import { auth, api } from './firebase.ts';
 import { isLocalDemo, isProduction } from './config.ts';
 import { openOnline, unlock, acquireWorkspace, rememberWorkspace, type Vault } from './vault.ts';
 import type { Identity } from '../../shared/domain.ts';
-import { Brand, Field } from './ui.tsx';
+import { Brand, Field, PasswordInput } from './ui.tsx';
 import { shouldHoldForRetry } from './sync-policy.ts';
+import {
+  loginCopy,
+  passwordResetOutcome,
+  passwordResetSentMessage,
+  resetFieldError,
+  signInErrorMessage,
+  signInFieldError,
+} from './login-messages.ts';
 
 function connectionUnavailable(error: unknown) {
   const detail = error as { code?: string; status?: number };
@@ -27,36 +35,77 @@ export function Login({
   const [email, setEmail] = useState(isLocalDemo ? 'leo@demo.theatre.local' : ''),
     [password, setPassword] = useState(isLocalDemo ? 'TheatreDemo!26' : ''),
     [error, setError] = useState(''),
-    [notice, setNotice] = useState(initialNotice),
-    [busy, setBusy] = useState(false);
-  useEffect(() => {
+    [notice] = useState(initialNotice),
+    [confirmation, setConfirmation] = useState(''),
+    [busy, setBusy] = useState(false),
+    [mode, setMode] = useState<'sign-in' | 'reset'>('sign-in');
+
+  function updateEmail(value: string) {
+    setEmail(value);
     setError('');
-  }, [email]);
+    setConfirmation('');
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault();
+    const fieldError = signInFieldError(email, password);
+    if (fieldError) {
+      setError(fieldError);
+      return;
+    }
     setBusy(true);
     setError('');
+    const address = email.trim();
     let release: (() => void) | undefined;
     try {
       release = await acquireWorkspace();
       let v: Vault;
       if (!navigator.onLine) {
-        v = await unlock(email, password);
+        v = await unlock(address, password);
       } else {
         try {
-          await signInWithEmailAndPassword(auth, email, password);
+          await signInWithEmailAndPassword(auth, address, password);
           const identity = await api<Identity>('/api/me');
           v = await openOnline(identity, password);
         } catch (onlineError) {
           if (!connectionUnavailable(onlineError)) throw onlineError;
-          v = await unlock(email, password);
+          v = await unlock(address, password);
         }
       }
       await rememberWorkspace(v);
       onOpen({ ...v, release });
     } catch (e) {
       release?.();
-      setError((e as Error).message);
+      setError(signInErrorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendReset(e: FormEvent) {
+    e.preventDefault();
+    const address = email.trim();
+    const fieldError = resetFieldError(address);
+    if (fieldError) {
+      setError(fieldError);
+      setConfirmation('');
+      return;
+    }
+    if (!navigator.onLine) {
+      setError(loginCopy.network);
+      setConfirmation('');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    setConfirmation('');
+    try {
+      await sendPasswordResetEmail(auth, address);
+      setConfirmation(passwordResetSentMessage(address));
+    } catch (resetError) {
+      const outcome = passwordResetOutcome(resetError, address);
+      if (outcome.status === 'sent') setConfirmation(outcome.message);
+      else setError(outcome.message);
     } finally {
       setBusy(false);
     }
@@ -99,64 +148,109 @@ export function Login({
                 : 'REVIEW VERSION · SYNTHETIC DATA ONLY'}
             </div>
           )}
-          <h2>Welcome to your workspace</h2>
-          <p>Sign in to bring your team’s day into focus.</p>
-          <form onSubmit={submit}>
-            <Field label="Staff email">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="username"
-              />
-            </Field>
-            <Field label="Password">
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
-            </Field>
-            {error && (
-              <div className="error" role="alert">
-                {error}
+          <h2>{mode === 'reset' ? 'Reset your password' : 'Welcome to your workspace'}</h2>
+          <p>
+            {mode === 'reset'
+              ? 'Enter your staff email and we will send a link to choose a new password.'
+              : 'Sign in to bring your team’s day into focus.'}
+          </p>
+          {mode === 'sign-in' && notice && (
+            <div className="info" role="status">
+              {notice}
+            </div>
+          )}
+          {mode === 'sign-in' ? (
+            <form onSubmit={submit} noValidate>
+              <Field label="Staff email">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => updateEmail(e.target.value)}
+                  autoComplete="username"
+                  disabled={busy}
+                />
+              </Field>
+              <div className="login-password">
+                <PasswordInput
+                  label="Password"
+                  value={password}
+                  onChange={(value) => {
+                    setPassword(value);
+                    setError('');
+                  }}
+                  disabled={busy}
+                />
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={busy}
+                  onClick={() => {
+                    setMode('reset');
+                    setError('');
+                  }}
+                >
+                  Forgot password?
+                </button>
               </div>
-            )}
-            <button className="button primary full" disabled={busy}>
-              {busy ? 'Opening workspace…' : 'Open workspace'}
-              <ArrowRight size={17} />
-            </button>
-          </form>
-          <button
-            className="text-button"
-            disabled={busy}
-            onClick={async () => {
-              setError('');
-              setNotice('');
-              if (!email.trim()) {
-                setError('Enter your staff email first.');
-                return;
-              }
-              setBusy(true);
-              try {
-                await sendPasswordResetEmail(auth, email.trim());
-                setNotice(
-                  'If this email has an account, password setup instructions have been sent.',
-                );
-              } catch {
-                setError('Password setup could not be requested. Check your email and connection.');
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            Set or reset password
-          </button>
-          {notice && <p role="status">{notice}</p>}
-          {isLocalDemo && (
+              {error && (
+                <div className="error" role="alert">
+                  {error}
+                </div>
+              )}
+              <button
+                className="button primary full"
+                type="submit"
+                disabled={busy}
+                aria-busy={busy}
+              >
+                {busy ? 'Signing in…' : 'Sign in'}
+                <ArrowRight size={17} />
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={sendReset} noValidate>
+              <Field label="Staff email">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => updateEmail(e.target.value)}
+                  autoComplete="username"
+                  disabled={busy}
+                />
+              </Field>
+              {confirmation && (
+                <div className="info" role="status">
+                  {confirmation}
+                </div>
+              )}
+              {error && (
+                <div className="error" role="alert">
+                  {error}
+                </div>
+              )}
+              <button
+                className="button primary full"
+                type="submit"
+                disabled={busy}
+                aria-busy={busy}
+              >
+                {busy ? 'Sending reset link…' : 'Send reset link'}
+                <ArrowRight size={17} />
+              </button>
+              <button
+                type="button"
+                className="text-button"
+                disabled={busy}
+                onClick={() => {
+                  setMode('sign-in');
+                  setError('');
+                }}
+              >
+                Back to sign in
+              </button>
+            </form>
+          )}
+          {isLocalDemo && mode === 'sign-in' && (
             <div className="demo-accounts">
               <span>TRY A DIFFERENT ROLE</span>
               <div>
@@ -173,8 +267,10 @@ export function Login({
                 ].map(([id, label]) => (
                   <button
                     key={id}
+                    type="button"
+                    disabled={busy}
                     onClick={() => {
-                      setEmail(`${id}@demo.theatre.local`);
+                      updateEmail(`${id}@demo.theatre.local`);
                       setPassword('TheatreDemo!26');
                     }}
                   >

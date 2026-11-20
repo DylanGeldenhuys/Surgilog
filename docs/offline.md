@@ -4,7 +4,7 @@ Updated 16 October 2026. Hardening and theatre-register changes are published to
 
 ## Implemented behaviour
 
-Sign in online once per account/browser/origin with your account password and visit the hospital departments to prepare their records. Login has one **Open workspace** action. After sign-in, a remembered device session restores the encrypted workspace across reloads and browser restarts until explicit logout or three days of inactivity. Restoration checks current identity/permissions when connected and uses prepared data during outages. The user does not select an offline mode. Use the built PWA on port 4173 for offline reloads; the Vite development server does not install a service worker. Unseen records and first-time sign-in require connectivity.
+Sign in online once per account/browser/origin with your account password and visit the hospital departments to prepare their records. Login has one **Sign in** action. **Forgot password?** emails a reset link and needs a connection. After sign-in, a remembered device session restores the encrypted workspace across reloads and browser restarts until explicit logout or three days of inactivity. Restoration checks current identity/permissions when connected and uses prepared data during outages. The user does not select an offline mode. Use the built PWA on port 4173 for offline reloads; the Vite development server does not install a service worker. Unseen records and first-time sign-in require connectivity.
 
 | Action | Current behaviour |
 | --- | --- |
