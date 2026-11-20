@@ -50,7 +50,9 @@ export function serverConfig(env: Environment) {
   if (mode === 'prod') {
     const expected = [...productionHostingOrigins(projectId)];
     if (!sameOrigins(origins as string[], expected))
-      throw new Error('Prod CORS allows only the two production Hosting origins for this project.');
+      throw new Error(
+        'Prod CORS allows only the three production Hosting origins for this project.',
+      );
   }
   // Preview hosts are created per pull request and cannot be listed in advance.
   // Only the dev/review project's Hosting channels match. Production never
