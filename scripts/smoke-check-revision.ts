@@ -6,9 +6,73 @@ import { DEV_PROJECT_ID } from '../shared/deploy-target.ts';
 export type DeployedService = {
   status?: {
     url?: string;
+    /** Stable project-number URL plus the legacy hash URL. */
+    urls?: string[] | string;
     traffic?: { tag?: string; url?: string; percent?: number; revisionName?: string }[];
   };
+  metadata?: {
+    annotations?: Record<string, unknown>;
+  };
 };
+
+const URLS_ANNOTATION = 'run.googleapis.com/urls';
+
+function normaliseOrigin(value: string) {
+  return value.trim().replace(/\/+$/, '');
+}
+
+function pushOrigin(urls: string[], value: unknown) {
+  if (typeof value !== 'string') return;
+  const origin = normaliseOrigin(value);
+  if (!origin || urls.includes(origin)) return;
+  urls.push(origin);
+}
+
+/** `status.urls` is a list. The v1 urls annotation is a JSON array string, or a comma-separated list. */
+function pushListedOrigins(urls: string[], value: unknown) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed) as unknown;
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) pushOrigin(urls, item);
+          return;
+        }
+      } catch {
+        // Not JSON. The comma split below still has to find an exact origin.
+      }
+    }
+    for (const part of trimmed.split(',')) pushOrigin(urls, part);
+    return;
+  }
+  if (!Array.isArray(value)) return;
+  for (const item of value) pushOrigin(urls, item);
+}
+
+/** Every origin Cloud Run lists. `status.url` is the primary URL and may be the legacy hash. */
+export function cloudRunServiceOrigins(service: DeployedService | null | undefined) {
+  const urls: string[] = [];
+  pushListedOrigins(urls, service?.status?.urls);
+  pushListedOrigins(urls, service?.metadata?.annotations?.[URLS_ANNOTATION]);
+  pushOrigin(urls, service?.status?.url);
+  return urls;
+}
+
+/** Returns the pinned origin when the service lists it. A trailing slash does not change the origin. */
+export function requirePinnedServiceOrigin(
+  service: DeployedService | null | undefined,
+  expected: string,
+) {
+  const expectedOrigin = normaliseOrigin(expected);
+  if (!expectedOrigin) throw new Error('The pinned API address is missing.');
+  const urls = cloudRunServiceOrigins(service);
+  if (!urls.includes(expectedOrigin)) {
+    const seen = urls.length > 0 ? urls.join(', ') : 'missing';
+    throw new Error(`The dev API is ${seen}. It must stay ${expectedOrigin}.`);
+  }
+  return expectedOrigin;
+}
 
 export type HealthBody = {
   mode?: string;
@@ -120,6 +184,18 @@ async function main() {
   const jsonPath = process.env.SERVICE_JSON;
   if (!jsonPath) throw new Error('SERVICE_JSON is required.');
   const service = JSON.parse(readFileSync(jsonPath, 'utf8')) as DeployedService;
+  if (process.argv.includes('--require-origin')) {
+    const expected = process.env.EXPECTED_ORIGIN ?? '';
+    const tail = process.env.REFUSAL_TAIL?.trim() || 'Nothing was deployed.';
+    try {
+      process.stdout.write(`${requirePinnedServiceOrigin(service, expected)}\n`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The API address check failed.';
+      console.error(`::error::${message} ${tail}`);
+      process.exit(1);
+    }
+    return;
+  }
   if (process.argv.includes('--serving-revision')) {
     process.stdout.write(servingRevisionName(service));
     return;

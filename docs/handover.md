@@ -8,7 +8,11 @@ Implemented on a feature branch from `dev`, targeting `dev`. Not merged and not 
 
 A Super User who adds a person still does not email them. The Admin API creates the Auth user with an unknown random password and returns a one-time password setup link in that admin’s browser. The link is omitted from audits and receipts. Existing accounts still never receive a reset link through Admin. That flow was not changed.
 
-Local checks: **111 unit tests**, typecheck, formatting and the production build pass. The existing bundle-size warning remains. Chromium checked the sign-in screen, the show/hide password control, the reset confirmation for an unknown address, a wrong password, a disabled account, an invalid email, an offline reset, and a successful local sign-in. The Auth emulator did not return a too-many-attempts error.
+Local checks: **115 unit tests**, typecheck, formatting and the production build pass. The existing bundle-size warning remains. Chromium checked the sign-in screen, the show/hide password control, the reset confirmation for an unknown address, a wrong password, a disabled account, an invalid email, an offline reset, and a successful local sign-in. The Auth emulator did not return a too-many-attempts error.
+
+## Dev API address check — 20 November 2026
+
+Deploy development run [44759130852](https://github.com/DylanGeldenhuys/Surgilog/actions/runs/44759130852) stopped at "Keep the existing dev API address" before anything was deployed. The check compared only Cloud Run `status.url` (`https://theatre-tracker-api-m2cpjwqipa-bq.a.run.app`) with the pinned origin `https://theatre-tracker-api-54783611706.africa-south1.run.app`. The guard now accepts that pinned origin when it is `status.url`, an entry in `status.urls`, or the `run.googleapis.com/urls` annotation, and still stops the deploy when the pinned origin is absent. A v1 describe puts the stable origin in that annotation as a JSON array string; a comma-separated list is still accepted, and a trailing slash does not change the match. The dev web build keeps the pinned origin. Production's "Read the API URL" step still uses `status.url` for the address baked into the production web app. That step has no pinned-origin check; the first production deploy succeeded with it, so this change leaves it alone. Not deployed.
 
 ## Production login badge — 20 November 2026
 

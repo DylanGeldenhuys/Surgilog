@@ -104,14 +104,14 @@ describe('environment isolation', () => {
       expect(() => httpsOrigin(origin, 'origin')).toThrow();
     expect(() => serverConfig({ ...review, ALLOWED_ORIGINS: undefined })).toThrow();
   });
-  it('locks production to its two Hosting origins and disables fictional seeding', () => {
+  it('locks production to its three Hosting origins and disables fictional seeding', () => {
     const prod = {
       APP_ENV: 'prod',
       NODE_ENV: 'production',
       K_SERVICE: 'surgilog-api',
       FIREBASE_PROJECT_ID: 'surgilog-production',
       ALLOWED_ORIGINS:
-        'https://surgilog-production.firebaseapp.com, https://surgilog-production.web.app',
+        'https://surgilog-production.firebaseapp.com, https://surgilog-production.web.app, https://surgilog.app',
       FICTIONAL_SEEDING: 'false',
     };
     const config = serverConfig(prod);
@@ -120,6 +120,7 @@ describe('environment isolation', () => {
     expect(config.origins).toEqual([
       'https://surgilog-production.web.app',
       'https://surgilog-production.firebaseapp.com',
+      'https://surgilog.app',
     ]);
     expect(config.origins.every((origin) => typeof origin === 'string')).toBe(true);
     expect(() =>
@@ -140,14 +141,34 @@ describe('environment isolation', () => {
         ALLOWED_ORIGINS:
           'https://surgilog-production.web.app,https://theatre-tracker-2f2e5.web.app',
       }),
-    ).toThrow('two production Hosting origins');
+    ).toThrow('three production Hosting origins');
+    expect(() =>
+      serverConfig({
+        ...prod,
+        ALLOWED_ORIGINS:
+          'https://surgilog-production.web.app,https://surgilog-production.firebaseapp.com',
+      }),
+    ).toThrow('three production Hosting origins');
     expect(() =>
       serverConfig({
         ...prod,
         ALLOWED_ORIGINS:
           'https://surgilog-production.web.app,https://surgilog-production.firebaseapp.com,https://surgilog-production--pr1-abcd.web.app',
       }),
-    ).toThrow('two production Hosting origins');
+    ).toThrow('three production Hosting origins');
+    expect(() =>
+      serverConfig({
+        ...prod,
+        ALLOWED_ORIGINS: '*',
+      }),
+    ).toThrow();
+    expect(() =>
+      serverConfig({
+        ...prod,
+        ALLOWED_ORIGINS:
+          'https://surgilog-production.web.app,https://surgilog-production.firebaseapp.com,https://*.surgilog.app',
+      }),
+    ).toThrow('three production Hosting origins');
     expect(() => serverConfig({ ...prod, FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080' })).toThrow(
       'emulator',
     );
