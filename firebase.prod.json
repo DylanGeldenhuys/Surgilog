@@ -9,7 +9,7 @@
     "indexes": "firebase/firestore.indexes.json"
   },
   "hosting": {
-    "site": "surgilog-prod",
+    "site": "surgilog-production",
     "public": "dist-prod",
     "predeploy": ["npx tsx scripts/verify-prod-build.ts --check-api"],
     "ignore": ["**/.*", "prod-build.json"],

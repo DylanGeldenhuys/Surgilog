@@ -109,16 +109,17 @@ describe('environment isolation', () => {
       APP_ENV: 'prod',
       NODE_ENV: 'production',
       K_SERVICE: 'surgilog-api',
-      FIREBASE_PROJECT_ID: 'surgilog-prod',
-      ALLOWED_ORIGINS: 'https://surgilog-prod.firebaseapp.com, https://surgilog-prod.web.app',
+      FIREBASE_PROJECT_ID: 'surgilog-production',
+      ALLOWED_ORIGINS:
+        'https://surgilog-production.firebaseapp.com, https://surgilog-production.web.app',
       FICTIONAL_SEEDING: 'false',
     };
     const config = serverConfig(prod);
     expect(config.mode).toBe('prod');
     expect(config.local).toBe(false);
     expect(config.origins).toEqual([
-      'https://surgilog-prod.web.app',
-      'https://surgilog-prod.firebaseapp.com',
+      'https://surgilog-production.web.app',
+      'https://surgilog-production.firebaseapp.com',
     ]);
     expect(config.origins.every((origin) => typeof origin === 'string')).toBe(true);
     expect(() =>
@@ -136,14 +137,15 @@ describe('environment isolation', () => {
     expect(() =>
       serverConfig({
         ...prod,
-        ALLOWED_ORIGINS: 'https://surgilog-prod.web.app,https://theatre-tracker-2f2e5.web.app',
+        ALLOWED_ORIGINS:
+          'https://surgilog-production.web.app,https://theatre-tracker-2f2e5.web.app',
       }),
     ).toThrow('two production Hosting origins');
     expect(() =>
       serverConfig({
         ...prod,
         ALLOWED_ORIGINS:
-          'https://surgilog-prod.web.app,https://surgilog-prod.firebaseapp.com,https://surgilog-prod--pr1-abcd.web.app',
+          'https://surgilog-production.web.app,https://surgilog-production.firebaseapp.com,https://surgilog-production--pr1-abcd.web.app',
       }),
     ).toThrow('two production Hosting origins');
     expect(() => serverConfig({ ...prod, FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080' })).toThrow(

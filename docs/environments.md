@@ -1,10 +1,10 @@
 # Dev and production environments
 
-Updated 29 October 2026. This is repository scaffolding. No production project has been created, and nothing in this document has been deployed.
+Updated 19 November 2026. The production project id is decided. Nothing in this document has been deployed by the GitHub workflow.
 
-`theatre-tracker-2f2e5` is **dev**. It is the fictional-data review site already described in [deployment](deployment.md) and [review infrastructure](review-infrastructure.md). Firebase aliases `dev` and `review` both select it. The default alias stays `demo-theatre-tracker` so a bare Firebase command remains on the local emulators.
+`theatre-tracker-2f2e5` is **dev**. Its Firebase display name is **Surgilog Development**. The project id is unchanged. It is the fictional-data review site already described in [deployment](deployment.md) and [review infrastructure](review-infrastructure.md). Firebase aliases `dev` and `review` both select it. The default alias stays `demo-theatre-tracker` so a bare Firebase command remains on the local emulators.
 
-**Production** is a second Firebase/GCP project. Its id is not decided. The placeholder `surgilog-prod` is the value to replace. It is not a live project.
+**Production** is Firebase/GCP project `surgilog-production`. Its display name is **Surgilog Production**. The web SDK key in `config/prod.json` is still a placeholder, so a production deploy still stops until that key is replaced and `placeholder` is set to `false`.
 
 ## Where the project id is set
 
@@ -17,7 +17,7 @@ Cloud Run and Hosting read their own files, so the same id is repeated in `confi
 
 ## What each environment runs
 
-| | Local | Dev (`theatre-tracker-2f2e5`) | Production (placeholder `surgilog-prod`) |
+| | Local | Dev (`theatre-tracker-2f2e5`, Surgilog Development) | Production (`surgilog-production`, Surgilog Production) |
 | --- | --- | --- | --- |
 | Alias | `default` | `dev` and `review` | `prod` |
 | Data | Emulator fixtures | Fictional review data | Empty until a hospital is onboarded. The fictional seed is refused. |
@@ -25,7 +25,7 @@ Cloud Run and Hosting read their own files, so the same id is repeated in `confi
 | API mode | `local` | `APP_ENV=review` | `APP_ENV=prod` and `FICTIONAL_SEEDING=false` |
 | Browser origins | Local Vite/preview | Dev Hosting origins, plus dev preview channels | Only `https://PROJECT.web.app` and `https://PROJECT.firebaseapp.com` |
 
-Production mode does not add Hosting preview-channel origins. A dev/review build cannot be deployed onto the production project, and a production build cannot be deployed onto the dev project. A production deploy also requires confirmation: `CONFIRM_PROD=yes` or `--confirm-prod`. The GitHub workflow adds a second check: the dispatch input must be the text `deploy-production`.
+Production mode does not add Hosting preview-channel origins. A dev/review build cannot be deployed onto the production project, and a production build cannot be deployed onto the dev project. A production deploy also requires confirmation: `CONFIRM_PROD=yes` or `--confirm-prod`. The production workflow passes that confirmation only from `refs/heads/main`.
 
 `FICTIONAL_SEEDING=false` is required for the API to start. The same value is a hard stop for `seed`, `setup-review`, `backfill-seed-history`, `review-admin`, and `synthetic-fixtures`, including when `APP_ENV` is unset but the process is pointed at the production project. A `migrate-*` script is not in that set. In a production context it runs only with `CONFIRM_PROD=yes` or `--confirm-prod`. The migrate scripts that exist today still refuse anything except the local demo emulator. That local check is separate, and `CONFIRM_PROD` does not bypass it.
 
@@ -33,23 +33,22 @@ Production mode does not add Hosting preview-channel origins. A dev/review build
 
 ## Promotion
 
-Work reaches production only from `main`, and only after Dylan has signed that commit off.
+Work reaches production only from `main`, and only after the `production` environment has approved that deploy.
 
-1. Changes land on `main` through the existing pull-request checks. Those checks do not deploy production. Dev Hosting at https://theatre-tracker-2f2e5.web.app stays the manual dev release in [deployment](deployment.md).
-2. Merging to `main` does not deploy production.
-3. Dylan signs off the `main` commit that should ship.
-4. A maintainer runs the **Deploy production** workflow (`.github/workflows/deploy-prod.yml`) from `main` and types `deploy-production`. The workflow fails the job when `github.ref` is not `refs/heads/main`. It runs typecheck, unit tests, and `npm run build:prod` before it authenticates or deploys. Choosing another branch at dispatch can bypass that step: GitHub runs the workflow file from the selected ref, and that copy can omit the check.
-5. The real protection is the GitHub Environment `production`, limited to deployment branch `main`, with Dylan (GitHub user `DylanGeldenhuys`) as a required reviewer. Set that environment up before any production secrets are added. GitHub otherwise creates the environment on the first dispatch with no protection.
-6. Turn on branch protection for `main`. Require a pull request before merging. Require the CI status checks **Typecheck, unit tests, format, build** and **Emulator integration tests**. Block force-pushes and block deletion. Apply the rules to administrators.
-7. The workflow checks for the API with `gcloud run services describe`. When the service does not exist yet, it deploys normally, without `--no-traffic`, and then smoke-checks `/health`. When the service already exists, it deploys with `--no-traffic --tag=candidate`, smoke-checks that tag's `/health`, and shifts traffic with `gcloud run services update-traffic --to-tags=candidate=100`. That sends traffic to the revision that was checked. A failed smoke check on a later run stops the job and leaves the current traffic in place. The job then builds the web app against the service URL and deploys Hosting. It does not deploy Firestore rules, indexes, or Auth providers. Cutover deploys those before staff use the site.
+1. Changes land on `main` through the existing pull-request checks. Those checks do not deploy production or dev.
+2. A push to `dev` runs **Deploy development** (`.github/workflows/deploy-dev.yml`) and publishes the existing dev site and API. Create the `dev` branch only after the `development` environment and the Workload Identity Federation setup in [ci.md](ci.md) are done. That push deploys https://theatre-tracker-2f2e5.web.app and https://theatre-tracker-api-54783611706.africa-south1.run.app.
+3. A push to `main` runs **Deploy production** (`.github/workflows/deploy-prod.yml`). The workflow fails unless `github.ref` is `refs/heads/main`. It runs typecheck, unit tests, and `npm run build:prod` before it authenticates or deploys.
+4. The real protection is the GitHub Environment `production`, limited to deployment branch `main`, with Dylan (GitHub user `DylanGeldenhuys`) as a required reviewer. Dev uses the GitHub Environment `development`, limited to the `dev` branch. Set both up before merging the workflow and before adding deploy variables. GitHub otherwise creates an environment on the first push with no protection.
+5. Turn on branch protection for `main` and for `dev`. Require a pull request before merging. Require the CI status checks **Typecheck, unit tests, format, build** and **Emulator integration tests**. Block force-pushes and block deletion. Apply the rules to administrators. The `development` environment has no required reviewer, so an unprotected `dev` branch lets a direct push deploy the live dev site and API.
+6. The workflow checks for the API with `gcloud run services describe`. When the service does not exist yet, it deploys normally, without `--no-traffic`, and then smoke-checks `/health`. When the service already exists, it deploys with `--no-traffic --tag=candidate`, smoke-checks that tag's `/health`, and shifts traffic with `gcloud run services update-traffic --to-tags=candidate=100`. That sends traffic to the revision that was checked. A failed smoke check on a later run stops the job and leaves the current traffic in place. The job first reads the revision that has 100% of traffic. If traffic is split, the deploy stops before it changes anything, because the rollback needs that one revision. The job then builds the web app against the service URL and deploys Hosting, then Firestore security rules only. It does not deploy Firestore indexes or Auth providers. Cutover deploys those before staff use the site. Dev uses the same rollout. Its health check must report `review` for `theatre-tracker-2f2e5`. Production must report `prod`.
 
-If `PROD_GCP_SA_KEY` or `FIREBASE_SERVICE_ACCOUNT_PROD` is missing from the `production` environment, the workflow fails and deploys nothing. Add those secrets only after the environment is limited to `main` and Dylan is a required reviewer. Store them on the `production` environment, not as ordinary repository secrets, so pull-request jobs cannot read them. While `config/prod.json` still has `"placeholder": true`, a run that does have the secrets fails before it deploys.
+If `GCP_WORKLOAD_IDENTITY_PROVIDER` or `GCP_SERVICE_ACCOUNT` is missing from the GitHub environment, the workflow fails and deploys nothing. Add them on that environment, as variables or secrets, after the branch limit is in place. For production, add them only after Dylan is a required reviewer. Do not store them as repository secrets, so pull-request jobs cannot read them. There is no JSON deploy key. While `config/prod.json` still has `"placeholder": true`, a production run that does have the variables fails before it deploys.
 
 ## One-time production setup
 
 The owner does this once, in a project they create. This repository does not create the project and these commands are not part of the scaffolding change.
 
-1. Create a Firebase/GCP project. Replace `surgilog-prod` using the section above if the real id is different. Prefer a dedicated billing account or the hospital's account, not a personal experiment attached to the dev project.
+1. The Firebase/GCP project is `surgilog-production`, display name Surgilog Production. Do not create a second project. Link billing and the Blaze plan if that is not done yet.
 2. Link billing and move the project to the **Blaze** plan. Cloud Run and Firestore need it. Set a budget alert in Billing → Budgets & alerts for an amount the owner chooses. An alert is not a spending cap.
 3. Enable the same APIs the dev project uses for the API build: `run.googleapis.com`, `cloudbuild.googleapis.com`, `artifactregistry.googleapis.com`, and `iam.googleapis.com`. Create the Firebase resources below in the Firebase console, which enables Firestore, Auth, and Hosting on the project.
 4. Create the Firestore database in **Standard** edition, location **`africa-south1` (Johannesburg)**. The location cannot be changed later. Use the `(default)` database. Leave rules and indexes for the cutover deploy below. The rules deny all direct client access. The API uses the Admin SDK.
@@ -63,13 +62,13 @@ The owner does this once, in a project they create. This repository does not cre
    - `roles/run.admin` on the Cloud Run service `surgilog-api` in `africa-south1`. A service-level binding cannot create a service that does not exist yet. The workflow's first run creates it, so that run needs project-level `roles/run.admin`. After the service exists, remove the project binding and leave the service binding.
    - `roles/cloudbuild.builds.editor` on the project.
    - `roles/artifactregistry.writer` on the regional Artifact Registry repository. The owner creates that repository so this account does not need `roles/artifactregistry.admin`.
-   - `roles/storage.objectAdmin` only on the source upload bucket. Cloud Run source deploys use a bucket such as `run-sources-PROJECT-africa-south1`, and Cloud Build uses a `*_cloudbuild` bucket. Read the bucket name from the first build log. Do not grant project-wide Storage Admin.
+   - `roles/storage.objectAdmin` only on `run-sources-PROJECT-africa-south1`. Source deploys upload there. The Cloud Build bucket is used by the build service account, which already has `roles/run.builder`, so this account does not get it. The commands are in [ci.md](ci.md). Do not grant project-wide Storage Admin.
    - `roles/iam.serviceAccountUser` (`iam.serviceAccounts.actAs`) on `surgilog-api@PROJECT.iam.gserviceaccount.com` and on `surgilog-build@PROJECT.iam.gserviceaccount.com`.
    - `roles/firebasehosting.admin` for the Hosting deploy.
    - `roles/serviceusage.apiKeysViewer`, because the Hosting CLI reads the web API key.
    - `roles/serviceusage.serviceUsageConsumer` on the project. Source deploy calls the enabled APIs as this identity, and that role is the extra it needs for those calls.
    - The deploy account must not have `firebaseauth.configs.update`. The preview custom role in `config/github-hosting-preview-role.yaml` (`firebaseauth.configs.get` and `firebaseauth.configs.update`) is never granted in production, not on this account and not on the runtime account. The live channel does not change authorized domains or sign-in providers. The runtime custom role stays the user-provisioner permissions only.
-   Keep the JSON key as the `production` environment secrets `PROD_GCP_SA_KEY` (Cloud Run deploy) and `FIREBASE_SERVICE_ACCOUNT_PROD` (Hosting). The same key file can fill both until the Hosting identity is split. Delete the local key files. Move GitHub off this long-lived key and onto Workload Identity Federation before any real patient data is stored. Until that move, rotate the key and keep the roles listed here.
+   Do not create a JSON key for this account. GitHub authenticates with Workload Identity Federation. The Cloud Shell steps in [ci.md](ci.md) create `github-deploy` in each project, grant the roles above, and print the two GitHub environment variables. That account is not `github-hosting-preview`, and it does not get `firebaseauth.configs.update` or the preview custom role. Store `GCP_WORKLOAD_IDENTITY_PROVIDER` and `GCP_SERVICE_ACCOUNT` on the GitHub environment, not in the repository.
 9. Enable Firestore point-in-time recovery and a daily backup schedule on `(default)`. Confirm a restore into an empty project before any real record exists. Record the backup location and retention with the hospital.
 10. Turn on Data Access audit logs for `datastore.googleapis.com` (Firestore) and `identitytoolkit.googleapis.com`. Admin Activity logs stay on; Google retains those for 400 days by default. Agree a retention period with the hospital. 365 days is a practical starting point, not a legal ruling. Lock the Cloud Logging bucket so that retention cannot be shortened. Do not sink Firestore document bodies into logs. The API already avoids logging clinical text.
 11. Create the first application Super User without the fictional seed. `npm run setup:review` and `npm run seed` refuse production. In the Auth console, create one Email/Password user. Then create `profiles/{uid}` with `superUser: true`, `active: true`, `version: 1`, empty `memberships`, and the person's name and email. Do not copy the dev account, the demo password, or the fictional hospitals. Do not commit the password.
@@ -85,10 +84,10 @@ Organisation policy can block that public invoke. `constraints/iam.allowedPolicy
 
 Do this only after the checklist and a signed-off deploy of an empty production project.
 
-1. Deploy Firestore rules and indexes for the signed-off commit. The production workflow does not deploy them:
+1. The production workflow deploys Firestore rules. Deploy the indexes separately for the signed-off commit:
 
 ```sh
-npx -y firebase-tools@latest deploy --only firestore --config firebase.prod.json --project PROD_ID
+npx -y firebase-tools@latest deploy --only firestore:indexes --config firebase.prod.json --project PROD_ID
 ```
 
 Confirm the published rules deny all client access and that every index reports READY. Do this before staff use the site.
@@ -113,7 +112,7 @@ gcloud run services update-traffic surgilog-api \
   --project=PROD_ID
 ```
 
-Leave the bad revision in place until the previous one is serving. The production workflow does not deploy rules or indexes, so a bad rules change is not undone by these two steps. Restore rules from the last known `firebase/firestore.rules` deploy, or restore data from the backup taken before the change.
+Leave the bad revision in place until the previous one is serving. The workflow publishes Firestore rules and does not publish indexes, so rolling back Hosting or the API does not restore the previous rules. Restore the previous ruleset in the Firebase console under Firestore → Rules → history, or check out the previous commit and run the rules deploy again. Restore data from the backup taken before the change.
 
 Dev rollback stays the procedure already recorded in [deployment](deployment.md). Rolling back dev does not affect production, and the reverse is also true.
 
@@ -134,4 +133,4 @@ Before any real record:
 
 ## Checks
 
-`npm test` covers the prod/dev deploy guard, a deploy with no project id, the placeholder lock, production CORS, fictional-script refusal (including `FICTIONAL_SEEDING=false` and a production project id with `APP_ENV` unset), and confirmed production migrations. `npm run build:prod` builds the web app with the placeholder API URL and then refuses to treat that build as deployable. `npm run typecheck`, `npm run format:check`, and `npm run build` stay the dev/local checks. The production workflow runs typecheck, unit tests, and `build:prod` before it deploys, and it fails when the production secrets are missing.
+`npm test` covers the prod/dev deploy guard, a deploy with no project id, the placeholder lock, production CORS, fictional-script refusal (including `FICTIONAL_SEEDING=false` and a production project id with `APP_ENV` unset), and confirmed production migrations. `npm run build:prod` builds the web app with the placeholder API URL and then refuses to treat that build as deployable. `npm run typecheck`, `npm run format:check`, and `npm run build` stay the dev/local checks. The production workflow runs typecheck, unit tests, and `build:prod` before it deploys, and it fails when the Workload Identity Federation variables are missing. The dev workflow does the same for the dev project before it deploys.

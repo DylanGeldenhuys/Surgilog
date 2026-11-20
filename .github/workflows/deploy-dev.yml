@@ -1,0 +1,332 @@
+name: Deploy development
+
+on:
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Typecheck and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Verify the dev web build
+        run: npm run build:review -- --api-url https://theatre-tracker-api-54783611706.africa-south1.run.app
+
+  deploy:
+    needs: check
+    name: Deploy API then Hosting
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: development
+    # id-token stays on this job. The check job has no token to mint.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # Defence in depth. A push runs this file from the pushed commit, so a
+      # bad commit can remove this step. The development environment, limited
+      # to the dev branch, is the matching control. The live site stays
+      # https://theatre-tracker-2f2e5.web.app and the live API stays
+      # https://theatre-tracker-api-54783611706.africa-south1.run.app.
+      - name: Require dev
+        env:
+          DEPLOY_REF: ${{ github.ref }}
+        run: |
+          if [ "$DEPLOY_REF" != "refs/heads/dev" ]; then
+            echo "::error::Dev deploys run only from the dev branch. This ref is ${DEPLOY_REF}. Nothing was deployed."
+            exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Require Workload Identity Federation settings
+        env:
+          WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER || secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          WIF_SERVICE_ACCOUNT: ${{ vars.GCP_SERVICE_ACCOUNT || secrets.GCP_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$WIF_PROVIDER" ] || [ -z "$WIF_SERVICE_ACCOUNT" ]; then
+            echo "::error::Dev deploy needs GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT on the development environment, as variables or secrets. Nothing was deployed. See docs/ci.md."
+            exit 1
+          fi
+
+      - name: Guard the dev target
+        id: target
+        run: npx tsx scripts/guard-deploy.ts --target dev --github-output
+
+      - name: Refuse a production project
+        env:
+          PROJECT: ${{ steps.target.outputs.project_id }}
+          MODE: ${{ steps.target.outputs.health_mode }}
+          ENV_FILE: ${{ steps.target.outputs.env_file }}
+          API: ${{ steps.target.outputs.api_origin }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" != "theatre-tracker-2f2e5" ] || [ "$MODE" != "review" ] || [ "$ENV_FILE" != "config/review-api.yaml" ] || [ "$API" != "https://theatre-tracker-api-54783611706.africa-south1.run.app" ]; then
+            echo "::error::Refusing a dev deploy that is not the existing dev project and API. Nothing was deployed."
+            exit 1
+          fi
+
+      - name: Authenticate the deploy identity
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER || secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT || secrets.GCP_SERVICE_ACCOUNT }}
+          project_id: ${{ steps.target.outputs.project_id }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
+        with:
+          project_id: ${{ steps.target.outputs.project_id }}
+
+      - name: Check whether the API service exists
+        id: service
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" != "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a dev deploy aimed at another project. Nothing was deployed."
+            exit 1
+          fi
+          if describe_out="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format='value(metadata.name)' --quiet 2>&1)"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            json="${RUNNER_TEMP:-/tmp}/serving-service.json"
+            gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format=json > "$json"
+            revision="$(SERVICE_JSON="$json" npx tsx scripts/smoke-check-revision.ts --serving-revision)"
+            echo "revision=${revision}" >> "$GITHUB_OUTPUT"
+          else
+            case "$describe_out" in
+              *'Cannot find service'*|*'NOT_FOUND'*|*'[404]'*|*'does not exist'*)
+                echo "exists=false" >> "$GITHUB_OUTPUT"
+                ;;
+              *)
+                echo "::error::Could not tell whether the Cloud Run service exists. Nothing was deployed."
+                printf '%s\n' "$describe_out"
+                exit 1
+                ;;
+            esac
+          fi
+
+      - name: Keep the existing dev API address
+        if: steps.service.outputs.exists == 'true'
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+          EXPECTED: ${{ steps.target.outputs.api_origin }}
+        run: |
+          set -euo pipefail
+          expected="https://theatre-tracker-api-54783611706.africa-south1.run.app"
+          if [ "$PROJECT" != "theatre-tracker-2f2e5" ] || [ "$EXPECTED" != "$expected" ]; then
+            echo "::error::Refusing a dev deploy that would change the API address. Nothing was deployed."
+            exit 1
+          fi
+          url="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format='value(status.url)')"
+          if [ "$url" != "$expected" ]; then
+            echo "::error::The dev API is ${url}. It must stay ${expected}. Nothing was deployed."
+            exit 1
+          fi
+
+      - name: Deploy the API
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          RUNTIME_SA: ${{ steps.target.outputs.runtime_service_account }}
+          BUILD_SA: ${{ steps.target.outputs.build_service_account }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+          ENV_FILE: ${{ steps.target.outputs.env_file }}
+          EXISTS: ${{ steps.service.outputs.exists }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" != "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a dev deploy aimed at another project. Nothing was deployed."
+            exit 1
+          fi
+          case "$ENV_FILE" in
+            config/review-api.yaml) ;;
+            *) echo "::error::Dev deploys only config/review-api.yaml. Nothing was deployed."; exit 1 ;;
+          esac
+          deploy_args=(
+            --source=.
+            --region="${REGION}"
+            --service-account="${RUNTIME_SA}"
+            --build-service-account="${BUILD_SA}"
+            --env-vars-file="${ENV_FILE}"
+            --cpu=1
+            --memory=512Mi
+            --min-instances=0
+            --max-instances=2
+            --concurrency=20
+            --timeout=30s
+            --cpu-throttling
+            --no-invoker-iam-check
+            --project="${PROJECT}"
+            --quiet
+          )
+          if [ "${EXISTS}" = "true" ]; then
+            deploy_args+=(--no-traffic --tag=candidate)
+          fi
+          gcloud run deploy "${SERVICE}" "${deploy_args[@]}"
+
+      - name: Smoke-check the deployed revision
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+          EXISTS: ${{ steps.service.outputs.exists }}
+          EXPECTED_MODE: ${{ steps.target.outputs.health_mode }}
+        run: |
+          set -euo pipefail
+          if [ "$EXISTS" = "true" ]; then
+            unchanged="Traffic was not changed."
+          else
+            unchanged="The first revision is already serving."
+          fi
+          # Dev runs as APP_ENV=review. A prod health body must not pass.
+          if [ "$EXPECTED_MODE" != "review" ] || [ "$PROJECT" != "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a dev health check for this target. ${unchanged}"
+            exit 1
+          fi
+          json="${RUNNER_TEMP:-/tmp}/candidate-service.json"
+          gcloud run services describe "${SERVICE}" \
+            --region="${REGION}" \
+            --project="${PROJECT}" \
+            --format=json > "$json"
+          export SERVICE_JSON="$json"
+          npx tsx scripts/smoke-check-revision.ts
+
+      - name: Shift traffic to the checked revision
+        if: steps.service.outputs.exists == 'true'
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" != "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a dev deploy aimed at another project. Traffic was not changed."
+            exit 1
+          fi
+          gcloud run services update-traffic "${SERVICE}" \
+            --to-tags=candidate=100 \
+            --region="${REGION}" \
+            --project="${PROJECT}" \
+            --quiet
+
+      - name: Record the API rollback
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+          PREVIOUS: ${{ steps.service.outputs.revision }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" != "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a dev deploy aimed at another project."
+            exit 1
+          fi
+          {
+            echo "## API rollback"
+            echo
+            echo "If the Hosting deploy fails after this point, the new API revision is already serving and the previous web app is still on the live site."
+            echo "Rules publish last, after Hosting. If that step fails, the new API and the new web app are already live and the previous rules are still published."
+            echo "A rule change the web app depends on must already be published, or the new rules must keep working with the previous web app."
+            if [ -n "${PREVIOUS}" ]; then
+              echo
+              echo "Send all traffic back to \`${PREVIOUS}\`:"
+              echo
+              echo '```sh'
+              echo "gcloud run services update-traffic ${SERVICE} --to-revisions=${PREVIOUS}=100 --region=${REGION} --project=${PROJECT}"
+              echo '```'
+            else
+              echo
+              echo "This is the first revision, so there is no previous revision to restore. Hosting has not been deployed yet."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Read the API URL
+        id: api
+        env:
+          SERVICE: ${{ steps.target.outputs.service }}
+          REGION: ${{ steps.target.outputs.region }}
+          PROJECT: ${{ steps.target.outputs.project_id }}
+          EXPECTED: ${{ steps.target.outputs.api_origin }}
+        run: |
+          set -euo pipefail
+          expected="https://theatre-tracker-api-54783611706.africa-south1.run.app"
+          if [ "$PROJECT" != "theatre-tracker-2f2e5" ] || [ "$EXPECTED" != "$expected" ]; then
+            echo "::error::Refusing a dev deploy that would change the API address. Hosting was not deployed."
+            exit 1
+          fi
+          url="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format='value(status.url)')"
+          if [ "$url" != "$expected" ]; then
+            echo "::error::The dev API is ${url}. It must stay ${expected}. Hosting was not deployed."
+            exit 1
+          fi
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+
+      - name: Build the dev web app
+        env:
+          DEV_API_URL: ${{ steps.api.outputs.url }}
+        run: npm run build:review -- --api-url "$DEV_API_URL"
+
+      - name: Write the hosting-only Firebase config
+        run: node scripts/write-preview-firebase-json.mjs --overwrite-firebase-json
+
+      - name: Deploy Hosting
+        env:
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" != "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a dev deploy aimed at another project. Hosting was not deployed."
+            exit 1
+          fi
+          npx firebase-tools deploy --only hosting --project "$PROJECT" --non-interactive
+
+      - name: Deploy Firestore rules
+        env:
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" != "theatre-tracker-2f2e5" ]; then
+            echo "::error::Refusing a dev rules deploy aimed at ${PROJECT}. Rules were not deployed."
+            exit 1
+          fi
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync("firebase.rules.json", JSON.stringify({ firestore: { rules: "firebase/firestore.rules" } }, null, 2) + "\n");'
+          npx firebase-tools deploy --only firestore:rules --config firebase.rules.json --project "$PROJECT" --non-interactive

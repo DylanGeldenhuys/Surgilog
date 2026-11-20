@@ -53,4 +53,4 @@ jobs:
           key: firebase-emulators-15.32.1-${{ runner.os }}
       - run: npm ci
       - name: Integration, admin, and theatre scenarios
-        run: npx -y firebase-tools@15.32.1 emulators:exec --project demo-theatre-tracker --only auth,firestore "node scripts/ci-integration.mjs"
+        run: npx firebase-tools emulators:exec --project demo-theatre-tracker --only auth,firestore "node scripts/ci-integration.mjs"

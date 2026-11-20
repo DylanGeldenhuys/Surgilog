@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, expect, it, vi } from 'vitest';
 import {
   DEV_API_ORIGIN,
   DEV_PROJECT_ID,
@@ -9,8 +11,21 @@ import {
   assertFictionalDataScriptAllowed,
 } from '../shared/deploy-target.ts';
 import { loadProdTarget, parseFlatYaml } from '../scripts/prod-target.ts';
+import {
+  assertTargetHints,
+  assertWorkflowRef,
+  devDeployValues,
+  prodDeployValues,
+} from '../scripts/guard-deploy.ts';
+import {
+  assertHealthy,
+  fetchHealthyResponse,
+  healthBackoffMs,
+  revisionUrl,
+  servingRevisionName,
+} from '../scripts/smoke-check-revision.ts';
 
-const prodProject = 'surgilog-prod';
+const prodProject = 'surgilog-production';
 const ready = {
   buildMode: 'prod',
   buildProjectId: prodProject,
@@ -23,10 +38,10 @@ const ready = {
 };
 
 describe('production target', () => {
-  it('keeps the placeholder project id in the alias and config, with copies locked', () => {
+  it('keeps the production web config and the placeholder API URL, with copies locked', () => {
     const target = loadProdTarget();
     const review = JSON.parse(readFileSync('config/review.json', 'utf8'));
-    expect(target.placeholder).toBe(true);
+    expect(target.placeholder).toBe(false);
     expect(target.projectId).toBe(prodProject);
     expect(target.projectId).not.toBe(DEV_PROJECT_ID);
     expect(target.region).toBe('africa-south1');
@@ -35,7 +50,14 @@ describe('production target', () => {
     expect(target.env.FICTIONAL_SEEDING).toBe('false');
     expect(target.env.APP_ENV).toBe('prod');
     expect(target.apiUrlPlaceholder).toBe('https://surgilog-api-placeholder.africa-south1.run.app');
-    expect(target.firebase.apiKey.startsWith('placeholder')).toBe(true);
+    expect(target.firebase).toMatchObject({
+      apiKey: 'AIzaSyCwy0VyUbQ_dJ-hXC0mSaCoY1VaQ8Po_rw',
+      authDomain: 'surgilog-production.firebaseapp.com',
+      projectId: prodProject,
+      storageBucket: 'surgilog-production.firebasestorage.app',
+      messagingSenderId: '396531693188',
+      appId: '1:396531693188:web:833d913acd71e93aeaf4d1',
+    });
     expect(JSON.stringify(target)).not.toContain(review.firebase.apiKey);
     expect(JSON.stringify(target.env)).not.toMatch(/SECRET|PASSWORD|TOKEN|PRIVATE_KEY/);
     expect(readFileSync('config/prod-api.yaml', 'utf8')).not.toContain('AIza');
@@ -178,12 +200,289 @@ describe('production target', () => {
     expect(() => parseFlatYaml('API_TOKEN: secret\n')).toThrow('secrets');
   });
 
-  it('refuses a production deploy while the project id is still the placeholder', () => {
+  it('accepts a confirmed production target once the web config is real', () => {
     const result = runGuard(['--target', 'prod', '--confirm-prod']);
-    expect(result.status).not.toBe(0);
-    expect(`${result.stdout}\n${result.stderr}`).toContain('placeholder');
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(`Production target ${prodProject}`);
+    expect(result.stdout).toContain('Nothing has been deployed');
     const review = runGuard(['--target', 'review', '--project', DEV_PROJECT_ID]);
     expect(review.status).toBe(0);
+  });
+
+  it('stops a dev run from targeting prod and a prod run from targeting dev', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'guard-'));
+    const output = join(dir, 'github-output');
+    const dev = runGuard(['--target', 'dev', '--github-output'], {
+      GITHUB_OUTPUT: output,
+      CONFIRM_PROD: 'yes',
+    });
+    expect(dev.status).toBe(0);
+    const body = readFileSync(output, 'utf8');
+    expect(body).toContain(`project_id=${DEV_PROJECT_ID}`);
+    expect(body).toContain('service=theatre-tracker-api');
+    expect(body).toContain('region=africa-south1');
+    expect(body).toContain(`api_origin=${DEV_API_ORIGIN}`);
+    expect(body).toContain('health_mode=review');
+    expect(body).toContain('env_file=config/review-api.yaml');
+    expect(body).not.toContain(prodProject);
+    expect(body).not.toContain('health_mode=prod');
+    expect(dev.stdout).toContain('Nothing has been deployed');
+
+    const devAtProd = runGuard(['--target', 'dev', '--project', prodProject]);
+    expect(devAtProd.status).not.toBe(0);
+    expect(`${devAtProd.stdout}\n${devAtProd.stderr}`).toContain(
+      'Refusing a dev deploy aimed at the production project.',
+    );
+    const reviewAtProd = runGuard(['--target', 'review', '--project', prodProject]);
+    expect(reviewAtProd.status).not.toBe(0);
+    expect(`${reviewAtProd.stdout}\n${reviewAtProd.stderr}`).toContain(
+      'Refusing a dev deploy aimed at the production project.',
+    );
+    const prodAtDev = runGuard(['--target', 'prod', '--confirm-prod', '--project', DEV_PROJECT_ID]);
+    expect(prodAtDev.status).not.toBe(0);
+    expect(`${prodAtDev.stdout}\n${prodAtDev.stderr}`).toContain(
+      'Refusing a production deploy aimed at the dev/review project.',
+    );
+    expect(`${prodAtDev.stdout}\n${prodAtDev.stderr}`).not.toContain('ready to deploy');
+
+    const devOnMain = runGuard(['--target', 'dev'], { GITHUB_REF: 'refs/heads/main' });
+    expect(devOnMain.status).not.toBe(0);
+    expect(`${devOnMain.stdout}\n${devOnMain.stderr}`).toContain(
+      'Refusing a dev deploy from refs/heads/main.',
+    );
+    const prodOnDev = runGuard(['--target', 'prod', '--confirm-prod'], {
+      GITHUB_REF: 'refs/heads/dev',
+    });
+    expect(prodOnDev.status).not.toBe(0);
+    expect(`${prodOnDev.stdout}\n${prodOnDev.stderr}`).toContain(
+      'Refusing a production deploy from refs/heads/dev.',
+    );
+    const devOnDev = runGuard(['--target', 'dev'], { GITHUB_REF: 'refs/heads/dev' });
+    expect(devOnDev.status).toBe(0);
+    const actionsWithoutRef = runGuard(['--target', 'prod', '--confirm-prod'], {
+      GITHUB_ACTIONS: 'true',
+      GITHUB_REF: '',
+    });
+    expect(actionsWithoutRef.status).not.toBe(0);
+    expect(`${actionsWithoutRef.stdout}\n${actionsWithoutRef.stderr}`).toContain('no ref');
+    const localWithoutRef = runGuard(['--target', 'dev'], { GITHUB_ACTIONS: '', GITHUB_REF: '' });
+    expect(localWithoutRef.status).toBe(0);
+  });
+
+  it('keeps the dev API address and the production health mode apart', () => {
+    const target = loadProdTarget();
+    const prod = prodDeployValues(target);
+    const dev = devDeployValues();
+    expect(prod.health_mode).toBe('prod');
+    expect(prod.env_file).toBe('config/prod-api.yaml');
+    expect(prod.project_id).toBe(prodProject);
+    expect(prod.service).toBe('surgilog-api');
+    expect(JSON.stringify(prod)).not.toContain(DEV_PROJECT_ID);
+    expect(dev).toMatchObject({
+      project_id: DEV_PROJECT_ID,
+      region: 'africa-south1',
+      service: 'theatre-tracker-api',
+      env_file: 'config/review-api.yaml',
+      health_mode: 'review',
+      api_origin: DEV_API_ORIGIN,
+      runtime_service_account: `theatre-tracker-api@${DEV_PROJECT_ID}.iam.gserviceaccount.com`,
+    });
+    expect(() => assertTargetHints('dev', [prodProject], DEV_PROJECT_ID, prodProject)).toThrow(
+      'aimed at the production project',
+    );
+    expect(() => assertTargetHints('prod', [DEV_PROJECT_ID], prodProject, DEV_PROJECT_ID)).toThrow(
+      'aimed at the dev/review project',
+    );
+    expect(() => assertWorkflowRef('prod', 'refs/heads/dev')).toThrow('refs/heads/main');
+    expect(() => assertWorkflowRef('dev', 'refs/heads/main')).toThrow('refs/heads/dev');
+    vi.stubEnv('GITHUB_ACTIONS', '');
+    vi.stubEnv('GITHUB_REF', 'refs/pull/7/merge');
+    try {
+      expect(() => assertWorkflowRef('prod', '')).not.toThrow();
+      expect(() => assertWorkflowRef('prod')).toThrow('refs/pull/7/merge');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    vi.stubEnv('GITHUB_ACTIONS', 'true');
+    vi.stubEnv('GITHUB_REF', '');
+    try {
+      expect(() => assertWorkflowRef('prod')).toThrow('no ref');
+      expect(() => assertWorkflowRef('dev')).toThrow('no ref');
+    } finally {
+      vi.unstubAllEnvs();
+    }
+
+    const caps = ['admin-v1', 'theatre-register-v1'];
+    const candidate = {
+      status: {
+        url: DEV_API_ORIGIN,
+        traffic: [{ tag: 'candidate', url: 'https://candidate---theatre-tracker-api.run.app' }],
+      },
+    };
+    expect(revisionUrl(candidate, false).origin).toBe(
+      'https://candidate---theatre-tracker-api.run.app',
+    );
+    expect(
+      revisionUrl({ status: { url: 'https://surgilog-api-1.africa-south1.run.app' } }, true).origin,
+    ).toBe('https://surgilog-api-1.africa-south1.run.app');
+    expect(() =>
+      revisionUrl({ status: { url: 'https://candidate---theatre-tracker-api.run.app' } }, true),
+    ).toThrow('no Cloud Run URL');
+    expect(() => revisionUrl({ status: { url: DEV_API_ORIGIN } }, false)).toThrow(
+      'no Cloud Run URL',
+    );
+    expect(() =>
+      assertHealthy(
+        { mode: 'review', projectId: DEV_PROJECT_ID, capabilities: caps },
+        { mode: 'review', projectId: DEV_PROJECT_ID },
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertHealthy(
+        { mode: 'prod', projectId: prodProject, capabilities: caps },
+        { mode: 'prod', projectId: prodProject },
+      ),
+    ).not.toThrow();
+    expect(() =>
+      assertHealthy(
+        { mode: 'prod', projectId: prodProject, capabilities: caps },
+        { mode: 'review', projectId: DEV_PROJECT_ID },
+      ),
+    ).toThrow('not the dev API');
+    expect(() =>
+      assertHealthy(
+        { mode: 'review', projectId: DEV_PROJECT_ID, capabilities: caps },
+        { mode: 'prod', projectId: prodProject },
+      ),
+    ).toThrow('not the production API');
+    expect(() =>
+      assertHealthy(
+        { mode: 'review', projectId: DEV_PROJECT_ID, capabilities: caps },
+        { mode: 'review', projectId: prodProject },
+      ),
+    ).toThrow('aimed at another project');
+    expect(() =>
+      assertHealthy(
+        { mode: 'prod', projectId: DEV_PROJECT_ID, capabilities: caps },
+        { mode: 'prod', projectId: DEV_PROJECT_ID },
+      ),
+    ).toThrow('aimed at the dev project');
+    expect(healthBackoffMs(1)).toBe(1000);
+    expect(healthBackoffMs(3)).toBe(4000);
+    expect(
+      servingRevisionName({
+        status: {
+          traffic: [
+            { tag: 'candidate', percent: 0, revisionName: 'surgilog-api-00002-new' },
+            { percent: 100, revisionName: 'surgilog-api-00001-old' },
+          ],
+        },
+      }),
+    ).toBe('surgilog-api-00001-old');
+    expect(() => servingRevisionName({ status: { traffic: [] } })).toThrow(
+      'Split traffic stops the deploy',
+    );
+    expect(() =>
+      servingRevisionName({
+        status: {
+          traffic: [
+            { percent: 50, revisionName: 'surgilog-api-00001-old' },
+            { percent: 50, revisionName: 'surgilog-api-00002-new' },
+          ],
+        },
+      }),
+    ).toThrow('Split traffic stops the deploy');
+  });
+
+  it('retries a cold health check before failing the release', async () => {
+    let calls = 0;
+    const sleeps: number[] = [];
+    const response = await fetchHealthyResponse('https://example.run.app/health', {
+      attempts: 3,
+      sleep: async (ms) => {
+        sleeps.push(ms);
+      },
+      fetchImpl: async () => {
+        calls += 1;
+        if (calls < 3) return new Response('starting', { status: 503 });
+        return new Response('{}', { status: 200 });
+      },
+    });
+    expect(response.ok).toBe(true);
+    expect(calls).toBe(3);
+    expect(sleeps).toEqual([1000, 2000]);
+    await expect(
+      fetchHealthyResponse('https://example.run.app/health', {
+        attempts: 2,
+        sleep: async () => undefined,
+        fetchImpl: async () => new Response('no', { status: 503 }),
+      }),
+    ).rejects.toThrow('returned 503');
+  });
+
+  it('keeps production and dev deploys on separate workflows and identities', () => {
+    const prod = readFileSync('.github/workflows/deploy-prod.yml', 'utf8');
+    const dev = readFileSync('.github/workflows/deploy-dev.yml', 'utf8');
+    for (const workflow of [prod, dev]) {
+      expect(workflow).not.toContain('credentials_json');
+      expect(workflow).not.toContain('PROD_GCP_SA_KEY');
+      expect(workflow).not.toContain('FIREBASE_SERVICE_ACCOUNT');
+      expect(workflow).not.toContain('github-hosting-preview');
+      expect(workflow).not.toContain('githubHostingPreviewDomains');
+      expect(workflow).not.toContain('firebaseauth.configs.update');
+      expect(workflow).toContain('google-github-actions/auth@');
+      expect(workflow).toContain('workload_identity_provider:');
+      expect(workflow).toContain('--no-traffic --tag=candidate');
+      expect(workflow).toContain('update-traffic');
+      expect(workflow).toContain('id-token: write');
+      expect(workflow).toContain('needs: check');
+      expect(workflow).toContain('## API rollback');
+      expect(workflow).toContain('npx firebase-tools deploy');
+      expect(workflow).toContain('--only firestore:rules');
+      expect(workflow).toContain('firebase/firestore.rules');
+      expect(workflow).toContain('PROJECT: ${{ steps.target.outputs.project_id }}');
+      expect(workflow).not.toContain('firestore:indexes');
+      expect(workflow).not.toContain('firebase-tools@');
+      const checkJob = workflow.slice(0, workflow.indexOf('\n  deploy:\n'));
+      expect(checkJob).not.toContain('id-token:');
+      expect(checkJob).toContain('npm ci');
+      expect(checkJob).not.toContain('--ignore-scripts');
+      expect(workflow).toContain('npm ci --ignore-scripts');
+    }
+    expect(prod).toContain('branches: [main]');
+    expect(prod).toContain('environment: production');
+    expect(prod).toContain('"$PROJECT" != "surgilog-production"');
+    expect(prod).toContain('--target prod');
+    expect(prod).toContain('refs/heads/main');
+    expect(prod).toContain('Refusing to point production Hosting at the dev API');
+    expect(prod).not.toContain('npm run build:review');
+    expect(prod).not.toContain('--target dev');
+    expect(dev).toContain('branches: [dev]');
+    expect(dev).toContain('environment: development');
+    expect(dev).toContain('"$PROJECT" != "theatre-tracker-2f2e5"');
+    expect(dev).toContain('--target dev');
+    expect(dev).toContain('refs/heads/dev');
+    expect(dev).toContain(DEV_API_ORIGIN);
+    expect(dev).toContain(DEV_PROJECT_ID);
+    expect(dev).not.toContain(prodProject);
+    expect(dev).not.toContain('config/prod-api.yaml');
+    const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+      devDependencies: Record<string, string>;
+    };
+    expect(pkg.devDependencies['firebase-tools']).toBe('15.32.1');
+    expect(readFileSync('package-lock.json', 'utf8')).toContain('"node_modules/firebase-tools"');
+    const guide = readFileSync('docs/ci.md', 'utf8');
+    expect(guide).toContain('environment:${ENV_NAME}');
+    expect(guide).not.toContain('ref:refs/heads/${BRANCH}');
+    expect(guide).toContain('1403413866');
+    expect(guide).toContain('46447404');
+    expect(guide).toContain('run-sources-${PROJECT_ID}-africa-south1');
+    expect(guide).toContain('The github provider does not match this script.');
+    expect(guide).toContain('attributeMapping');
+    expect(guide).toContain('Split traffic stops');
+    expect(guide).not.toContain('*_cloudbuild');
+    expect(guide).toContain('Remove the temporary Cloud Run admin grant');
+    expect(guide).toContain('roles/firebaserules.admin');
   });
 
   it('reads a missing --project from the environment instead of the next flag', () => {
@@ -203,7 +502,16 @@ describe('production target', () => {
 
 function runGuard(args: string[], env: Record<string, string | undefined> = {}) {
   const childEnv = { ...process.env };
-  for (const key of ['GCLOUD_PROJECT', 'PROJECT_ID', 'GOOGLE_CLOUD_PROJECT', 'CONFIRM_PROD'])
+  for (const key of [
+    'GCLOUD_PROJECT',
+    'PROJECT_ID',
+    'GOOGLE_CLOUD_PROJECT',
+    'CONFIRM_PROD',
+    'GITHUB_REF',
+    'GITHUB_OUTPUT',
+    'GITHUB_ACTIONS',
+    'FIREBASE_PROJECT_ID',
+  ])
     delete childEnv[key];
   for (const [key, value] of Object.entries(env)) {
     if (value === undefined) delete childEnv[key];

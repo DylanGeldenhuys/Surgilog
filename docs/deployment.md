@@ -5,7 +5,7 @@ Updated 23 October 2026. **Published with fictional data, including the Admin ta
 - Website: https://theatre-tracker-2f2e5.web.app
 - Earlier GitHub review release: [v0.1.0-review.1](https://github.com/DylanGeldenhuys/Surgilog/releases/tag/v0.1.0-review.1), tagged at `e4f7356`.
 - API: https://theatre-tracker-api-54783611706.africa-south1.run.app
-- Project: `theatre-tracker-2f2e5`; owner account: `dylangeldenhuys1@gmail.com`.
+- Project: `theatre-tracker-2f2e5`.
 - API revision: `theatre-tracker-api-00008-dub`, ready with 100% traffic.
 - Hosting version: `bc29adb91ebd03d2`, released 23 October 2026 at 11:29:22 SAST.
 - Cloud Build: `8673a9f2-e5a5-42c4-a04f-ce67c842d298`.
@@ -15,13 +15,13 @@ Dylan completed owner sign-in and explicitly approved the API/IAM plan in [revie
 
 ## Dev and production
 
-`theatre-tracker-2f2e5` is the **dev** environment. Firebase aliases `dev` and `review` both point at it. Production is a separate project that has not been created. The placeholder id `surgilog-prod` is set in [config/prod.json](../config/prod.json) and the `.firebaserc` `prod` alias. [Environments](environments.md) covers the split, the promotion rule (only Dylan-signed-off `main` goes to production), the one-time owner checklist, cutover, rollback, and the POPIA note. This file remains the record of what is actually deployed to dev. Nothing in the production scaffolding has been deployed.
+`theatre-tracker-2f2e5` is the **dev** environment. Its Firebase display name is Surgilog Development. The project id is unchanged. Firebase aliases `dev` and `review` both point at it. Production is `surgilog-production`, display name Surgilog Production. That id is set in [config/prod.json](../config/prod.json) and the `.firebaserc` `prod` alias. The web SDK key there is still a placeholder. [Environments](environments.md) covers the split, the promotion rule (a push to `main` deploys production only after the `production` environment approves it, and a push to `dev` deploys this dev project), the one-time owner checklist, cutover, rollback, and the POPIA note. The Cloud Shell steps for those GitHub deploys are in [ci.md](ci.md). This file remains the record of what is actually deployed to dev. Nothing in the production scaffolding has been deployed.
 
 ## Diagnosis and palette release — 23 October 2026
 
 Published source **bb4f2ff** after the merged CI run passed. The new API revision was checked through its `diagnosis-review` tag with isolated synthetic fixtures before switching 100% of live traffic to it. The Hosting release followed, using the existing capability guard. Source includes optional diagnosis/WHO ICD-10 fields, approved navy/teal palette and scoped Hosting preview CORS. Full app file/hash checks and desktop/phone-width login checks passed; see [verification](verification.md).
 
-No data migration, IAM expansion, Auth provider changes, rules or index deployment was required. Existing accounts and records were preserved; temporary synthetic release fixtures were cleaned up. Rollback targets are API **theatre-tracker-api-00006-seh** and Hosting **339ebd25e4021603**. The new frontend bundle is **index-BZhgYI5k.js** and CSS **index-DY0qOOTK.css**. GitHub workflows still do not automatically deploy the live app.
+No data migration, IAM expansion, Auth provider changes, rules or index deployment was required. Existing accounts and records were preserved; temporary synthetic release fixtures were cleaned up. Rollback targets are API **theatre-tracker-api-00006-seh** and Hosting **339ebd25e4021603**. The new frontend bundle is **index-BZhgYI5k.js** and CSS **index-DY0qOOTK.css**. That release was published by hand. Automatic branch deploys are described in [ci.md](ci.md) and were not used for it.
 
 ## Original typography restored — 20 October 2026
 
@@ -72,7 +72,7 @@ npm run build:review -- --api-url https://theatre-tracker-api-54783611706.africa
 ```
 
 ```sh
-npx -y firebase-tools@latest deploy --only hosting --config firebase.review.json --project theatre-tracker-2f2e5 --account dylangeldenhuys1@gmail.com --non-interactive
+npx -y firebase-tools@latest deploy --only hosting --config firebase.review.json --project theatre-tracker-2f2e5 --non-interactive
 ```
 
 The separate `dist-review` verifier checks project/endpoint and absence of local demo credentials/endpoints. Hosting's predeploy check requires the live API to report review mode and the expected project. `.firebaserc` retains the local default; always specify the cloud project explicitly. GitHub Actions runs the checks in [ci.md](ci.md) and can publish a pull-request Hosting preview. Publishing the live site and the API remains a manual release. Do not treat a preview as that release.
@@ -82,7 +82,7 @@ The separate `dist-review` verifier checks project/endpoint and absence of local
 Once Dylan supplies a reviewer's email, create that individual's Email/Password account privately in Firebase Authentication, then run:
 
 ```sh
-npm run setup:review -- --project theatre-tracker-2f2e5 --account dylangeldenhuys1@gmail.com --reviewer LEO_EMAIL --name 'Leo'
+npm run setup:review -- --project theatre-tracker-2f2e5 --reviewer LEO_EMAIL --name 'Leo'
 ```
 
 The existing script gives clinician access to both fictional hospitals and their fixture departments, refuses existing-profile overwrites and creates no shared login accounts. The new role/admin work requested after deployment will update this process; check current role documentation before using it. Passwords and tokens must stay out of chat/Git.
