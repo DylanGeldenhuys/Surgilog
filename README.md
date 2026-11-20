@@ -55,7 +55,7 @@ The login’s **Super User** shortcut opens the full local Admin section. All ac
 | `province@demo.theatre.local` | `state_viewer`; Western Cape, aggregate only |
 | `district@demo.theatre.local` | `district_viewer`; City of Cape Town, aggregate only |
 
-Use your account password and the single **Open workspace** button. The app refreshes the account online when possible and automatically opens the encrypted saved workspace during a connection outage. There is no separate offline mode, device passphrase, migration banner or old-workspace recovery form. Explicit Log out deletes that account’s local work, including unsynced entries; automatic inactivity expiry retains encrypted work for later sign-in. Only one workspace can be open per browser origin at a time.
+Use your account password and the **Sign in** button. **Forgot password?** emails a reset link. The app refreshes the account online when possible and automatically opens the encrypted saved workspace during a connection outage. There is no separate offline mode, device passphrase, migration banner or old-workspace recovery form. Explicit Log out deletes that account’s local work, including unsynced entries; automatic inactivity expiry retains encrypted work for later sign-in. Only one workspace can be open per browser origin at a time.
 
 For a stale port-4173 app screen, open [Update SurgiLog](http://127.0.0.1:4173/api/app-update.html) in the same browser and choose **Update and open app**. Continue in the page it opens. This unregisters the old service worker and removes replaceable static-app caches. It does not clear IndexedDB, account storage or encrypted saved work.
 

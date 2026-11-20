@@ -1183,7 +1183,8 @@ td .procedure-name {
   margin-bottom: 16px;
   min-width: 0;
 }
-.field > span {
+.field > span,
+.field > label {
   font-size: 11px;
   font-weight: 600;
   color: var(--muted);
@@ -1784,6 +1785,40 @@ td .procedure-name {
   margin-top: 5px;
   justify-content: space-between;
   padding: 11px 15px;
+}
+.login-card form > .text-button {
+  margin-top: 8px;
+}
+.password-field {
+  position: relative;
+  width: 100%;
+}
+.password-field input {
+  padding-right: 40px;
+}
+.password-toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 8px 8px 0;
+}
+.password-toggle:hover {
+  color: var(--blue);
+}
+.login-password .field {
+  margin-bottom: 4px;
+}
+.login-password .text-button {
+  margin: 0 0 16px;
+  padding: 0;
 }
 .demo-accounts {
   border-top: 1px solid var(--border);

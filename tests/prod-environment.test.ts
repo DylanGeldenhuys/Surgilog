@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
@@ -19,8 +19,10 @@ import {
 } from '../scripts/guard-deploy.ts';
 import {
   assertHealthy,
+  cloudRunServiceOrigins,
   fetchHealthyResponse,
   healthBackoffMs,
+  requirePinnedServiceOrigin,
   revisionUrl,
   servingRevisionName,
 } from '../scripts/smoke-check-revision.ts';
@@ -464,6 +466,12 @@ describe('production target', () => {
     expect(dev).toContain('refs/heads/dev');
     expect(dev).toContain(DEV_API_ORIGIN);
     expect(dev).toContain(DEV_PROJECT_ID);
+    expect(dev.match(/--require-origin/g)).toHaveLength(2);
+    expect(dev).toContain('REFUSAL_TAIL="Nothing was deployed."');
+    expect(dev).toContain('REFUSAL_TAIL="Hosting was not deployed."');
+    expect(dev).not.toContain('value(status.url)');
+    expect(prod).toContain("--format='value(status.url)'");
+    expect(prod).not.toContain('--require-origin');
     expect(dev).not.toContain(prodProject);
     expect(dev).not.toContain('config/prod-api.yaml');
     const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
@@ -499,6 +507,179 @@ describe('production target', () => {
     expect(output).not.toContain('does not match the build');
   });
 });
+
+const LEGACY_DEV_API = 'https://theatre-tracker-api-m2cpjwqipa-bq.a.run.app';
+
+describe('pinned Cloud Run address', () => {
+  const listed = {
+    status: {
+      url: LEGACY_DEV_API,
+      urls: [LEGACY_DEV_API, DEV_API_ORIGIN],
+    },
+    metadata: {
+      annotations: {
+        'run.googleapis.com/urls': `${LEGACY_DEV_API},${DEV_API_ORIGIN}`,
+      },
+    },
+  };
+
+  it('accepts the stable origin when status.url is only the legacy hash', () => {
+    expect(requirePinnedServiceOrigin(listed, DEV_API_ORIGIN)).toBe(DEV_API_ORIGIN);
+    expect(requirePinnedServiceOrigin({ status: { urls: [DEV_API_ORIGIN] } }, DEV_API_ORIGIN)).toBe(
+      DEV_API_ORIGIN,
+    );
+    expect(
+      requirePinnedServiceOrigin(
+        {
+          metadata: {
+            annotations: { 'run.googleapis.com/urls': ` ${LEGACY_DEV_API}, ${DEV_API_ORIGIN} ` },
+          },
+        },
+        DEV_API_ORIGIN,
+      ),
+    ).toBe(DEV_API_ORIGIN);
+    expect(requirePinnedServiceOrigin({ status: { url: DEV_API_ORIGIN } }, DEV_API_ORIGIN)).toBe(
+      DEV_API_ORIGIN,
+    );
+    expect(
+      requirePinnedServiceOrigin({ status: { urls: [`${DEV_API_ORIGIN}/`] } }, DEV_API_ORIGIN),
+    ).toBe(DEV_API_ORIGIN);
+  });
+
+  it('reads the stable origin from the dev service describe output', () => {
+    const urlsAnnotation =
+      '["https://theatre-tracker-api-54783611706.africa-south1.run.app","https://theatre-tracker-api-m2cpjwqipa-bq.a.run.app"]';
+    const service = {
+      apiVersion: 'serving.knative.dev/v1',
+      kind: 'Service',
+      metadata: {
+        name: 'theatre-tracker-api',
+        namespace: '54783611706',
+        annotations: {
+          'run.googleapis.com/urls': urlsAnnotation,
+        },
+      },
+      status: {
+        url: 'https://theatre-tracker-api-m2cpjwqipa-bq.a.run.app',
+      },
+    };
+    expect(urlsAnnotation).toBe(JSON.stringify([DEV_API_ORIGIN, LEGACY_DEV_API]));
+    expect(service.status.url).toBe(LEGACY_DEV_API);
+    expect(service.status).not.toHaveProperty('urls');
+    expect(cloudRunServiceOrigins(service)).toEqual([DEV_API_ORIGIN, LEGACY_DEV_API]);
+    expect(requirePinnedServiceOrigin(service, DEV_API_ORIGIN)).toBe(DEV_API_ORIGIN);
+    expect(
+      requirePinnedServiceOrigin(
+        {
+          metadata: {
+            annotations: {
+              'run.googleapis.com/urls': JSON.stringify([`${DEV_API_ORIGIN}/`, LEGACY_DEV_API]),
+            },
+          },
+        },
+        ` ${DEV_API_ORIGIN}/ `,
+      ),
+    ).toBe(DEV_API_ORIGIN);
+
+    const hashOnly = {
+      ...service,
+      metadata: {
+        annotations: {
+          'run.googleapis.com/urls': JSON.stringify([LEGACY_DEV_API]),
+        },
+      },
+    };
+    expect(() => requirePinnedServiceOrigin(hashOnly, DEV_API_ORIGIN)).toThrow(
+      `The dev API is ${LEGACY_DEV_API}. It must stay ${DEV_API_ORIGIN}.`,
+    );
+    try {
+      requirePinnedServiceOrigin(hashOnly, DEV_API_ORIGIN);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      expect(message).not.toContain('[');
+      expect(message).not.toContain('"');
+    }
+
+    expect(() =>
+      requirePinnedServiceOrigin(
+        {
+          status: { url: LEGACY_DEV_API },
+          metadata: { annotations: { 'run.googleapis.com/urls': '[not-json' } },
+        },
+        DEV_API_ORIGIN,
+      ),
+    ).toThrow(`The dev API is [not-json, ${LEGACY_DEV_API}. It must stay ${DEV_API_ORIGIN}.`);
+
+    const accepted = runRequireOrigin(service, DEV_API_ORIGIN);
+    expect(accepted.status).toBe(0);
+    expect(accepted.stdout.trim()).toBe(DEV_API_ORIGIN);
+    expect(accepted.stderr).not.toContain('::error::');
+  });
+
+  it('still fails when the stable origin is absent', () => {
+    expect(() =>
+      requirePinnedServiceOrigin(
+        { status: { url: LEGACY_DEV_API, urls: [LEGACY_DEV_API] } },
+        DEV_API_ORIGIN,
+      ),
+    ).toThrow(`The dev API is ${LEGACY_DEV_API}. It must stay ${DEV_API_ORIGIN}.`);
+    expect(() =>
+      requirePinnedServiceOrigin(
+        {
+          status: { url: LEGACY_DEV_API },
+          metadata: { annotations: { 'run.googleapis.com/urls': LEGACY_DEV_API } },
+        },
+        DEV_API_ORIGIN,
+      ),
+    ).toThrow(LEGACY_DEV_API);
+    expect(() => requirePinnedServiceOrigin({}, DEV_API_ORIGIN)).toThrow(
+      `The dev API is missing. It must stay ${DEV_API_ORIGIN}.`,
+    );
+    expect(() => requirePinnedServiceOrigin(listed, '  ')).toThrow(
+      'The pinned API address is missing.',
+    );
+    expect(() =>
+      requirePinnedServiceOrigin(
+        {
+          status: {
+            urls: [`${DEV_API_ORIGIN}.evil.example`, `https://not-${DEV_API_ORIGIN.slice(8)}`],
+          },
+        },
+        DEV_API_ORIGIN,
+      ),
+    ).toThrow('must stay');
+    expect(cloudRunServiceOrigins(listed)).toEqual([LEGACY_DEV_API, DEV_API_ORIGIN]);
+  });
+
+  it('prints the pinned origin and refuses a hash-only service', () => {
+    const accepted = runRequireOrigin(listed, DEV_API_ORIGIN);
+    expect(accepted.status).toBe(0);
+    expect(accepted.stdout.trim()).toBe(DEV_API_ORIGIN);
+    expect(accepted.stderr).not.toContain('::error::');
+
+    const refused = runRequireOrigin({ status: { url: LEGACY_DEV_API } }, DEV_API_ORIGIN);
+    expect(refused.status).not.toBe(0);
+    expect(refused.stdout.trim()).not.toBe(DEV_API_ORIGIN);
+    expect(refused.stderr).toContain(
+      `::error::The dev API is ${LEGACY_DEV_API}. It must stay ${DEV_API_ORIGIN}. Nothing was deployed.`,
+    );
+  });
+});
+
+function runRequireOrigin(service: unknown, expected: string) {
+  const dir = mkdtempSync(join(tmpdir(), 'api-urls-'));
+  const file = join(dir, 'service.json');
+  writeFileSync(file, JSON.stringify(service));
+  return spawnSync('npx', ['tsx', 'scripts/smoke-check-revision.ts', '--require-origin'], {
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      SERVICE_JSON: file,
+      EXPECTED_ORIGIN: expected,
+      REFUSAL_TAIL: 'Nothing was deployed.',
+    },
+  });
+}
 
 function runGuard(args: string[], env: Record<string, string | undefined> = {}) {
   const childEnv = { ...process.env };

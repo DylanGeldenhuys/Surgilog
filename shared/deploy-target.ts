@@ -1,6 +1,8 @@
 export const LOCAL_PROJECT_ID = 'demo-theatre-tracker';
 export const DEV_PROJECT_ID = 'theatre-tracker-2f2e5';
 export const DEV_API_ORIGIN = 'https://theatre-tracker-api-54783611706.africa-south1.run.app';
+/** Exact production custom-domain origin. Not a wildcard and not derived from the project id. */
+export const PRODUCTION_CUSTOM_DOMAIN_ORIGIN = 'https://surgilog.app';
 
 const PROJECT_ID = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 /** Fictional review data only. Real production migrations are a separate pattern. */
@@ -11,7 +13,11 @@ const MIGRATION_SCRIPT = /(?:^|\/)migrate-[\w.-]+\.[cm]?[jt]s$/;
 export function productionHostingOrigins(projectId: string) {
   if (!PROJECT_ID.test(projectId) || projectId.startsWith('demo-'))
     throw new Error('Production requires an explicit real Firebase project id.');
-  return [`https://${projectId}.web.app`, `https://${projectId}.firebaseapp.com`] as const;
+  return [
+    `https://${projectId}.web.app`,
+    `https://${projectId}.firebaseapp.com`,
+    PRODUCTION_CUSTOM_DOMAIN_ORIGIN,
+  ] as const;
 }
 
 export function sameOrigins(actual: readonly string[], expected: readonly string[]) {

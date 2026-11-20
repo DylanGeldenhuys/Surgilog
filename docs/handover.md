@@ -1,6 +1,22 @@
 # Project handover
 
-Updated: 19 November 2026, Africa/Johannesburg.
+Updated: 20 November 2026, Africa/Johannesburg.
+
+## Sign-in and password reset — 20 November 2026
+
+Implemented on a feature branch from `dev`, targeting `dev`. Not merged and not deployed. The sign-in screen has email, password and **Sign in**. **Forgot password?** opens a reset view that reuses the entered email and calls the existing `sendPasswordResetEmail`. A sent request, an unknown address and a disabled account show the same confirmation, so reset does not reveal which accounts exist. Wrong password, too many attempts, a network failure, an invalid email and a disabled account each show a visible message on sign-in. The buttons stay disabled while a request is in flight. The password field has a show/hide control. Offline unlock with the same account password is unchanged. The production environment badge stays hidden.
+
+A Super User who adds a person still does not email them. The Admin API creates the Auth user with an unknown random password and returns a one-time password setup link in that admin’s browser. The link is omitted from audits and receipts. Existing accounts still never receive a reset link through Admin. That flow was not changed.
+
+Local checks: **115 unit tests**, typecheck, formatting and the production build pass. The existing bundle-size warning remains. Chromium checked the sign-in screen, the show/hide password control, the reset confirmation for an unknown address, a wrong password, a disabled account, an invalid email, an offline reset, and a successful local sign-in. The Auth emulator did not return a too-many-attempts error.
+
+## Dev API address check — 20 November 2026
+
+Deploy development run [44759130852](https://github.com/DylanGeldenhuys/Surgilog/actions/runs/44759130852) stopped at "Keep the existing dev API address" before anything was deployed. The check compared only Cloud Run `status.url` (`https://theatre-tracker-api-m2cpjwqipa-bq.a.run.app`) with the pinned origin `https://theatre-tracker-api-54783611706.africa-south1.run.app`. The guard now accepts that pinned origin when it is `status.url`, an entry in `status.urls`, or the `run.googleapis.com/urls` annotation, and still stops the deploy when the pinned origin is absent. A v1 describe puts the stable origin in that annotation as a JSON array string; a comma-separated list is still accepted, and a trailing slash does not change the match. The dev web build keeps the pinned origin. Production's "Read the API URL" step still uses `status.url` for the address baked into the production web app. That step has no pinned-origin check; the first production deploy succeeded with it, so this change leaves it alone. Not deployed.
+
+## Production login badge — 20 November 2026
+
+Dylan asked for the small production environment badge to be removed. Feature branches come from and target `dev`. Not merged and not deployed. The login card hides its environment label when `VITE_APP_ENV` is `prod`. Local still shows `LOCAL V1 · SYNTHETIC DATA ONLY` and review still shows `REVIEW VERSION · SYNTHETIC DATA ONLY`. The signed-in “Production workspace” note and the footer line are unchanged.
 
 ## Production project id — 19 November 2026
 
@@ -193,7 +209,7 @@ Existing encrypted development archives are silently preserved by the storage la
 
 Use `http://127.0.0.1:5173/` for Dylan's ongoing feature review: it is the Vite development app and refreshes automatically. Use `http://127.0.0.1:4173/` only for the built installable PWA and offline/service-worker checks. The PWA can retain old JavaScript in an already-open tab. `/api/app-update.html` bypasses the existing worker’s navigation fallback, unregisters old workers, removes replaceable Cache Storage entries and opens the current sign-in. It never clears IndexedDB or account storage. Continue in the page opened by the updater rather than an old tab.
 
-**Latest login direction:** Dylan confirmed that offline handling should happen in the background. The login page no longer exposes “Sign in online” and “Unlock offline” choices. It has one **Open workspace** action. When connected, it authenticates and refreshes current identity/permissions; when connectivity is unavailable, it automatically opens that account’s encrypted prepared workspace with the same account password. First use on a device and expired offline access still require connectivity. Chromium verified online open → lock → full offline reload → the same Open workspace action → reconnect to Connected.
+**Latest login direction:** Dylan confirmed that offline handling should happen in the background. The login page no longer exposes “Sign in online” and “Unlock offline” choices. It has one sign-in action. On 20 November 2026 the button label became **Sign in**, with **Forgot password?** under the password field. When connected, it authenticates and refreshes current identity/permissions; when connectivity is unavailable, it automatically opens that account’s encrypted prepared workspace with the same account password. First use on a device and expired offline access still require connectivity. Chromium previously verified online open → lock → full offline reload → that same action → reconnect to Connected. The offline reload was not rerun for the 20 November label change.
 
 ## Design and brand reference
 
@@ -331,7 +347,7 @@ Implemented the **Admin** tab for adding hospitals, departments, named theatres 
 
 Nurses/clerks can register patients, edit patient details/notes and record surgery start/end. They cannot change existing priority, approve readiness, hold/release, create sessions, book or cancel surgery. The registration implementation currently records a doctor-assigned initial priority with the doctor’s name and Needs assessment readiness. That specific transcription approach was proposed to Dylan and is still awaiting his answer; the broader role hierarchy and write-admin clinical powers are confirmed.
 
-`apps/api/admin.ts` checks current scope/delegation inside transactions, uses stable request IDs and profile/hospital versions, writes `systemAudit`/`adminOperations`, prevents self-escalation and preserves unrelated grants. New Firebase Auth identities use a resumable reservation, then current authority is checked again before profile creation. Only new identities receive a password setup link, returned in memory and omitted from receipts/audits. Existing accounts never expose reset links to admins. Auth-only interrupted setup has no app access. The sign-in page now has Set or reset password; forgotten-password recovery of encrypted pending clinical work remains unresolved.
+`apps/api/admin.ts` checks current scope/delegation inside transactions, uses stable request IDs and profile/hospital versions, writes `systemAudit`/`adminOperations`, prevents self-escalation and preserves unrelated grants. New Firebase Auth identities use a resumable reservation, then current authority is checked again before profile creation. Only new identities receive a password setup link, returned in memory and omitted from receipts/audits. Existing accounts never expose reset links to admins. Auth-only interrupted setup has no app access. Sign-in now uses Forgot password, which emails a reset link. The admin setup link described above is unchanged. Forgotten-password recovery of encrypted pending clinical work remains unresolved.
 
 Local role fixtures were migrated without touching patient records: `super@demo.theatre.local`, `major@demo.theatre.local`, `major-read@demo.theatre.local`, `hospital-admin@demo.theatre.local`, `hospital-read@demo.theatre.local`. Leo is Doctor, sister is Nurse, clerk is Clerk, former scheduler is read-only System Admin. `npm run migrate:admin-roles` is guarded/idempotent and is part of `npm run dev`. Choose **Super User** on the local login to exercise all Admin actions. Do not automatically promote Leo to Super User.
 

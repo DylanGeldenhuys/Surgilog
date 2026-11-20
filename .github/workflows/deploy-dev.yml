@@ -156,9 +156,13 @@ jobs:
             echo "::error::Refusing a dev deploy that would change the API address. Nothing was deployed."
             exit 1
           fi
-          url="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format='value(status.url)')"
+          json="${RUNNER_TEMP:-/tmp}/dev-api-address.json"
+          gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format=json > "$json"
+          # status.url is the legacy hash URL. Accept the pinned origin when it is
+          # that URL, one of status.urls, or in the run.googleapis.com/urls annotation.
+          url="$(SERVICE_JSON="$json" EXPECTED_ORIGIN="$expected" REFUSAL_TAIL="Nothing was deployed." npx tsx scripts/smoke-check-revision.ts --require-origin)"
           if [ "$url" != "$expected" ]; then
-            echo "::error::The dev API is ${url}. It must stay ${expected}. Nothing was deployed."
+            echo "::error::The dev API address check did not return ${expected}. Nothing was deployed."
             exit 1
           fi
 
@@ -293,9 +297,12 @@ jobs:
             echo "::error::Refusing a dev deploy that would change the API address. Hosting was not deployed."
             exit 1
           fi
-          url="$(gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format='value(status.url)')"
+          json="${RUNNER_TEMP:-/tmp}/dev-api-url.json"
+          gcloud run services describe "${SERVICE}" --region="${REGION}" --project="${PROJECT}" --format=json > "$json"
+          # Same address check as above. The web build keeps the pinned origin, not the hash URL.
+          url="$(SERVICE_JSON="$json" EXPECTED_ORIGIN="$expected" REFUSAL_TAIL="Hosting was not deployed." npx tsx scripts/smoke-check-revision.ts --require-origin)"
           if [ "$url" != "$expected" ]; then
-            echo "::error::The dev API is ${url}. It must stay ${expected}. Hosting was not deployed."
+            echo "::error::The dev API address check did not return ${expected}. Hosting was not deployed."
             exit 1
           fi
           echo "url=${url}" >> "$GITHUB_OUTPUT"
