@@ -12,7 +12,8 @@ import {
 import { saDay } from '../../shared/domain.ts';
 import { theatrePeriod, type ReportPeriod, type TheatreReport } from '../../shared/theatre.ts';
 import { api } from './firebase.ts';
-import { Field, date, time } from './ui.tsx';
+import { reportScopeEmptyCopy, theatreReportPath } from './reporting-scope.ts';
+import { Empty, Field, date, time } from './ui.tsx';
 
 const number = (v: number | null, suffix = '') =>
   v === null ? 'Not available' : `${Math.round(v * 10) / 10}${suffix}`;
@@ -23,9 +24,11 @@ const clock = (v: number | null) =>
 export function TheatreReports({
   hospitalId,
   departmentId,
+  superUser = false,
 }: {
   hospitalId: string;
   departmentId: string;
+  superUser?: boolean;
 }) {
   const [period, setPeriod] = useState<ReportPeriod>('Month'),
     [anchor, setAnchor] = useState(saDay(new Date())),
@@ -34,18 +37,14 @@ export function TheatreReports({
     [revision, setRevision] = useState(0),
     [loading, setLoading] = useState(false);
   const range = theatrePeriod(period, anchor);
+  const path = theatreReportPath(hospitalId, departmentId, range.from, range.to);
   useEffect(() => {
+    if (!path) return;
     let active = true;
     setLoading(true);
     setReport(null);
     setError('');
-    const params = new URLSearchParams({
-      hospitalId,
-      departmentId,
-      from: range.from,
-      to: range.to,
-    });
-    api<TheatreReport>(`/api/reporting/theatre?${params}`)
+    api<TheatreReport>(path)
       .then((r) => {
         if (active) setReport(r);
       })
@@ -58,7 +57,11 @@ export function TheatreReports({
     return () => {
       active = false;
     };
-  }, [hospitalId, departmentId, range.from, range.to, revision]);
+  }, [path, revision]);
+  if (!path) {
+    const copy = reportScopeEmptyCopy(superUser);
+    return <Empty title={copy.title} detail={copy.detail} />;
+  }
   return (
     <section className="theatre-reports">
       <div className="register-toolbar no-print">

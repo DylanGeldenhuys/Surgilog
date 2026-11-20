@@ -5,6 +5,7 @@ import { sessionExpired, type SessionEnd } from './session-policy.ts';
 import { shouldHoldForRetry } from './sync-policy.ts';
 import { acknowledgeOperation } from './workspace-projection.ts';
 import { SnapshotGuard } from './snapshot-guard.ts';
+import { overviewReportPath } from './reporting-scope.ts';
 export { projected } from './workspace-projection.ts';
 import {
   operationSchema,
@@ -88,19 +89,15 @@ export function useWorkspace(initial: Vault, onEnd: (reason: SessionEnd) => void
   );
   const refreshReporting = useCallback(
     async (hospitalIds: string[], departments: ReportingDepartmentSelection[]) => {
+      const path = overviewReportPath(hospitalIds, departments);
+      if (!path) return;
       await auth.authStateReady();
       if (auth.currentUser?.uid !== ref.current.data.profile.uid)
         throw new RequestError(401, 'Sign in with this workspace account to refresh.');
-      const key = reportingCacheKey(hospitalIds, departments),
-        query = new URLSearchParams({
-          hospitalIds: hospitalIds.join(','),
-          departmentKeys: departments
-            .map((item) => `${item.hospitalId}/${item.departmentId}`)
-            .join(','),
-        });
+      const key = reportingCacheKey(hospitalIds, departments);
       try {
         const current = snapshots.current.beginRead(`report:${key}`);
-        const report = await api<ReportingWorkspace>(`/api/reporting/overview?${query}`);
+        const report = await api<ReportingWorkspace>(path);
         await commit((d) =>
           current()
             ? {
