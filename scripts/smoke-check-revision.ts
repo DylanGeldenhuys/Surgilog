@@ -17,16 +17,33 @@ export type DeployedService = {
 
 const URLS_ANNOTATION = 'run.googleapis.com/urls';
 
-function pushOrigin(urls: string[], value: unknown) {
-  if (typeof value !== 'string') return;
-  const trimmed = value.trim();
-  if (!trimmed || urls.includes(trimmed)) return;
-  urls.push(trimmed);
+function normaliseOrigin(value: string) {
+  return value.trim().replace(/\/+$/, '');
 }
 
+function pushOrigin(urls: string[], value: unknown) {
+  if (typeof value !== 'string') return;
+  const origin = normaliseOrigin(value);
+  if (!origin || urls.includes(origin)) return;
+  urls.push(origin);
+}
+
+/** `status.urls` is a list. The v1 urls annotation is a JSON array string, or a comma-separated list. */
 function pushListedOrigins(urls: string[], value: unknown) {
   if (typeof value === 'string') {
-    for (const part of value.split(',')) pushOrigin(urls, part);
+    const trimmed = value.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed) as unknown;
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) pushOrigin(urls, item);
+          return;
+        }
+      } catch {
+        // Not JSON. The comma split below still has to find an exact origin.
+      }
+    }
+    for (const part of trimmed.split(',')) pushOrigin(urls, part);
     return;
   }
   if (!Array.isArray(value)) return;
@@ -42,12 +59,12 @@ export function cloudRunServiceOrigins(service: DeployedService | null | undefin
   return urls;
 }
 
-/** Returns the pinned origin only when the service lists that exact origin. */
+/** Returns the pinned origin when the service lists it. A trailing slash does not change the origin. */
 export function requirePinnedServiceOrigin(
   service: DeployedService | null | undefined,
   expected: string,
 ) {
-  const expectedOrigin = expected.trim();
+  const expectedOrigin = normaliseOrigin(expected);
   if (!expectedOrigin) throw new Error('The pinned API address is missing.');
   const urls = cloudRunServiceOrigins(service);
   if (!urls.includes(expectedOrigin)) {
