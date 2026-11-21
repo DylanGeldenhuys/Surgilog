@@ -2,6 +2,7 @@ import { saveTheatreEntry } from './theatre.ts';
 import type { TheatreEntry } from '../../shared/theatre.ts';
 import { createHash } from 'node:crypto';
 import { FieldValue } from 'firebase-admin/firestore';
+import { departmentQuery, readQuery } from './pages.ts';
 import { db } from './firebase.ts';
 import {
   applyDiagnosis,
@@ -161,19 +162,11 @@ export async function workspace(uid: string, hid: string, dep: string): Promise<
   requireThat(hs.exists, 404, 'Hospital not found.');
   const m = access(p, hs.data() as Hospital);
   department(m, dep);
-  const [cs, ss, bs] = await Promise.all(
-    ['cases', 'sessions', 'bookings'].map((name) =>
-      h.collection(name).where('departmentId', '==', dep).limit(1001).get(),
-    ),
-  );
-  requireThat(
-    cs.size <= 1000 && ss.size <= 1000 && bs.size <= 1000,
-    422,
-    'The local pilot dataset limit was reached. Archive/filter the working set before continuing.',
-  );
-  const cases = cs.docs.map((d) => d.data() as SurgicalCase),
-    sessions = ss.docs.map((d) => d.data() as TheatreSession),
-    bookings = bs.docs.map((d) => d.data() as Booking);
+  const [cases, sessions, bookings] = await Promise.all([
+    readQuery<SurgicalCase>(departmentQuery(h.collection('cases'), dep)),
+    readQuery<TheatreSession>(departmentQuery(h.collection('sessions'), dep)),
+    readQuery<Booking>(departmentQuery(h.collection('bookings'), dep)),
+  ]);
   const register =
     m.role === 'viewer'
       ? null
@@ -245,24 +238,19 @@ type DepartmentDataset = {
 async function reportingDepartment(hospital: Hospital, departmentId: string) {
   const departmentRecord = hospital.departments.find((item) => item.id === departmentId);
   requireThat(departmentRecord, 404, 'Department not found.');
-  const h = db.doc(`hospitals/${hospital.id}`),
-    [cs, ss, bs] = await Promise.all(
-      ['cases', 'sessions', 'bookings'].map((name) =>
-        h.collection(name).where('departmentId', '==', departmentId).limit(1001).get(),
-      ),
-    );
-  requireThat(
-    cs.size <= 1000 && ss.size <= 1000 && bs.size <= 1000,
-    422,
-    'The reporting scope exceeds the local pilot dataset limit.',
-  );
+  const h = db.doc(`hospitals/${hospital.id}`);
+  const [cases, sessions, bookings] = await Promise.all([
+    readQuery<SurgicalCase>(departmentQuery(h.collection('cases'), departmentId)),
+    readQuery<TheatreSession>(departmentQuery(h.collection('sessions'), departmentId)),
+    readQuery<Booking>(departmentQuery(h.collection('bookings'), departmentId)),
+  ]);
   return {
     hospital,
     departmentId,
     departmentName: departmentRecord.name,
-    cases: cs.docs.map((item) => item.data() as SurgicalCase),
-    sessions: ss.docs.map((item) => item.data() as TheatreSession),
-    bookings: bs.docs.map((item) => item.data() as Booking),
+    cases,
+    sessions,
+    bookings,
   } satisfies DepartmentDataset;
 }
 

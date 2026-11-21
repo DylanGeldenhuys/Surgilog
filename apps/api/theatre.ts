@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { db } from './firebase.ts';
+import { readQuery } from './pages.ts';
 import { ApiError, profileFor, resolvedReportingAccess } from './service.ts';
 import {
   canClinical,
@@ -259,50 +260,43 @@ export async function theatreReport(
   check(grant, 403, 'This reporting scope is outside your access.');
   const h = db.doc(`hospitals/${hid}`),
     base = (name: string) => h.collection(name).where('departmentId', '==', dep);
-  const [es, bs, ss, plannedBookings] = await Promise.all([
-    base('theatreEntries')
-      .where('operationDate', '>=', theatreDay(new Date(start - 86400000)))
-      .where('operationDate', '<=', to)
-      .orderBy('operationDate')
-      .limit(5001)
-      .get(),
-    base('bookings')
-      .where('inAt', '>=', new Date(start - 2 * 86400000).toISOString())
-      .where('inAt', '<', new Date(end + 86400000).toISOString())
-      .orderBy('inAt')
-      .limit(5001)
-      .get(),
-    base('sessions')
-      .where('start', '>=', new Date(start - 2 * 86400000).toISOString())
-      .where('start', '<', new Date(end + 86400000).toISOString())
-      .orderBy('start')
-      .limit(2001)
-      .get(),
-    base('bookings')
-      .where('start', '>=', new Date(start - 86400000).toISOString())
-      .where('start', '<', new Date(end + 86400000).toISOString())
-      .orderBy('start')
-      .limit(5001)
-      .get(),
+  const [stored, actualBookings, sessions, plannedBookings] = await Promise.all([
+    readQuery<TheatreEntry>(
+      base('theatreEntries')
+        .where('operationDate', '>=', theatreDay(new Date(start - 86400000)))
+        .where('operationDate', '<=', to)
+        .orderBy('operationDate'),
+    ),
+    readQuery<Booking>(
+      base('bookings')
+        .where('inAt', '>=', new Date(start - 2 * 86400000).toISOString())
+        .where('inAt', '<', new Date(end + 86400000).toISOString())
+        .orderBy('inAt'),
+    ),
+    readQuery<TheatreSession>(
+      base('sessions')
+        .where('start', '>=', new Date(start - 2 * 86400000).toISOString())
+        .where('start', '<', new Date(end + 86400000).toISOString())
+        .orderBy('start'),
+    ),
+    readQuery<Booking>(
+      base('bookings')
+        .where('start', '>=', new Date(start - 86400000).toISOString())
+        .where('start', '<', new Date(end + 86400000).toISOString())
+        .orderBy('start'),
+    ),
   ]);
-  check(
-    es.size <= 5000 && bs.size <= 5000 && ss.size <= 2000 && plannedBookings.size <= 5000,
-    422,
-    'This report exceeds the preview limit. Select a shorter period. No partial totals are shown.',
-  );
-  const stored = es.docs.map((d) => d.data() as TheatreEntry),
-    bookings = [
-      ...new Map(
-        [...bs.docs, ...plannedBookings.docs].map((d) => [d.id, d.data() as Booking]),
-      ).values(),
-    ].filter((b) => {
-      const when = Date.parse(b.inAt ?? b.start);
-      return (
-        when < end &&
-        (when >= start || (b.status === 'Completed' && Date.parse(b.outAt ?? '') > start))
-      );
-    }),
-    sessions = ss.docs.map((d) => d.data() as TheatreSession);
+  const bookings = [
+    ...new Map(
+      [...actualBookings, ...plannedBookings].map((booking) => [booking.id, booking]),
+    ).values(),
+  ].filter((b) => {
+    const when = Date.parse(b.inAt ?? b.start);
+    return (
+      when < end &&
+      (when >= start || (b.status === 'Completed' && Date.parse(b.outAt ?? '') > start))
+    );
+  });
   // Read only the case references required by bookings, in bounded batches.
   const cases: SurgicalCase[] = [];
   const ids = [...new Set(bookings.filter((b) => b.status === 'Completed').map((b) => b.caseId))];
