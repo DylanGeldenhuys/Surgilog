@@ -37,7 +37,7 @@ describe('Cloud Run client address', () => {
 
 describe('runtime alignment', () => {
   it('builds and tests the API on the same Node 22 release', () => {
-    expect(readFileSync('Dockerfile', 'utf8')).toContain('FROM node:22-bookworm-slim');
+    expect(readFileSync('Dockerfile', 'utf8')).toContain('FROM node:22.23-bookworm-slim');
     expect(readFileSync('Dockerfile', 'utf8')).not.toContain('node:24');
     for (const file of [
       '.github/workflows/ci.yml',
