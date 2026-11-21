@@ -240,7 +240,7 @@ jobs:
             echo "## API rollback"
             echo
             echo "If the Hosting deploy fails after this point, the new API revision is already serving and the previous web app is still on the live site."
-            echo "Rules publish last, after Hosting. If that step fails, the new API and the new web app are already live and the previous rules are still published."
+            echo "Rules publish after Hosting, then Firestore indexes. If rules fail, the new API and the new web app are already live and the previous rules are still published. If indexes fail, rules are already published and the previous indexes are still in place."
             echo "A rule change the web app depends on must already be published, or the new rules must keep working with the previous web app."
             if [ -n "${PREVIOUS}" ]; then
               echo
@@ -312,3 +312,15 @@ jobs:
           fi
           node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync("firebase.rules.json", JSON.stringify({ firestore: { rules: "firebase/firestore.rules" } }, null, 2) + "\n");'
           npx firebase-tools deploy --only firestore:rules --config firebase.rules.json --project "$PROJECT" --non-interactive
+
+      - name: Deploy Firestore indexes
+        env:
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" != "surgilog-production" ]; then
+            echo "::error::Refusing a production index deploy aimed at ${PROJECT}. Indexes were not deployed."
+            exit 1
+          fi
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync("firebase.indexes.json", JSON.stringify({ firestore: { rules: "firebase/firestore.rules", indexes: "firebase/firestore.indexes.json" } }, null, 2) + "\n");'
+          npx firebase-tools deploy --only firestore:indexes --config firebase.indexes.json --project "$PROJECT" --non-interactive

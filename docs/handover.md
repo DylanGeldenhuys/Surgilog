@@ -1,6 +1,10 @@
 # Project handover
 
-Updated: 20 November 2026, Africa/Johannesburg.
+Updated: 21 November 2026, Africa/Johannesburg.
+
+## Deploy indexes, Node 22, and the Cloud Run client address — 21 November 2026
+
+Implemented on a branch from `dev`, targeting `dev`. Not merged and not deployed. Dev and production deploys publish Firestore indexes after the security rules. The deploy account needs `roles/datastore.indexAdmin` once per project; the command is in [ci.md](ci.md). `npm audit fix` was run without forcing major upgrades. It cleared the direct advisories in zod, fastify, fast-uri, fast-xml-parser, re2js and vite. 19 advisories remain inside `firebase-tools` and the Workbox toolchain; clearing them would mean a breaking `firebase-tools` change, so they were left. On Cloud Run the API trusts one proxy hop, so rate limits use the client address Google appends, not a spoofed prefix and not the proxy. The container is Node 22, matching CI. No startup or liveness probe is defined in the repo, so none was added; the workflows still call `/health` before shifting traffic. `docs/deployment.md` now says the production project and workflow are in the repo and that a production publish still stops while the web SDK key is a placeholder. Leo's HTML artifact stays in the repo because the requirements and this handover name it. Local checks: **122 unit tests**, typecheck and formatting pass.
 
 ## Empty reporting scope — 20 November 2026
 
@@ -24,7 +28,7 @@ Dylan asked for the small production environment badge to be removed. Feature br
 
 ## Production project id — 19 November 2026
 
-Dylan replaced the production project. The id is **surgilog-production**, display name **Surgilog Production**. The dev project id stays `theatre-tracker-2f2e5`; its display name is **Surgilog Development**. The web SDK key in `config/prod.json` is still a placeholder, so a production deploy still stops. After Hosting, both deploy workflows publish Firestore security rules only. Indexes are not part of that step. Nothing was deployed.
+Dylan replaced the production project. The id is **surgilog-production**, display name **Surgilog Production**. The dev project id stays `theatre-tracker-2f2e5`; its display name is **Surgilog Development**. The web SDK key in `config/prod.json` is still a placeholder, so a production deploy still stops. After Hosting, both deploy workflows publish Firestore security rules and then the indexes in `firebase/firestore.indexes.json`. The index step needs `roles/datastore.indexAdmin` on the deploy account. Nothing was deployed by that project-id change.
 
 
 
@@ -335,7 +339,7 @@ Automated status remains 26 unit/storage/sync tests and 14 integration scenarios
 
 ## Current milestone: publish a review version for Leo
 
-Dylan supplied the web SDK config for **theatre-tracker-2f2e5**, saved as public client configuration in `config/review.json`. See [deployment.md](deployment.md). Cloud preparation is implemented: explicit local/review modes, platform API credentials, injected port/bind/CORS settings, Node 24 Dockerfile, source-upload allowlist, a separate `dist-review` build and `firebase.review.json`, no demo password/role controls in review login, guarded fictional seeding and individual reviewer profile setup. Analytics stays off. Local development still uses its emulator project; do not point emulator scripts at cloud.
+Dylan supplied the web SDK config for **theatre-tracker-2f2e5**, saved as public client configuration in `config/review.json`. See [deployment.md](deployment.md). Cloud preparation is implemented: explicit local/review modes, platform API credentials, injected port/bind/CORS settings, Node 22 Dockerfile, source-upload allowlist, a separate `dist-review` build and `firebase.review.json`, no demo password/role controls in review login, guarded fictional seeding and individual reviewer profile setup. Analytics stays off. Local development still uses its emulator project; do not point emulator scripts at cloud.
 
 **Published on 5 October 2026 after Dylan approved the exact API/IAM plan and completed owner login.** Website: https://theatre-tracker-2f2e5.web.app. API: https://theatre-tracker-api-54783611706.africa-south1.run.app. Cloud Run revision `theatre-tracker-api-00001-h6k`; Hosting version `ed445173ca2d2119`. Firestore Standard and API run in Johannesburg. Four approved APIs are enabled; dedicated runtime/build service accounts have exactly the three approved project grants. Read-back verified service identity, configuration and readiness. See [deployment](deployment.md) and [infrastructure](review-infrastructure.md).
 
