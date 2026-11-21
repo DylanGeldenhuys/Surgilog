@@ -50,6 +50,7 @@ import {
   reportScopeEmptyCopy,
 } from './reporting-scope.ts';
 import { UpdateNotice } from './UpdateNotice.tsx';
+import { AppErrorBoundary } from './ErrorBoundary.tsx';
 import { WorkspaceSession } from './WorkspaceSession.tsx';
 import type { SessionEnd } from './session-policy.ts';
 import { Admin } from './Admin.tsx';
@@ -1956,11 +1957,17 @@ function ImportForm({
     </Modal>
   );
 }
+function DevCrash() {
+  if (import.meta.env.DEV && new URLSearchParams(window.location.search).get('crash') === '1')
+    throw new Error('Synthetic render failure for the error screen.');
+  return null;
+}
 const root = import.meta.hot?.data.root ?? createRoot(document.getElementById('root')!);
 if (import.meta.hot) import.meta.hot.data.root = root;
 root.render(
-  <>
+  <AppErrorBoundary>
+    <DevCrash />
     <App />
     <UpdateNotice />
-  </>,
+  </AppErrorBoundary>,
 );

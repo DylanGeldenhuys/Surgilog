@@ -1,6 +1,10 @@
 # Project handover
 
-Updated: 20 November 2026, Africa/Johannesburg.
+Updated: 21 November 2026, Africa/Johannesburg.
+
+## Logging and client errors — 21 November 2026
+
+Implemented on a branch from `dev`, targeting `dev`. Not merged and not deployed. The API writes JSON logs with Cloud Logging `severity`, an `httpRequest` record, and the request id. Errors include the message, stack, route, method and status. Request bodies, patient fields, tokens and auth headers are redacted and are not written to the log. Every response sends `x-request-id`, and error JSON includes `requestId`. An unhandled rejection or uncaught exception is logged at CRITICAL and the process exits so Cloud Run can start a new instance. The web app shows a reload screen with that reference and posts a short report to `POST /api/client-errors`. The report is optional to authenticate, limited to 20 per minute and 4 KB, and the stored text is redacted. A local development page opened with `?crash=1` shows the screen; that query does nothing in a production build. Local checks: **132 unit tests**, typecheck and formatting pass. Headless Chromium at 1440px and 390px showed the reload screen with a reference, posted the report, and Reload loaded the screen again with a new reference. The normal sign-in route did not show that screen.
 
 ## Empty reporting scope — 20 November 2026
 
@@ -25,8 +29,6 @@ Dylan asked for the small production environment badge to be removed. Feature br
 ## Production project id — 19 November 2026
 
 Dylan replaced the production project. The id is **surgilog-production**, display name **Surgilog Production**. The dev project id stays `theatre-tracker-2f2e5`; its display name is **Surgilog Development**. The web SDK key in `config/prod.json` is still a placeholder, so a production deploy still stops. After Hosting, both deploy workflows publish Firestore security rules only. Indexes are not part of that step. Nothing was deployed.
-
-
 
 ## Branch deploys — 18 November 2026
 
