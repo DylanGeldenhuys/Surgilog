@@ -258,8 +258,9 @@ describe('client error reports', () => {
         fingerprint,
         stack: [
           'Error: Missing theatre for Ada Nkosi 8001015009087 K35.8',
-          '    at DevCrash (http://127.0.0.1:5173/apps/web/main.tsx?patient=Ada:10:5)',
-          '    at other (https://evil.example/a.js:1:1)',
+          '    at DevCrash (http://127.0.0.1:5173/assets/index-Ab12.js?patient=Ada:10:5)',
+          '    at other (https://evil.example/assets/index.js:1:1)',
+          '    at named (http://127.0.0.1:5173/assets/Jane%20Doe.js:1:1)',
         ].join('\n'),
       },
     });
@@ -273,8 +274,9 @@ describe('client error reports', () => {
     expect(logged?.errorName).toBe('TypeError');
     expect(logged?.fingerprint).toBe(fingerprint);
     expect(logged?.uid).toBe('user-1');
-    expect(String(logged?.stack)).toContain('http://127.0.0.1:5173/apps/web/main.tsx:10:5');
+    expect(String(logged?.stack)).toContain('http://127.0.0.1:5173/assets/index-Ab12.js:10:5');
     expect(String(logged?.stack)).not.toContain('evil.example');
+    expect(String(logged?.stack)).not.toContain('Jane');
     const text = lines.join('\n');
     expect(text).not.toContain('Ada');
     expect(text).not.toContain('8001015009087');

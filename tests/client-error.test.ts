@@ -11,7 +11,7 @@ describe('browser error reports', () => {
         message: 'Could not save Ada Nkosi 8001015009087 Bearer session-token',
         stack: [
           'Error: Ada Nkosi',
-          '    at save (http://127.0.0.1:5173/apps/web/state.ts:10:4)',
+          '    at save (http://127.0.0.1:5173/assets/index-Ab12.js:10:4)',
           '    at other (https://evil.example/a.js:1:1)',
         ].join('\n'),
       },
@@ -23,7 +23,7 @@ describe('browser error reports', () => {
       fingerprint: await messageFingerprint(
         'Could not save Ada Nkosi 8001015009087 Bearer session-token',
       ),
-      stack: 'at save (http://127.0.0.1:5173/apps/web/state.ts:10:4)',
+      stack: 'at save (http://127.0.0.1:5173/assets/index-Ab12.js:10:4)',
     });
     expect(JSON.stringify(payload)).not.toContain('Ada');
     expect(JSON.stringify(payload)).not.toContain('8001015009087');

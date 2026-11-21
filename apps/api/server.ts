@@ -59,6 +59,10 @@ export async function buildApp() {
     capabilities: ['admin-v1', 'theatre-register-v1'],
   }));
   registerClientErrorRoute(app, {
+    allowOrigin: (origin) =>
+      runtime.origins.some((allowed) =>
+        typeof allowed === 'string' ? allowed === origin : allowed.test(origin),
+      ),
     identify: async (authorization) => {
       const token = authorization.startsWith('Bearer ')
         ? authorization.slice('Bearer '.length)

@@ -40,7 +40,7 @@ export function clientStackFrames(stack: string | undefined, origin: string | un
     } catch {
       continue;
     }
-    if (url.origin !== allowed) continue;
+    if (url.origin !== allowed || !/^\/assets\/[\w.-]+\.m?js$/.test(url.pathname)) continue;
     frames.push(`at ${match[1]} (${url.origin}${url.pathname}:${match[3]}:${match[4]})`);
     if (frames.length >= 10) break;
   }
