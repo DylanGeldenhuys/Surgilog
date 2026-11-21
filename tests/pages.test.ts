@@ -1,7 +1,12 @@
 import { FieldPath } from 'firebase-admin/firestore';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { departmentQuery, readQuery } from '../apps/api/pages.ts';
+import {
+  departmentQuery,
+  mapWithConcurrency,
+  newestByStart,
+  readQuery,
+} from '../apps/api/pages.ts';
 
 type Row = { id: string; name: string };
 
@@ -38,8 +43,38 @@ describe('paged department reads', () => {
       id: `case-${index}`,
       name: `Case ${index}`,
     }));
-    await expect(readQuery<Row>(queryFor(rows) as never, 2)).resolves.toEqual(rows);
-    await expect(readQuery<Row>(queryFor([]) as never, 2)).resolves.toEqual([]);
+    await expect(readQuery<Row>(queryFor(rows) as never, { pageSize: 2 })).resolves.toEqual({
+      rows,
+      truncated: false,
+    });
+    await expect(readQuery<Row>(queryFor([]) as never, { pageSize: 2 })).resolves.toEqual({
+      rows: [],
+      truncated: false,
+    });
+  });
+
+  it('stops at the document cap and reports that more rows exist', async () => {
+    const rows = Array.from({ length: 6 }, (_, index) => ({
+      id: `case-${index}`,
+      name: `Ada Nkosi ${index}`,
+    }));
+    const page = await readQuery<Row>(queryFor(rows) as never, { pageSize: 2, maxDocs: 4 });
+    expect(page.truncated).toBe(true);
+    expect(page.rows).toHaveLength(4);
+    expect(page.rows.map((row) => row.id)).toEqual(['case-0', 'case-1', 'case-2', 'case-3']);
+  });
+
+  it('stops when the shared overview budget is spent', async () => {
+    const rows = Array.from({ length: 10 }, (_, index) => ({ id: `row-${index}`, name: 'x' }));
+    const budget = { used: 0, max: 3 };
+    const page = await readQuery<Row>(queryFor(rows) as never, {
+      pageSize: 2,
+      maxDocs: 10,
+      budget,
+    });
+    expect(page.truncated).toBe(true);
+    expect(page.rows.length).toBeLessThanOrEqual(3);
+    expect(budget.used).toBeLessThanOrEqual(4);
   });
 
   it('does not stop at the old 1,000 or 5,000 pilot caps', async () => {
@@ -47,10 +82,38 @@ describe('paged department reads', () => {
       id: `row-${String(index).padStart(4, '0')}`,
       name: 'synthetic',
     }));
-    const read = await readQuery<Row>(queryFor(rows) as never, 300);
-    expect(read).toHaveLength(1001);
-    expect(read[0]?.id).toBe('row-0000');
-    expect(read[1000]?.id).toBe('row-1000');
+    const read = await readQuery<Row>(queryFor(rows) as never, { pageSize: 300, maxDocs: 2000 });
+    expect(read.truncated).toBe(false);
+    expect(read.rows).toHaveLength(1001);
+    expect(read.rows[0]?.id).toBe('row-0000');
+    expect(read.rows[1000]?.id).toBe('row-1000');
+  });
+
+  it('keeps the browser list to the newest rows and limits overview fan-out', async () => {
+    const rows = Array.from({ length: 6 }, (_, index) => ({
+      start: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
+    }));
+    expect(newestByStart(rows, 2).map((row) => row.start)).toEqual([rows[4].start, rows[5].start]);
+    let active = 0;
+    let peak = 0;
+    const release: Array<() => void> = [];
+    const pending = mapWithConcurrency([1, 2, 3, 4], 2, () => {
+      active += 1;
+      peak = Math.max(peak, active);
+      return new Promise<void>((resolve) => {
+        release.push(() => {
+          active -= 1;
+          resolve();
+        });
+      });
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(peak).toBe(2);
+    expect(active).toBe(2);
+    release.splice(0).forEach((finish) => finish());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    release.splice(0).forEach((finish) => finish());
+    await pending;
   });
 
   it('orders a department collection by document id', () => {

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { db } from './firebase.ts';
-import { readQuery } from './pages.ts';
+import { readQuery, THEATRE_BOOKING_CAP, THEATRE_ENTRY_CAP, THEATRE_SESSION_CAP } from './pages.ts';
 import { ApiError, profileFor, resolvedReportingAccess } from './service.ts';
 import {
   canClinical,
@@ -260,32 +260,50 @@ export async function theatreReport(
   check(grant, 403, 'This reporting scope is outside your access.');
   const h = db.doc(`hospitals/${hid}`),
     base = (name: string) => h.collection(name).where('departmentId', '==', dep);
-  const [stored, actualBookings, sessions, plannedBookings] = await Promise.all([
+  const [storedPage, actualPage, sessionPage, plannedPage] = await Promise.all([
     readQuery<TheatreEntry>(
       base('theatreEntries')
         .where('operationDate', '>=', theatreDay(new Date(start - 86400000)))
         .where('operationDate', '<=', to)
         .orderBy('operationDate'),
+      { maxDocs: THEATRE_ENTRY_CAP },
     ),
     readQuery<Booking>(
       base('bookings')
         .where('inAt', '>=', new Date(start - 2 * 86400000).toISOString())
         .where('inAt', '<', new Date(end + 86400000).toISOString())
         .orderBy('inAt'),
+      { maxDocs: THEATRE_BOOKING_CAP },
     ),
     readQuery<TheatreSession>(
       base('sessions')
         .where('start', '>=', new Date(start - 2 * 86400000).toISOString())
         .where('start', '<', new Date(end + 86400000).toISOString())
         .orderBy('start'),
+      { maxDocs: THEATRE_SESSION_CAP },
     ),
     readQuery<Booking>(
       base('bookings')
         .where('start', '>=', new Date(start - 86400000).toISOString())
         .where('start', '<', new Date(end + 86400000).toISOString())
         .orderBy('start'),
+      { maxDocs: THEATRE_BOOKING_CAP },
     ),
   ]);
+  if (
+    storedPage.truncated ||
+    actualPage.truncated ||
+    sessionPage.truncated ||
+    plannedPage.truncated
+  )
+    throw new ApiError(
+      422,
+      'This report has too much data. Narrow the date range. No partial totals are shown.',
+    );
+  const stored = storedPage.rows,
+    actualBookings = actualPage.rows,
+    sessions = sessionPage.rows,
+    plannedBookings = plannedPage.rows;
   const bookings = [
     ...new Map(
       [...actualBookings, ...plannedBookings].map((booking) => [booking.id, booking]),

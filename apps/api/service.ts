@@ -2,7 +2,17 @@ import { saveTheatreEntry } from './theatre.ts';
 import type { TheatreEntry } from '../../shared/theatre.ts';
 import { createHash } from 'node:crypto';
 import { FieldValue } from 'firebase-admin/firestore';
-import { departmentQuery, readQuery } from './pages.ts';
+import {
+  departmentQuery,
+  mapWithConcurrency,
+  newestByStart,
+  OVERVIEW_CONCURRENCY,
+  OVERVIEW_DOCUMENT_BUDGET,
+  readQuery,
+  TOO_MUCH_DATA,
+  WORKSPACE_LIST_CAP,
+  type ReadBudget,
+} from './pages.ts';
 import { db } from './firebase.ts';
 import {
   applyDiagnosis,
@@ -162,11 +172,16 @@ export async function workspace(uid: string, hid: string, dep: string): Promise<
   requireThat(hs.exists, 404, 'Hospital not found.');
   const m = access(p, hs.data() as Hospital);
   department(m, dep);
-  const [cases, sessions, bookings] = await Promise.all([
+  const [casePage, sessionPage, bookingPage] = await Promise.all([
     readQuery<SurgicalCase>(departmentQuery(h.collection('cases'), dep)),
     readQuery<TheatreSession>(departmentQuery(h.collection('sessions'), dep)),
     readQuery<Booking>(departmentQuery(h.collection('bookings'), dep)),
   ]);
+  if (casePage.truncated || sessionPage.truncated || bookingPage.truncated)
+    throw new ApiError(422, TOO_MUCH_DATA);
+  const cases = casePage.rows,
+    sessions = sessionPage.rows,
+    bookings = bookingPage.rows;
   const register =
     m.role === 'viewer'
       ? null
@@ -176,6 +191,8 @@ export async function workspace(uid: string, hid: string, dep: string): Promise<
           .orderBy('operationDate', 'desc')
           .limit(501)
           .get();
+  const returnedSessions = newestByStart(sessions, WORKSPACE_LIST_CAP),
+    returnedBookings = newestByStart(bookings, WORKSPACE_LIST_CAP);
   const report = metrics(cases, sessions, bookings),
     prioritised = [...cases]
       .sort(
@@ -185,7 +202,10 @@ export async function workspace(uid: string, hid: string, dep: string): Promise<
       )
       .slice(0, 250);
   // Every returned booking needs its case/patient, even outside the prepared backlog page.
-  const included = new Set([...prioritised.map((c) => c.id), ...bookings.map((b) => b.caseId)]);
+  const included = new Set([
+    ...prioritised.map((c) => c.id),
+    ...returnedBookings.map((b) => b.caseId),
+  ]);
   const visible = cases.filter((c) => included.has(c.id));
   const patientIds = [...new Set(visible.map((c) => c.patientId))];
   const patients =
@@ -216,11 +236,14 @@ export async function workspace(uid: string, hid: string, dep: string): Promise<
     departmentId: dep,
     patients,
     cases: m.role === 'viewer' ? [] : visible,
-    sessions: m.role === 'viewer' ? [] : sessions,
-    bookings: m.role === 'viewer' ? [] : bookings,
+    sessions: m.role === 'viewer' ? [] : returnedSessions,
+    bookings: m.role === 'viewer' ? [] : returnedBookings,
     metrics: report,
     asOf,
-    truncated: cases.length > visible.length,
+    truncated:
+      cases.length > visible.length ||
+      sessions.length > returnedSessions.length ||
+      bookings.length > returnedBookings.length,
     theatreEntries: register?.docs.slice(0, 500).map((d) => d.data() as TheatreEntry) ?? [],
     theatreEntriesTruncated: (register?.size ?? 0) > 500,
   };
@@ -235,22 +258,24 @@ type DepartmentDataset = {
   bookings: Booking[];
 };
 
-async function reportingDepartment(hospital: Hospital, departmentId: string) {
+async function reportingDepartment(hospital: Hospital, departmentId: string, budget: ReadBudget) {
   const departmentRecord = hospital.departments.find((item) => item.id === departmentId);
   requireThat(departmentRecord, 404, 'Department not found.');
   const h = db.doc(`hospitals/${hospital.id}`);
-  const [cases, sessions, bookings] = await Promise.all([
-    readQuery<SurgicalCase>(departmentQuery(h.collection('cases'), departmentId)),
-    readQuery<TheatreSession>(departmentQuery(h.collection('sessions'), departmentId)),
-    readQuery<Booking>(departmentQuery(h.collection('bookings'), departmentId)),
+  const [casePage, sessionPage, bookingPage] = await Promise.all([
+    readQuery<SurgicalCase>(departmentQuery(h.collection('cases'), departmentId), { budget }),
+    readQuery<TheatreSession>(departmentQuery(h.collection('sessions'), departmentId), { budget }),
+    readQuery<Booking>(departmentQuery(h.collection('bookings'), departmentId), { budget }),
   ]);
+  if (casePage.truncated || sessionPage.truncated || bookingPage.truncated)
+    throw new ApiError(422, 'This reporting scope has too much data. Select fewer departments.');
   return {
     hospital,
     departmentId,
     departmentName: departmentRecord.name,
-    cases,
-    sessions,
-    bookings,
+    cases: casePage.rows,
+    sessions: sessionPage.rows,
+    bookings: bookingPage.rows,
   } satisfies DepartmentDataset;
 }
 
@@ -359,18 +384,17 @@ export async function reportingWorkspace(
     }));
   });
   const hospitals = authorised.map((item) => item.hospital);
-  const datasets = (
-    await Promise.all(
-      authorised.flatMap((grant) => {
-        const departmentIds = selectedDepartments
-          .filter((selection) => selection.hospitalId === grant.hospital.id)
-          .map((selection) => selection.departmentId);
-        return departmentIds.map((departmentId) =>
-          reportingDepartment(grant.hospital, departmentId),
-        );
-      }),
-    )
-  ).flat();
+  const budget: ReadBudget = { used: 0, max: OVERVIEW_DOCUMENT_BUDGET };
+  const datasets = await mapWithConcurrency(
+    authorised.flatMap((grant) => {
+      const departmentIds = selectedDepartments
+        .filter((selection) => selection.hospitalId === grant.hospital.id)
+        .map((selection) => selection.departmentId);
+      return departmentIds.map((departmentId) => ({ hospital: grant.hospital, departmentId }));
+    }),
+    OVERVIEW_CONCURRENCY,
+    (selection) => reportingDepartment(selection.hospital, selection.departmentId, budget),
+  );
   const asOf = new Date().toISOString(),
     report = combinedMetrics(datasets, asOf),
     summaries =
