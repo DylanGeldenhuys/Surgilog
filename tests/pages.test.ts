@@ -77,6 +77,23 @@ describe('paged department reads', () => {
     expect(budget.used).toBeLessThanOrEqual(4);
   });
 
+  it('treats a follow-on query with a spent budget as truncated', async () => {
+    let reads = 0;
+    const base = queryFor([{ id: 'row-0', name: 'x' }]);
+    const query = {
+      ...base,
+      limit(size: number) {
+        reads += 1;
+        return base.limit(size);
+      },
+    };
+    const budget = { used: 8000, max: 8000 };
+    const page = await readQuery<Row>(query as never, { pageSize: 2, maxDocs: 10, budget });
+    expect(page).toEqual({ rows: [], truncated: true });
+    expect(reads).toBe(0);
+    expect(budget.used).toBe(8000);
+  });
+
   it('does not stop at the old 1,000 or 5,000 pilot caps', async () => {
     const rows = Array.from({ length: 1001 }, (_, index) => ({
       id: `row-${String(index).padStart(4, '0')}`,

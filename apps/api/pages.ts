@@ -35,7 +35,9 @@ export async function readQuery<T>(
   for (;;) {
     const budgetRoom = options?.budget ? options.budget.max - options.budget.used : maxDocs;
     if (rows.length >= maxDocs || budgetRoom <= 0) {
-      if (!cursor) return { rows, truncated: false };
+      // A later department, or another collection in the same request, must not
+      // look empty when the shared budget was already used up.
+      if (!cursor) return { rows, truncated: true };
       if (options?.budget) options.budget.used += 1;
       const probe = await base.startAfter(cursor).limit(1).get();
       if (options?.budget && probe.empty) options.budget.used -= 1;
