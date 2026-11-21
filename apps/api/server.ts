@@ -14,18 +14,18 @@ import { registerClientErrorRoute } from './client-errors.ts';
 import { describeFailure } from './http-error.ts';
 import {
   createLoggerOptions,
+  createRequestId,
   installFatalHandlers,
   logRequestFailure,
   registerRequestLogging,
   RequestLogController,
-  requestIdFrom,
 } from './logging.ts';
 
 export async function buildApp() {
   const app = Fastify({
     logger: createLoggerOptions(),
     logController: new RequestLogController(),
-    genReqId: (req) => requestIdFrom(req.headers['x-request-id']),
+    genReqId: () => createRequestId(),
     bodyLimit: 128 * 1024,
   });
   await app.register(cors, { origin: runtime.origins });
@@ -38,7 +38,7 @@ export async function buildApp() {
   });
   async function uid(req: { headers: Record<string, any> }) {
     const token = req.headers.authorization?.replace(/^Bearer /, '');
-    if (!token) throw new ApiError(401, 'Sign in to continue.');
+    if (!token) throw new ApiError(401, 'Sign in to continue.', 'sign-in-required');
     try {
       return (await auth.verifyIdToken(token, true)).uid;
     } catch (error) {
@@ -48,6 +48,7 @@ export async function buildApp() {
         status === 401
           ? 'Sign in again to synchronise your work.'
           : 'Account verification is temporarily unavailable. Please retry shortly.',
+        status === 401 ? 'sign-in-again' : 'auth-unavailable',
       );
     }
   }
@@ -64,7 +65,7 @@ export async function buildApp() {
         : '';
       if (!token) return undefined;
       try {
-        return (await auth.verifyIdToken(token, true)).uid;
+        return (await auth.verifyIdToken(token, false)).uid;
       } catch {
         return undefined;
       }
@@ -125,7 +126,7 @@ export async function buildApp() {
       departments = departmentKeys?.map((key) => {
         const [hospitalId, departmentId, ...extra] = key.split('/');
         if (!hospitalId || !departmentId || extra.length)
-          throw new ApiError(400, 'Invalid department selection.');
+          throw new ApiError(400, 'Invalid department selection.', 'invalid-department');
         return { hospitalId, departmentId };
       });
     return reportingWorkspace(userId, hospitalIds, departments ?? null);
@@ -161,8 +162,8 @@ function runningAsServer() {
 }
 
 if (runningAsServer()) {
-  installFatalHandlers();
   const app = await buildApp();
+  installFatalHandlers({ close: () => app.close() });
   await app.listen({ port: runtime.port, host: runtime.host });
   process.on('SIGTERM', () => {
     void app.close();

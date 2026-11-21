@@ -30,11 +30,11 @@ export class AppErrorBoundary extends Component<Props, State> {
     const requestId = await postClientError(
       {
         reference,
+        name: error.name,
         message: error.message,
         stack: error.stack,
-        path: window.location.pathname,
       },
-      { token },
+      { token, frameOrigin: window.location.origin },
     );
     if (this.mounted && requestId) this.setState({ requestId });
   }

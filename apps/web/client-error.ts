@@ -3,9 +3,9 @@ import { clientErrorPayload, type ClientErrorReport } from '../../shared/client-
 
 export async function postClientError(
   report: ClientErrorReport,
-  options?: { origin?: string; fetchImpl?: typeof fetch; token?: string },
+  options?: { origin?: string; fetchImpl?: typeof fetch; token?: string; frameOrigin?: string },
 ) {
-  const payload = clientErrorPayload(report);
+  const payload = await clientErrorPayload(report, options?.frameOrigin);
   const fetchImpl = options?.fetchImpl ?? fetch;
   const origin = options?.origin ?? apiOrigin;
   try {

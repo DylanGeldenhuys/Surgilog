@@ -1,22 +1,33 @@
 import { describe, expect, it, vi } from 'vitest';
-import { clientErrorPayload } from '../shared/client-error.ts';
+import { clientErrorPayload, messageFingerprint } from '../shared/client-error.ts';
 import { postClientError } from '../apps/web/client-error.ts';
 
 describe('browser error reports', () => {
-  it('drops query text, emails and tokens before the report leaves the browser', () => {
-    expect(
-      clientErrorPayload({
+  it('sends a name, fingerprint and same-origin frames, not the message', async () => {
+    const payload = await clientErrorPayload(
+      {
         reference: '11111111-1111-1111-1111-111111111111',
-        message: 'Could not save ada@hospital.test Bearer session-token',
-        stack: 'Error: +27 82 555 0199',
-        path: '/backlog?patient=Ada#notes',
-      }),
-    ).toEqual({
+        name: 'TypeError',
+        message: 'Could not save Ada Nkosi 8001015009087 Bearer session-token',
+        stack: [
+          'Error: Ada Nkosi',
+          '    at save (http://127.0.0.1:5173/apps/web/state.ts:10:4)',
+          '    at other (https://evil.example/a.js:1:1)',
+        ].join('\n'),
+      },
+      'http://127.0.0.1:5173',
+    );
+    expect(payload).toEqual({
       reference: '11111111-1111-1111-1111-111111111111',
-      message: 'Could not save [redacted] Bearer [redacted]',
-      stack: 'Error: [redacted]',
-      path: '/backlog',
+      name: 'TypeError',
+      fingerprint: await messageFingerprint(
+        'Could not save Ada Nkosi 8001015009087 Bearer session-token',
+      ),
+      stack: 'at save (http://127.0.0.1:5173/apps/web/state.ts:10:4)',
     });
+    expect(JSON.stringify(payload)).not.toContain('Ada');
+    expect(JSON.stringify(payload)).not.toContain('8001015009087');
+    expect(JSON.stringify(payload)).not.toContain('session-token');
   });
 
   it('returns the server request id and still resolves when the report cannot be sent', async () => {
@@ -28,17 +39,26 @@ describe('browser error reports', () => {
     });
     await expect(
       postClientError(
-        { reference: '11111111-1111-1111-1111-111111111111', message: 'Broken', path: '/' },
+        {
+          reference: '11111111-1111-1111-1111-111111111111',
+          name: 'Error',
+          message: 'Broken',
+        },
         { origin: 'http://api.test', fetchImpl, token: 'session-token' },
       ),
     ).resolves.toBe('server-req-9');
     const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect(init.headers).toMatchObject({ Authorization: 'Bearer session-token' });
     expect(String(init.body)).not.toContain('session-token');
+    expect(String(init.body)).not.toContain('Broken');
 
     await expect(
       postClientError(
-        { reference: '11111111-1111-1111-1111-111111111111', message: 'Broken', path: '/' },
+        {
+          reference: '11111111-1111-1111-1111-111111111111',
+          name: 'Error',
+          message: 'Broken',
+        },
         {
           origin: 'http://api.test',
           fetchImpl: vi.fn(async () => {

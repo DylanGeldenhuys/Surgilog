@@ -26,6 +26,9 @@ const JWT = /eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/g;
 const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const PHONE = /\+\d{1,3}(?:[\s().-]*\d){7,14}|\b0\d{2}[\s.-]\d{3}[\s.-]\d{4}\b/g;
 const QUERY = /\?[^\s'"<>]*/g;
+const DIGITS = /\d{5,}/g;
+const NAME_PAIR = /\b[A-Z][a-z]+ [A-Z][a-z]+\b/g;
+const ICD10 = /\b[A-Z]\d{2}(?:\.\d{1,2})?\b/g;
 
 export function redactText(value: string) {
   return value
@@ -33,7 +36,10 @@ export function redactText(value: string) {
     .replace(JWT, '[redacted]')
     .replace(EMAIL, '[redacted]')
     .replace(PHONE, '[redacted]')
-    .replace(QUERY, '');
+    .replace(QUERY, '')
+    .replace(DIGITS, '[redacted]')
+    .replace(ICD10, '[redacted]')
+    .replace(NAME_PAIR, '[redacted]');
 }
 
 function isSecretKey(key: string) {

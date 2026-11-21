@@ -1,11 +1,14 @@
+import { createHash } from 'node:crypto';
 import { ZodError } from 'zod';
-import { redactText } from '../../shared/redact.ts';
+import { serverStackFrames } from '../../shared/client-error.ts';
 
 export type FailureLog = {
   status: number;
   clientError: string;
   severity: 'WARNING' | 'ERROR';
-  errorMessage: string;
+  errorName: string;
+  errorCode: string;
+  fingerprint?: string;
   stack?: string;
 };
 
@@ -18,7 +21,17 @@ function apiStatus(err: unknown) {
   return status;
 }
 
-/** Client message plus the fields that are safe to log. Issue values are not logged. */
+function safeCode(value: unknown, fallback: string) {
+  return typeof value === 'string' && /^[a-z0-9-]{1,40}$/i.test(value) && !/\d{5,}/.test(value)
+    ? value.toLowerCase()
+    : fallback;
+}
+
+function fingerprint(message: string) {
+  return createHash('sha256').update(message).digest('hex').slice(0, 16);
+}
+
+/** Client message plus the fields that are safe to log. The message itself is not logged. */
 export function describeFailure(err: unknown): FailureLog {
   if (err instanceof ZodError)
     return {
@@ -27,31 +40,37 @@ export function describeFailure(err: unknown): FailureLog {
         .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
         .join('; '),
       severity: 'WARNING',
-      errorMessage: 'invalid request',
+      errorName: 'ZodError',
+      errorCode: 'invalid-request',
     };
   const status = apiStatus(err);
-  if (err instanceof Error && status)
+  if (err instanceof Error && status && status < 500)
     return {
       status,
       clientError: err.message,
-      severity: status >= 500 ? 'ERROR' : 'WARNING',
-      errorMessage: redactText(err.message).slice(0, 500),
-      ...(status >= 500 && err.stack ? { stack: redactText(err.stack).slice(0, 4000) } : {}),
-    };
-  const code = (err as { statusCode?: unknown }).statusCode;
-  if (typeof code === 'number' && code >= 400 && code < 500)
-    return {
-      status: code,
-      clientError: code === 429 ? 'Too many requests. Please retry shortly.' : 'Invalid request.',
       severity: 'WARNING',
-      errorMessage: code === 429 ? 'rate limit' : 'invalid request',
+      errorName: err.name || 'ApiError',
+      errorCode: safeCode((err as { code?: unknown }).code, `http-${status}`),
+    };
+  const httpCode = (err as { statusCode?: unknown }).statusCode;
+  if (typeof httpCode === 'number' && httpCode >= 400 && httpCode < 500)
+    return {
+      status: httpCode,
+      clientError:
+        httpCode === 429 ? 'Too many requests. Please retry shortly.' : 'Invalid request.',
+      severity: 'WARNING',
+      errorName: 'FastifyError',
+      errorCode: httpCode === 429 ? 'rate-limit' : 'invalid-request',
     };
   const error = err instanceof Error ? err : new Error('request failed');
+  const failureStatus = status && status >= 500 ? status : 500;
   return {
-    status: 500,
+    status: failureStatus,
     clientError: 'The request could not be confirmed. Retry the same request shortly.',
     severity: 'ERROR',
-    errorMessage: redactText(error.message).slice(0, 500),
-    ...(error.stack ? { stack: redactText(error.stack).slice(0, 4000) } : {}),
+    errorName: error.name || 'Error',
+    errorCode: safeCode((error as { code?: unknown }).code, `http-${failureStatus}`),
+    fingerprint: fingerprint(error.message),
+    stack: serverStackFrames(error.stack),
   };
 }
