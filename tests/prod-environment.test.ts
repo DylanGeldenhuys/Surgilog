@@ -441,9 +441,11 @@ describe('production target', () => {
       expect(workflow).toContain('## API rollback');
       expect(workflow).toContain('npx firebase-tools deploy');
       expect(workflow).toContain('--only firestore:rules');
+      expect(workflow).toContain('--only firestore:indexes');
       expect(workflow).toContain('firebase/firestore.rules');
+      expect(workflow).toContain('firebase/firestore.indexes.json');
       expect(workflow).toContain('PROJECT: ${{ steps.target.outputs.project_id }}');
-      expect(workflow).not.toContain('firestore:indexes');
+      expect(workflow).toContain('firestore:indexes');
       expect(workflow).not.toContain('firebase-tools@');
       const checkJob = workflow.slice(0, workflow.indexOf('\n  deploy:\n'));
       expect(checkJob).not.toContain('id-token:');
