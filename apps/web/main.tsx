@@ -709,8 +709,8 @@ function WorkspaceApp({ initial, onEnd }: { initial: Vault; onEnd: (reason: Sess
           )}
           {w?.truncated && !reportingPage && page !== 'admin' && (
             <div className="info">
-              Showing 250 prioritised cases plus cases with bookings. Metrics cover the full pilot
-              department; local search only covers downloaded cases.
+              Showing 250 prioritised cases plus cases with bookings. Metrics include the whole
+              department. Search on this device only covers downloaded cases.
             </div>
           )}
           {page === 'sync' ? (

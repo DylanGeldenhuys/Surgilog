@@ -10,7 +10,7 @@ The local synthetic-data v0.1 now implements the core patient/first-case registr
 
 The sections below remain the broader **pilot requirements**, not a claim of completed pilot acceptance. An Admin tab with scoped account/access and hospital/department/theatre creation is implemented locally. MFA, mixed roles within a hospital, patient-reference correction/merging/transfers, actual-procedure/outcome verification, downtime/no-shows/corrections, session amendments/publication, report snapshots, audited exports, hospital production infrastructure and physical-device validation are outstanding. The current local schema has one role per hospital membership; test actors have explicit department grants.
 
-Current import accepts pasted CSV in batches of at most 100 new waiting cases, validates before saving, and uses per-row stable operations. It is not yet a managed import job. Current reports show a bounded local pilot cohort, not a production paginated warehouse. Leo has confirmed the P1/P2/P3 day ranges; the pilot must still confirm which clinical event starts the urgency clock and any specialty-specific exceptions before real-data use.
+Current import accepts pasted CSV in batches of at most 100 new waiting cases, validates before saving, and uses per-row stable operations. It is not yet a managed import job. Reports and department metrics page through the recorded rows for the selected scope. They are not a separate reporting warehouse. Leo has confirmed the P1/P2/P3 day ranges; the pilot must still confirm which clinical event starts the urgency clock and any specialty-specific exceptions before real-data use.
 
 
 Planning baseline: 3 October 2026. Status: draft for Dylan and Leo.
