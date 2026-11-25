@@ -15,7 +15,7 @@ Dylan completed owner sign-in and explicitly approved the API/IAM plan in [revie
 
 ## Dev and production
 
-`theatre-tracker-2f2e5` is the **dev** environment. Its Firebase display name is Surgilog Development. The project id is unchanged. Firebase aliases `dev` and `review` both point at it. Production is `surgilog-production`, display name Surgilog Production. That id is set in [config/prod.json](../config/prod.json) and the `.firebaserc` `prod` alias. The web SDK key there is still a placeholder. [Environments](environments.md) covers the split, the promotion rule (a push to `main` deploys production only after the `production` environment approves it, and a push to `dev` deploys this dev project), the one-time owner checklist, cutover, rollback, and the POPIA note. The Cloud Shell steps for those GitHub deploys are in [ci.md](ci.md). This file remains the record of what is actually deployed to dev. Nothing in the production scaffolding has been deployed.
+`theatre-tracker-2f2e5` is the **dev** environment. Its Firebase display name is Surgilog Development. The project id is unchanged. Firebase aliases `dev` and `review` both point at it. Production is `surgilog-production`, display name Surgilog Production. That id is set in [config/prod.json](../config/prod.json) and the `.firebaserc` `prod` alias. The web SDK key there is still a placeholder. [Environments](environments.md) covers the split, the promotion rule (a push to `main` deploys production only after the `production` environment approves it, and a push to `dev` deploys this dev project), the one-time owner checklist, cutover, rollback, and the POPIA note. The Cloud Shell steps for those GitHub deploys are in [ci.md](ci.md). This file remains the record of what is actually deployed to dev. The production project `surgilog-production`, its config, and the production deploy workflow are in the repo. A production run still stops while `config/prod.json` has a placeholder web SDK key, so the production site and API have not been published.
 
 ## Diagnosis and palette release — 23 October 2026
 
@@ -61,7 +61,7 @@ The four approved APIs (Cloud Run, Cloud Build, Artifact Registry and IAM) are e
 
 ## Repeat deployment
 
-Local development still defaults to the demo emulators. `shared/runtime-config.ts` rejects emulator endpoints in review mode. The source upload allowlist includes only Dockerfile, package files, API and shared modules. The container uses Node 24, native TypeScript and a non-root user with platform credentials.
+Local development still defaults to the demo emulators. `shared/runtime-config.ts` rejects emulator endpoints in review mode. The source upload allowlist includes only Dockerfile, package files, API and shared modules. The container uses Node 22, the same major version as CI, native TypeScript and a non-root user with platform credentials.
 
 Use the Cloud Run command in [review-infrastructure.md](review-infrastructure.md) when backend code changes. Sign in to the selected owner account again if its Google Cloud login has expired or been revoked. Read the current leaf help before constructing new gcloud commands. Do not repeat API enablement or grant extra permissions without checking actual requirements.
 

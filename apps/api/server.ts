@@ -8,7 +8,14 @@ import { auth, runtime } from './firebase.ts';
 import { ApiError, me, workspace, reportingWorkspace, execute, caseHistory } from './service.ts';
 import { adminWorkspace, administer } from './admin.ts';
 import { authFailureStatus } from './auth-errors.ts';
-const app = Fastify({ logger: false, bodyLimit: 128 * 1024 });
+import { trustProxySetting } from './trust-proxy.ts';
+const app = Fastify({
+  logger: false,
+  // Cloud Run's frontend appends the client address. Trust that one hop so
+  // rate limits use it. Local requests have no proxy, so the socket address is used.
+  trustProxy: trustProxySetting(process.env),
+  bodyLimit: 128 * 1024,
+});
 await app.register(cors, { origin: runtime.origins });
 await app.register(helmet);
 await app.register(rateLimit, { max: 180, timeWindow: '1 minute' });
