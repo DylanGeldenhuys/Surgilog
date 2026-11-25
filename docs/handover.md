@@ -2,6 +2,10 @@
 
 Updated: 21 November 2026, Africa/Johannesburg.
 
+## Logging and client errors — 21 November 2026
+
+Implemented on a branch from `dev`, targeting `dev`. Not merged and not deployed. The API writes JSON logs with Cloud Logging `severity`, an `httpRequest` record, and a server-generated request id. A caller-supplied id is stored separately. Client crash reports log the error name, a message fingerprint and same-origin `/assets/*.js` stack frames at WARNING, and only when the page origin is one the API already allows. Server 4xx errors log a stable code. Server 500s log the name, code, fingerprint and stack frames. An unhandled rejection logs at CRITICAL, closes the server, and exits after at most 2.5 seconds. `POST /api/client-errors` is limited per account or IP and to 200 reports a minute on each instance. The per-IP key is the real client address only after the Cloud Run proxy trust in the ops pull request lands first. Local checks: **132 unit tests**, typecheck and formatting pass.
+
 ## Department reads no longer stop at the pilot cap — 21 November 2026
 
 Implemented on a branch from `dev`, targeting `dev`. Not merged and not deployed. A department with more than 1,000 cases, sessions or bookings no longer makes the worklist or Overview fail. A theatre report no longer fails at 5,000 rows. The API reads those collections in pages of 300 and stops at a fixed document cap (2,000 per collection for a department, 8,000 documents for one Overview, with at most 4 departments read at a time). Crossing the cap returns a clear error asking to narrow the range or select fewer departments, instead of loading the rest into memory. A later department that starts after the shared budget is already spent is treated as too large, not as an empty department. Theatre reports stop at the previous 5,000 entry/booking and 2,000 session backstops and do not show partial totals. The worklist response stays bounded: 250 prioritised cases, and at most 500 of the newest sessions and bookings. Metrics use the scanned rows only when the scan is complete. Deploy this with or after the index-wait workflow, and only after those composite indexes are READY. On the Firestore emulator, writing 2,000 synthetic department documents took 3.8s and reading them back in pages of 300 took 337ms, with a 3.8 MB heap increase. Calculating metrics for 2,000 synthetic open cases took 30ms. Local checks: **126 unit tests**, typecheck and formatting pass.
@@ -33,8 +37,6 @@ Dylan asked for the small production environment badge to be removed. Feature br
 ## Production project id — 19 November 2026
 
 Dylan replaced the production project. The id is **surgilog-production**, display name **Surgilog Production**. The dev project id stays `theatre-tracker-2f2e5`; its display name is **Surgilog Development**. The web SDK key in `config/prod.json` is still a placeholder, so a production deploy still stops. After Hosting, both deploy workflows publish Firestore security rules and then the indexes in `firebase/firestore.indexes.json`. The index step needs `roles/datastore.indexAdmin` on the deploy account. Nothing was deployed by that project-id change.
-
-
 
 ## Branch deploys — 18 November 2026
 

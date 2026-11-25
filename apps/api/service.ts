@@ -46,9 +46,12 @@ import {
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  code: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
+    this.name = 'ApiError';
     this.status = status;
+    this.code = code && /^[a-z0-9-]{1,40}$/.test(code) ? code : `http-${status}`;
   }
 }
 function caseDocumentUpdate(c: SurgicalCase, diagnosisEdited: boolean) {
@@ -715,6 +718,7 @@ export async function execute(uid: string, hid: string, input: unknown) {
         throw new ApiError(
           409,
           `${details.join(' ')} A session reserves this time even when no patients are booked. Choose another resource or a non-overlapping time.`,
+          'session-clash',
         );
       }
       const s: TheatreSession = { id: d.sessionId, ...d, version: 1 };

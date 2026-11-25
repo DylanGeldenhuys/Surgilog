@@ -2784,3 +2784,37 @@ fieldset:disabled {
     max-width: 120px;
   }
 }
+.crash {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--canvas);
+}
+.crash-card {
+  width: min(440px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  color: var(--body-ink);
+}
+.crash-card h1 {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 28px;
+  letter-spacing: -0.4px;
+}
+.crash-card p {
+  margin: 0 0 16px;
+  line-height: 1.6;
+}
+.crash-reference {
+  background: var(--wash);
+  border-radius: 8px;
+  padding: 12px;
+  overflow-wrap: anywhere;
+}
+.crash-card .button {
+  margin-top: 4px;
+}
