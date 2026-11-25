@@ -20,12 +20,16 @@ import {
   registerRequestLogging,
   RequestLogController,
 } from './logging.ts';
+import { trustProxySetting } from './trust-proxy.ts';
 
 export async function buildApp() {
   const app = Fastify({
     logger: createLoggerOptions(),
     logController: new RequestLogController(),
     genReqId: () => createRequestId(),
+    // Cloud Run's frontend appends the client address. Trust that one hop so
+    // rate limits use it. Local requests have no proxy, so the socket address is used.
+    trustProxy: trustProxySetting(process.env),
     bodyLimit: 128 * 1024,
   });
   await app.register(cors, { origin: runtime.origins });

@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim
+FROM node:22.23-bookworm-slim
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force

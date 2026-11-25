@@ -139,6 +139,30 @@ jobs:
             esac
           fi
 
+      - name: Deploy Firestore indexes
+        env:
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" != "surgilog-production" ]; then
+            echo "::error::Refusing a production index deploy aimed at ${PROJECT}. The API was not deployed and traffic was not changed."
+            exit 1
+          fi
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync("firebase.indexes.json", JSON.stringify({ firestore: { rules: "firebase/firestore.rules", indexes: "firebase/firestore.indexes.json" } }, null, 2) + "\n");'
+          npx firebase-tools deploy --only firestore:indexes --config firebase.indexes.json --project "$PROJECT" --non-interactive
+
+      - name: Wait until Firestore indexes are ready
+        env:
+          PROJECT: ${{ steps.target.outputs.project_id }}
+        run: |
+          set -euo pipefail
+          if [ "$PROJECT" != "surgilog-production" ]; then
+            echo "::error::Refusing to wait on indexes for ${PROJECT}. The API was not deployed and traffic was not changed."
+            exit 1
+          fi
+          # firebase deploy returns when index builds are submitted. Traffic stays put until they are READY.
+          npx tsx scripts/wait-for-firestore-indexes.ts
+
       - name: Deploy the API
         env:
           SERVICE: ${{ steps.target.outputs.service }}
@@ -240,7 +264,7 @@ jobs:
             echo "## API rollback"
             echo
             echo "If the Hosting deploy fails after this point, the new API revision is already serving and the previous web app is still on the live site."
-            echo "Rules publish last, after Hosting. If that step fails, the new API and the new web app are already live and the previous rules are still published."
+            echo "Indexes are published and READY before this API receives traffic. Rules publish after Hosting. If rules fail, the new API and the new web app are already live and the previous rules are still published."
             echo "A rule change the web app depends on must already be published, or the new rules must keep working with the previous web app."
             if [ -n "${PREVIOUS}" ]; then
               echo
