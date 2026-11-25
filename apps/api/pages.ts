@@ -80,7 +80,7 @@ export function newestByStart<T extends { start: string }>(rows: T[], max: numbe
   return [...rows].sort((a, b) => Date.parse(a.start) - Date.parse(b.start)).slice(-max);
 }
 
-/** Equality on department plus document id. Indexed in firestore.indexes.json. */
+/** Equality on department plus document id. The automatic single-field index serves this. */
 export function departmentQuery(collection: CollectionReference, departmentId: string) {
   return collection.where('departmentId', '==', departmentId).orderBy(FieldPath.documentId());
 }

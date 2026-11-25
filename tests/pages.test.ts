@@ -152,19 +152,18 @@ describe('paged department reads', () => {
     expect(ordered).toEqual([FieldPath.documentId()]);
   });
 
-  it('declares composite indexes for the department document-id queries', () => {
+  it('does not declare composite indexes for department id plus document id', () => {
     const indexes = JSON.parse(readFileSync('firebase/firestore.indexes.json', 'utf8')) as {
       indexes: { collectionGroup: string; fields: { fieldPath: string; order: string }[] }[];
     };
     for (const collection of ['cases', 'sessions', 'bookings']) {
-      expect(indexes.indexes).toContainEqual({
-        collectionGroup: collection,
-        queryScope: 'COLLECTION',
-        fields: [
-          { fieldPath: 'departmentId', order: 'ASCENDING' },
-          { fieldPath: '__name__', order: 'ASCENDING' },
-        ],
-      });
+      expect(
+        indexes.indexes.some(
+          (index) =>
+            index.collectionGroup === collection &&
+            index.fields.some((field) => field.fieldPath === '__name__'),
+        ),
+      ).toBe(false);
     }
     const theatre = indexes.indexes.filter((index) =>
       ['theatreEntries', 'bookings', 'sessions'].includes(index.collectionGroup),
